@@ -24,9 +24,17 @@ const App = new VMCRMUserApp();
 // Контекст фрейма
 const { app_id, domain, catalog, itemId, items, user } = (await App.getRequestParams()).data
 
-// Текущий пользователь
-const { name, group, role, id } = (await App.getUser()).data
-// group = from_group (тенант), id = хеш логина
+// Текущий пользователь (включая тариф)
+const { name, group, role, id, tarif, tarif_name } = (await App.getUser()).data
+// group       = from_group (тенант)
+// id          = хеш логина
+// tarif       = ID тарифа (строка с числом, "3")
+// tarif_name  = название тарифа ("Стандарт")
+// Используй для feature gating: if (tarif === '3') showProFeatures()
+
+// Полная биллинг-инфа (баланс, скидки, даты, прайсы):
+const billing = await App.fetch('/api/user/tariff')
+// data: { tarif, tarif_name, balance, discount, discount_date, payment_date, price, discount_3months, discount_12months }
 
 // Fetch (всегда через App, не через window.fetch — CORS)
 App.fetch('/db/catalog.json')
