@@ -1,0 +1,30 @@
+{
+  "name": "korfix-devkit",
+  "version": "0.1.0",
+  "description": "Claude Code plugin for developing marketplace miniapps on the Korfix ERP platform. Provides AI agents, skills, and MCP connection to Korfix API.",
+  "author": {
+    "name": "Korfix",
+    "email": "info@korfix.ru",
+    "url": "https://korfix.ru"
+  },
+  "homepage": "https://github.com/korfixdev/devkit",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/korfixdev/devkit"
+  },
+  "license": "MIT",
+  "keywords": [
+    "korfix",
+    "miniapp",
+    "erp",
+    "marketplace",
+    "ai-agent",
+    "claude-code"
+  ],
+  "mcpServers": {
+    "korfix": {
+      "type": "sse",
+      "url": "https://mcp.korfix.ru/${KORFIX_TOKEN}/sse"
+    }
+  }
+}

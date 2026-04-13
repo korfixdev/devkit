@@ -1,0 +1,104 @@
+---
+name: korfix-miniapp-validate
+description: Use before deploying a Korfix miniapp to validate it against the release checklist. Produces a PASS/WARN/FAIL report with evidence per checklist item. Invoke as impartial reviewer from fresh context (not self-review).
+---
+
+# korfix-miniapp-validate
+
+Беспристрастная валидация готового миниапа перед релизом. **Роль ревьюера, не разработчика.**
+
+Запускается в fresh-context (subagent или отдельная сессия) — не знаешь истории разработки, не сочувствуешь автору, не «закрываешь глаза» на срезанные углы.
+
+## Когда использовать
+
+- Dev-агент закончил работу над миниапом и готов к деплою
+- Нужен независимый аудит: все ли пункты чеклиста выполнены
+- Перед публикацией в маркетплейс
+
+## Вход
+
+- **Путь к директории миниапа** (обязательно): `/path/to/app-dir`
+- Либо путь к zip — тогда распаковать в `/tmp` и работать с распаковкой
+- Опционально: версия / alias для контекста отчёта
+
+## Процесс
+
+1. Прочитать полный rubric: `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/checklist.md`
+2. Через `Glob` и `Read` обойти директорию миниапа: `config.json`, `*.html`, `*.js`, `*.css`
+3. Для каждого пункта чеклиста вынести вердикт: **PASS** / **WARN** / **FAIL**
+4. **Каждый вердикт ОБЯЗАН иметь evidence**: `файл:строка` или цитата. Без evidence — автоматический **FAIL**.
+5. Агрегировать отчёт по блокам (config.json / файлы / код / UI-UX / после отправки)
+6. Выдать общий статус: `READY` / `NOT READY` + summary причин
+
+## Приоритеты пунктов
+
+- **Critical (блокирует релиз):**
+  - `config.json` невалиден, отсутствуют обязательные поля (`name`, `package`, `about`, `permissions`)
+  - В zip/директории запрещённые расширения (`.php`, `.exe`, `.sh`)
+  - `config.json` не в корне
+  - Используются `window.fetch` / `XMLHttpRequest` вместо `App.fetch`
+  - Отсутствует `permissions` или каталог используется без объявления
+- **Must (должно быть, один FAIL = NOT READY):**
+  - Все 5 разделов в `about`, прямые ссылки `/db/{catalog}` в «Где появляется в CRM»
+  - `App.setFrameSize` вызывается
+  - Шрифт input/select/textarea ≥ 16px
+  - Кликабельные элементы — `<a>` или `<button>`
+  - Массовое создание: `alias = uid()`, `from_auth`, `from_group`
+  - Self-provisioning: проверка через `custom_dbtables`, а не `/db/{catalog}.json`
+- **Nice-to-have (WARN, не блокирует):**
+  - Оптимизация CSS, читаемость кода
+  - Наличие шестерёнки для настроек
+  - Пустое состояние оформлено осмысленно
+
+## Формат отчёта
+
+```
+=== MINIAPP VALIDATION: <name> v<version> ===
+
+[config.json]
+  PASS: name заполнен (config.json:2)
+  FAIL: permissions не объявлены
+  WARN: tags отсутствуют (config.json — нет поля)
+
+[файлы в zip]
+  PASS: config.json в корне
+  FAIL: widget.html:urls.main не существует в директории
+
+[код]
+  FAIL: index.html:45 — прямой fetch() вместо App.fetch
+  WARN: settings.html:12 — input font-size 14px, требуется ≥16
+
+[UI/UX]
+  PASS: адаптивная вёрстка (styles.css:89 @media)
+  WARN: нет шестерёнки для настроек
+
+SUMMARY
+  Critical: 2 FAIL
+  Must: 1 FAIL, 1 WARN
+  Nice: 1 WARN
+
+STATUS: NOT READY
+Блокеры: permissions, прямой fetch в index.html:45
+
+Рекомендуемые действия (по приоритету):
+1. Добавить permissions.catalogs в config.json
+2. Заменить fetch() на App.fetch() в index.html:45
+3. Увеличить font-size в settings.html:12 до 16px
+```
+
+## Правила беспристрастности
+
+- Не принимать оправдания «это очевидно», «потом добавлю», «работает же». Либо выполнено, либо нет.
+- Если разработчик передал дополнительный контекст («я не успел сделать X, но это не важно») — **игнорировать**. Судить только по артефакту.
+- Если пункт чеклиста неоднозначен — трактовать **в пользу строгости** (WARN минимум).
+- Не давать советов по оптимизации или улучшению архитектуры — только соответствие чеклисту.
+
+## Документация
+
+- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/checklist.md` — rubric (источник правды, читать при каждом запуске)
+- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/deploy.md` — что означает готовность к релизу
+- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/config-json.md` — спека config.json для верификации
+
+---
+
+*Отличие от `korfix-miniapp-checklist`: этот skill — роль ревьюера с структурированным отчётом. Checklist — инструкция для разработчика при работе над миниапом.*
