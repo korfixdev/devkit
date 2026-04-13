@@ -8,9 +8,28 @@ Provides AI agents, skills, and optional MCP connection. After installation, Cla
 
 ## Install
 
+The plugin is distributed via the [Korfix Marketplace](https://github.com/korfixdev/marketplace). Add the marketplace once, then install plugins from it.
+
+**New Claude Code (interactive `/plugin` UI):**
+
+1. Type `/plugin` in Claude Code
+2. Choose **Add marketplace** → paste `github:korfixdev/marketplace`
+3. Once added, find `korfix-devkit` in the list → **Install**
+
+**Older Claude Code (commands):**
+
 ```
-/plugin add github:korfixdev/devkit
+/plugin marketplace add github:korfixdev/marketplace
+/plugin install korfix-devkit@korfixdev
 ```
+
+**Manual install** (any version, fallback):
+
+```bash
+git clone https://github.com/korfixdev/devkit ~/.claude/plugins/korfix-devkit
+```
+
+Then enable in Claude Code settings.
 
 ## Setup
 
@@ -71,9 +90,28 @@ info@korfix.ru
 
 ## Установка
 
+Плагин распространяется через [маркетплейс Korfix](https://github.com/korfixdev/marketplace). Добавь маркетплейс один раз — потом устанавливай плагины из него.
+
+**Новый Claude Code (интерактивный `/plugin` UI):**
+
+1. Набери `/plugin` в Claude Code
+2. Выбери **Add marketplace** → вставь `github:korfixdev/marketplace`
+3. После добавления найди `korfix-devkit` в списке → **Install**
+
+**Старый Claude Code (командой):**
+
 ```
-/plugin add github:korfixdev/devkit
+/plugin marketplace add github:korfixdev/marketplace
+/plugin install korfix-devkit@korfixdev
 ```
+
+**Ручная установка** (любая версия, fallback):
+
+```bash
+git clone https://github.com/korfixdev/devkit ~/.claude/plugins/korfix-devkit
+```
+
+Потом включи в настройках Claude Code.
 
 ## Настройка
 
