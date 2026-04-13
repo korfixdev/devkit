@@ -31,6 +31,16 @@ git clone https://github.com/korfixdev/devkit ~/.claude/plugins/korfix-devkit
 
 Then enable in Claude Code settings.
 
+### After install — activate in current session
+
+After installing, the plugin is **not active in your current Claude session yet**. To use it immediately:
+
+```
+/reload-plugins
+```
+
+Or just restart Claude Code — plugins load automatically on the next start.
+
 ## Setup
 
 ```bash
@@ -112,6 +122,16 @@ git clone https://github.com/korfixdev/devkit ~/.claude/plugins/korfix-devkit
 ```
 
 Потом включи в настройках Claude Code.
+
+### После установки — активация в текущей сессии
+
+После установки плагин **ещё не активен в текущей сессии Claude**. Чтобы пользоваться сразу:
+
+```
+/reload-plugins
+```
+
+Либо просто перезапусти Claude Code — при следующем старте плагины подтянутся автоматически.
 
 ## Настройка
 
