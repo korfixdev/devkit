@@ -1,10 +1,71 @@
 # korfix-devkit
 
-Claude Code plugin для разработки маркетплейс-миниапов на платформе Korfix.
+**Claude Code plugin for developing marketplace miniapps on the Korfix ERP platform.**
 
-Пакет содержит AI-агентов, skills и опциональное MCP-подключение. После установки Claude Code может самостоятельно разрабатывать миниапы: создавать структуру, писать код, валидировать по чеклисту, упаковывать и деплоить.
+Provides AI agents, skills, and optional MCP connection. After installation, Claude Code can develop miniapps end-to-end: scaffold, write code, validate against the release checklist, package, and deploy.
+
+## Install
+
+```
+/plugin add github:korfixdev/devkit
+```
+
+## Setup
+
+```bash
+export KORFIX_API_URL="https://panel.korfix.ru"                      # your Korfix instance
+export KORFIX_TOKEN="your-token-from-db-api"                         # required
+export KORFIX_MCP_URL="https://mcp.korfix.ru/${KORFIX_TOKEN}/sse"    # optional, enables MCP mode
+```
+
+Get a token in your Korfix panel → `/db/api` → Add.
+
+## What's inside
+
+| Component | Role |
+|-----------|------|
+| Agent `korfix-miniapp-dev` | Writes miniapps: architecture, code, styling, packaging |
+| Agent `korfix-miniapp-validator` | Impartial review before deploy (fresh context, checklist-driven) |
+| 7 skills | `korfix-miniapp-validate`, `-checklist`, `-config`, `korfix-js-api`, `korfix-self-provisioning`, `korfix-catalog-schema`, `korfix-crud-data` |
+| Bundled docs | `docs/miniapps/` — synced from [korfixdev/docs](https://github.com/korfixdev/docs) |
+
+## Usage
+
+```
+Create a miniapp that shows record count under each catalog's table
+```
+
+The agent will:
+1. Ask for instance and token if env isn't set
+2. Read bundled platform docs
+3. Write code, package as zip
+4. Spawn `korfix-miniapp-validator` for impartial review
+5. On `READY` — deploy via API
+6. On `NOT READY` — fix issues and re-validate
+
+The agent never deploys without your confirmed instance and token.
+
+## Security
+
+- Keep the token in env, not in files. `KORFIX_TOKEN` never goes into miniapp commits.
+- Grant the token **minimum privileges** — only needed catalogs and methods.
+- Use separate tokens for prod and staging.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+## Contact
+
+info@korfix.ru
 
 ---
+
+# korfix-devkit — на русском
+
+**Claude Code plugin для разработки маркетплейс-миниапов на платформе Korfix.**
+
+Содержит AI-агентов, skills и опциональное MCP-подключение. После установки Claude Code может самостоятельно разрабатывать миниапы: создавать структуру, писать код, валидировать по чеклисту, упаковывать и деплоить.
 
 ## Установка
 
@@ -12,97 +73,46 @@ Claude Code plugin для разработки маркетплейс-миниа
 /plugin add github:korfixdev/devkit
 ```
 
-## Настройка окружения
-
-Плагин не содержит никаких хардкодов. **Инстанс, токен и MCP-URL** задаёшь ты — для своего Korfix.
-
-### Минимум (без MCP)
+## Настройка
 
 ```bash
-export KORFIX_API_URL="https://panel.korfix.ru"    # адрес твоего инстанса
-export KORFIX_TOKEN="your-token-from-db-api"        # токен с классами db_*_get/post, db_marketplace_post
+export KORFIX_API_URL="https://panel.korfix.ru"                      # адрес твоего инстанса
+export KORFIX_TOKEN="your-token-from-db-api"                         # обязательно
+export KORFIX_MCP_URL="https://mcp.korfix.ru/${KORFIX_TOKEN}/sse"    # опционально, для MCP-режима
 ```
 
-Получить токен:
-1. В Korfix панель → `/db/api` → Добавить
-2. Выдай токен с нужными классами API
-3. Скопируй и экспортируй в env
-
-Агент будет ходить через `curl`/`App.fetch` в пределах выданных прав.
-
-### С MCP (рекомендуется)
-
-MCP-сервер упрощает работу агента: вместо `curl` команд — нативные инструменты `catalog_schema`, `db_read`, `db_insert`, `db_update`.
-
-```bash
-export KORFIX_API_URL="https://panel.korfix.ru"
-export KORFIX_TOKEN="your-token"
-export KORFIX_MCP_URL="https://mcp.korfix.ru/${KORFIX_TOKEN}/sse"
-```
-
-Для self-hosted Korfix укажи свой MCP-endpoint.
-
----
+Получить токен — в панели Korfix → `/db/api` → Добавить.
 
 ## Что внутри
 
-### Агенты
-
-| Агент | Роль |
-|-------|------|
-| `korfix-miniapp-dev` | Пишет миниап: архитектура, код, стили, пакеджинг |
-| `korfix-miniapp-validator` | Беспристрастный ревью готового миниапа перед деплоем |
-
-### Skills
-
-| Skill | Когда срабатывает |
-|-------|-------------------|
-| `korfix-miniapp-validate` | Перед деплоем — структурированный отчёт PASS/WARN/FAIL |
-| `korfix-miniapp-checklist` | Во время разработки — инструкция для автора |
-| `korfix-miniapp-config` | Работа с `config.json` — поля, permissions, about |
-| `korfix-js-api` | `VMCRMUserApp` внутри iframe |
-| `korfix-self-provisioning` | Создание кастомных каталогов при установке |
-| `korfix-catalog-schema` | Получение схемы каталога (типы полей, FK) |
-| `korfix-crud-data` | CRUD через `App.fetch` внутри iframe |
-
-### Документация
-
-`docs/miniapps/` — синхронизированная копия [korfixdev/docs](https://github.com/korfixdev/docs). Агент читает её через `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/...`.
-
----
+| Компонент | Роль |
+|-----------|------|
+| Агент `korfix-miniapp-dev` | Пишет миниапы: архитектура, код, стили, пакеджинг |
+| Агент `korfix-miniapp-validator` | Беспристрастное ревью перед деплоем (fresh context, по чеклисту) |
+| 7 skills | `korfix-miniapp-validate`, `-checklist`, `-config`, `korfix-js-api`, `korfix-self-provisioning`, `korfix-catalog-schema`, `korfix-crud-data` |
+| Документация | `docs/miniapps/` — синхронизировано из [korfixdev/docs](https://github.com/korfixdev/docs) |
 
 ## Использование
-
-После установки и настройки env:
 
 ```
 Создай миниап, который показывает количество записей в каталоге под его таблицей
 ```
 
-Что произойдёт:
-1. `korfix-miniapp-dev` спросит, на какой инстанс работаем (если env не задан)
+Агент:
+1. Спросит инстанс и токен если env не задан
 2. Прочитает документацию из плагина
 3. Напишет код, упакует в zip
-4. Запустит subagent `korfix-miniapp-validator` для ревью
+4. Запустит `korfix-miniapp-validator` для беспристрастного ревью
 5. При `READY` — задеплоит через API
 6. При `NOT READY` — починит и перепроверит
 
-**Агент никогда не деплоит без твоего инстанса и токена.** Если env не задан — спросит.
-
----
+Агент никогда не деплоит без подтверждённого инстанса и токена.
 
 ## Безопасность
 
 - Токен держи в env, не в файлах. `KORFIX_TOKEN` не попадает в коммиты миниапа.
 - Выдавай токену **минимум прав** — только нужные каталоги, только нужные методы.
 - Для прода и теста — разные токены.
-
----
-
-## Разработка плагина
-
-- Правки агентов/skills → PR в этот репо
-- Правки документации → PR в [korfixdev/docs](https://github.com/korfixdev/docs) (оттуда sync сюда)
 
 ## Лицензия
 
