@@ -1,8 +1,10 @@
 # korfix-devkit
 
-**Claude Code plugin for developing marketplace miniapps on the Korfix ERP platform.**
+**Claude Code plugin for developing marketplace miniapps on the [Korfix](https://korfix.ru) ERP platform.**
 
 Provides AI agents, skills, and optional MCP connection. After installation, Claude Code can develop miniapps end-to-end: scaffold, write code, validate against the release checklist, package, and deploy.
+
+**Platform:** [korfix.ru](https://korfix.ru) · **Docs:** [docs.korfix.info](https://docs.korfix.info) · **Related plugin:** [korfixdev/assistant](https://github.com/korfixdev/assistant)
 
 ## Install
 
