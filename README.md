@@ -13,13 +13,13 @@ The plugin is distributed via the [Korfix Marketplace](https://github.com/korfix
 **New Claude Code (interactive `/plugin` UI):**
 
 1. Type `/plugin` in Claude Code
-2. Choose **Add marketplace** → paste `github:korfixdev/marketplace`
+2. Choose **Add marketplace** → paste `korfixdev/marketplace`
 3. Once added, find `korfix-devkit` in the list → **Install**
 
 **Older Claude Code (commands):**
 
 ```
-/plugin marketplace add github:korfixdev/marketplace
+/plugin marketplace add korfixdev/marketplace
 /plugin install korfix-devkit@korfixdev
 ```
 
@@ -95,13 +95,13 @@ info@korfix.ru
 **Новый Claude Code (интерактивный `/plugin` UI):**
 
 1. Набери `/plugin` в Claude Code
-2. Выбери **Add marketplace** → вставь `github:korfixdev/marketplace`
+2. Выбери **Add marketplace** → вставь `korfixdev/marketplace`
 3. После добавления найди `korfix-devkit` в списке → **Install**
 
 **Старый Claude Code (командой):**
 
 ```
-/plugin marketplace add github:korfixdev/marketplace
+/plugin marketplace add korfixdev/marketplace
 /plugin install korfix-devkit@korfixdev
 ```
 
