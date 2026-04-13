@@ -103,7 +103,41 @@ document.getElementById('btnInstall')?.addEventListener('click', async () => {
 </script>
 ```
 
+## Права доступа (access_db) — обязательно
+
+После создания кастомного каталога платформа автоматически создаёт запись в `access_db`, но **только для admin/root**. Обычные роли (менеджер, оператор, клиент и т.д.) **не увидят** каталог.
+
+Миниап должен либо:
+
+**1. Обновить `access_db` после создания каталога:**
+
+```js
+// Найти auto-created запись access_db
+const acc = (await App.fetch(
+    '/db/access_db.json?form[dbmodule]=custom_quicknotes'
+)).data?.[0];
+
+if (acc) {
+    // Значения acctype_*: 0=нет, 1=все, 2=только свои
+    await App.fetch(`/db/access_db/${acc.alias}?edit&ajax=1`, {
+        method: 'POST',
+        body: {
+            'form[id]': acc.id,
+            'form[alias]': acc.alias,
+            'form[dbmodule]': acc.dbmodule,
+            'form[acctype_adm]': 1,     // менеджеры — полный доступ
+            'form[acctype_b2b2]': 2,    // операторы — только свои
+            submit: 1
+        }
+    });
+}
+```
+
+**2. Написать в `about` → «Настройка»** явную инструкцию: «После установки откройте `/db/access_db`, найдите запись для `custom_{catalog}`, пропишите права ролям».
+
+Список всех `acctype_*` — специфичен для инстанса. Получать через `App.fetch('/db/access_db/sheme.json')`. На `panel.korfix.ru`: acctype_root, acctype_adm, acctype_res, acctype_fin, acctype_ag1..6, acctype_ec1..5, acctype_b2b1..3, acctype_md1..3.
+
 ## Документация
 
-- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/self-provisioning.md` — полный справочник, типы полей, FK-связи
+- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/self-provisioning.md` — полный справочник, типы полей, FK-связи, раздел про access_db
 - `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/data-api.md` — CRUD через App.fetch
