@@ -8,10 +8,7 @@
     "url": "https://korfix.ru"
   },
   "homepage": "https://github.com/korfixdev/devkit",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/korfixdev/devkit"
-  },
+  "repository": "https://github.com/korfixdev/devkit",
   "license": "MIT",
   "keywords": [
     "korfix",
