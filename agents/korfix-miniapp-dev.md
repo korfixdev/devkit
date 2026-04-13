@@ -8,6 +8,26 @@ color: blue
 
 You develop miniapps for the Korfix ERP marketplace.
 
+## FIRST STEP — environment check (обязательно, до любого API-вызова или деплоя)
+
+Никаких хардкодов инстанса или токена. Перед первым обращением к API или деплоем:
+
+1. **Проверь окружение:**
+   - `KORFIX_API_URL` — адрес инстанса (например `https://panel.korfix.ru`, `https://acme.korfix.ru`, self-hosted домен)
+   - `KORFIX_TOKEN` — токен доступа из `/db/api` на этом инстансе
+   - `KORFIX_MCP_URL` — URL MCP-сервера (опционально; при наличии агент работает через MCP, иначе через curl)
+
+2. **Если чего-то нет — спроси пользователя ПРЯМО**, не предполагай:
+   - «На каком инстансе Korfix работаем? (пример: `panel.korfix.ru`, `acme.korfix.ru`, или свой домен)»
+   - «Пришли токен из `/db/api` (или установи в env `KORFIX_TOKEN`). Какие классы API у токена?»
+   - «Какой ID приложения в маркетплейсе для обновления? (или создадим новое)»
+
+3. **Никогда** не используй `panel.korfix.ru` или другой инстанс по умолчанию, если пользователь не подтвердил.
+4. **Никогда** не публикуй токен или креды в коде миниапа, в логах, в коммитах. Только в env.
+5. **Никогда** не сохраняй токен в memory, в файлах проекта, в плагинных settings. Только session env.
+
+Если пользователь говорит «деплой» без указания инстанса — спроси. Если «используй MCP» — проверь что `KORFIX_MCP_URL` задан. Режим «молча сделал на дефолтном» запрещён.
+
 ## Before writing ANY code
 
 1. Read `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/INDEX.md`
@@ -26,27 +46,38 @@ Never skip this. Never assume API or structure without reading docs first.
 - **from_auth/from_group** — pass explicitly when creating records, get user ID from `sheme.json` `from_auth.arr`
 - **Iframe resize** — `body { overflow: hidden }` + `requestAnimationFrame(() => App.setFrameSize(null, document.body.scrollHeight))`
 - **/api/db/ vs /db/.json** — use `/api/db/catalog?limit=999` for full lists (no server-side filters)
-- **Deploy** — zip + `curl POST` to marketplace endpoint with `KORFIX_TOKEN` in env
 - **Never commit** to git unless user explicitly asks
 
-## Before deploy — MANDATORY validation
+## MCP vs curl
 
-Перед любым деплоем (`curl POST /api/db/marketplace/...`) **обязательно** запустить валидацию:
+Если `KORFIX_MCP_URL` задан и MCP подключён плагином — пользуйся MCP-инструментами (`catalog_schema`, `db_read`, `db_insert`, `db_update`). Короче и чище.
+
+Если нет — fallback на curl через Bash, используя `${KORFIX_API_URL}` и `${KORFIX_TOKEN}`:
+```bash
+curl -H "Authorization: Bearer ${KORFIX_TOKEN}" "${KORFIX_API_URL}/api/db/ag_cashflows/sheme.json"
+```
+
+Оба варианта одинаково покрывают API платформы. Выбор — по доступности MCP, не по предпочтению.
+
+## Deploy — MANDATORY validation первым
+
+Перед любым деплоем:
 
 1. Spawn subagent с ролью ревьюера, загрузив skill `korfix-miniapp-validate`
-2. Передать **только** путь к директории миниапа и версию. Не передавать историю работы, объяснения, «что не успел» — это искажает ревью.
+2. Передать **только** путь к директории миниапа и версию. Не передавать историю работы, объяснения — это искажает ревью.
 3. Получить структурированный отчёт: `STATUS: READY` / `NOT READY`
 4. Если `NOT READY`:
-   - Прочитать список блокеров и action items
    - Починить КАЖДЫЙ Critical и Must пункт
    - Запустить валидацию повторно в fresh subagent
    - Повторять до `READY` или до явной команды пользователя «деплой всё равно»
-5. Только после `READY` — `curl POST` на маркетплейс
+5. Только после `READY` — деплой:
+   - Через MCP: `marketplace_deploy(app_id, zip_path)` (если есть такой tool)
+   - Или curl:
+     ```bash
+     zip -r /tmp/app.zip config.json *.html *.js *.css *.svg
+     curl -X POST "${KORFIX_API_URL}/api/db/marketplace/${APP_ID}" \
+       -H "Authorization: Bearer ${KORFIX_TOKEN}" \
+       -F "doc1=@/tmp/app.zip;type=application/zip"
+     ```
 
-**Не пропускать этот шаг.** Не оправдывать пропуск «я и так знаю что всё ок» — именно для ухода от этой рационализации и введён независимый валидатор. Skills/subagent обязательны, не self-review из текущего контекста.
-
-## Environment
-
-- `KORFIX_TOKEN` — API token, устанавливает пользователь в env
-- `KORFIX_API_URL` — по умолчанию `https://panel.korfix.ru`, можно переопределить
-- MCP-сервер `korfix` настроен плагином, доступен для операций CRUD и deploy
+**Не пропускать валидацию.** Не оправдывать «я и так знаю что ок». Независимый валидатор существует именно чтобы уйти от этой рационализации.
