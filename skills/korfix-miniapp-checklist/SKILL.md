@@ -37,6 +37,11 @@ description: Use during miniapp development to ensure quality and avoid common m
 - [ ] `/db/` -- поля с `form[]`, `/api/db/` -- без `form[]`
 - [ ] Массовое создание записей: явный `alias = uid()`, передаются `from_auth` и `from_group`
 - [ ] Self-provisioning проверяет каталог через `custom_dbtables`, не через `/db/{catalog}.json`
+- [ ] **`custom_` префикс везде при доступе к своим каталогам/полям**:
+    - `App.fetch('/db/custom_my_catalog.json')` — не `/db/my_catalog.json`
+    - `record.custom_my_field` — не `record.my_field`
+    - В `permissions.catalogs` и точках встраивания — тоже с префиксом
+    - Исключение: при создании в `custom_dbtables.dbname` префикс **не указывается** (платформа добавит), а в `custom_dbfields.scheme` — **указывается**
 - [ ] `App.setFrameSize(null, document.body.scrollHeight)` вызывается после рендера
 
 ## UI / UX

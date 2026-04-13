@@ -45,6 +45,11 @@ description: Use before deploying a Korfix miniapp to validate it against the re
   - Кликабельные элементы — `<a>` или `<button>`
   - Массовое создание: `alias = uid()`, `from_auth`, `from_group`
   - Self-provisioning: проверка через `custom_dbtables`, а не `/db/{catalog}.json`
+  - **`custom_` префикс при доступе к своим каталогам и полям** — частая ошибка вайбкодинга:
+    - URL: `App.fetch('/db/custom_X.json')`, не `/db/X.json` (FAIL если в коде есть `/db/{name}` где `{name}` совпадает с именем созданного через `custom_dbtables`, без префикса)
+    - Поля: `record.custom_field`, не `record.field` (FAIL если в коде читается имя поля, созданного через `custom_dbfields`, без префикса)
+    - В `permissions.catalogs` и точках встраивания — тоже с префиксом
+    - Evidence: цитата из install-кода (где создавался каталог/поле без префикса) + цитата из usage-кода (где должен быть с префиксом, но нет)
 - **Nice-to-have (WARN, не блокирует):**
   - Оптимизация CSS, читаемость кода
   - Наличие шестерёнки для настроек
