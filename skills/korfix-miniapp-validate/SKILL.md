@@ -50,6 +50,12 @@ description: Use before deploying a Korfix miniapp to validate it against the re
     - Поля: `record.custom_field`, не `record.field` (FAIL если в коде читается имя поля, созданного через `custom_dbfields`, без префикса)
     - В `permissions.catalogs` и точках встраивания — тоже с префиксом
     - Evidence: цитата из install-кода (где создавался каталог/поле без префикса) + цитата из usage-кода (где должен быть с префиксом, но нет)
+  - **Права в `access_db` для новых каталогов** (self-provisioning apps):
+    - После создания `custom_dbtables` платформа автоматически добавляет запись в `access_db`, но **только для root/adm** (остальные роли = 0)
+    - Миниап ДОЛЖЕН либо обновить `access_db` записью с нужными `acctype_*` для ролей, которые будут пользоваться приложением, ЛИБО явно написать в `about` → «Настройка» инструкцию для админа прописать права вручную
+    - FAIL: миниап встраивается в меню/каталоги как виджет для обычных ролей (`acctype_adm`, `acctype_b2b*`, etc.), но установочный код не обновляет `access_db` и в `about` нет инструкции по настройке прав
+    - PASS: либо в install-коде есть вызов `App.fetch('/db/access_db/...?edit&ajax=1')`, либо в `about` → «Настройка» есть текст про access_db с конкретными ролями
+    - Evidence: если FAIL — цитата из `catalogs.{custom_X}.*` или `menu.{...}` в config.json + отсутствие update access_db в install-коде + отсутствие упоминания в about
 - **Nice-to-have (WARN, не блокирует):**
   - Оптимизация CSS, читаемость кода
   - Наличие шестерёнки для настроек
