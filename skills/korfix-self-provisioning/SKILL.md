@@ -105,37 +105,67 @@ document.getElementById('btnInstall')?.addEventListener('click', async () => {
 
 ## Права доступа (access_db) — обязательно
 
-После создания кастомного каталога платформа автоматически создаёт запись в `access_db`, но **только для admin/root**. Обычные роли (менеджер, оператор, клиент и т.д.) **не увидят** каталог.
+После создания кастомного каталога платформа автоматически создаёт запись в `access_db`, но **только для admin/root**. Обычные роли **не увидят** каталог.
 
-Миниап должен либо:
+### Значения acctype_*
 
-**1. Обновить `access_db` после создания каталога:**
+| Значение | Доступ |
+|---|---|
+| `0` | Нет (каталог скрыт) |
+| `1` | Все записи организации (from_group) — для коллаборативных каталогов (задачи, клиенты) |
+| `2` | Только свои записи (from_auth = user_id) — для персональных данных |
+
+### Best default: «self всем ролям» (значение 2)
+
+**Самый типовой кейс — поставить `2` (self) всем ролям.** Каждый видит только то что создал сам. Безопасно, подходит для 80% миниап-сценариев.
+
+Используй готовый хелпер, который подтягивает актуальный список ролей из схемы — не хардкодить роли (они специфичны для инстанса):
 
 ```js
-// Найти auto-created запись access_db
-const acc = (await App.fetch(
-    '/db/access_db.json?form[dbmodule]=custom_quicknotes'
-)).data?.[0];
+async function configureAccess(catalog, defaultValue = 2) {
+    // 1. Список acctype_* полей из схемы текущего инстанса
+    const schema = await App.fetch('/db/access_db/sheme.json');
+    const acctypeFields = Object.keys(schema.data || {})
+        .filter(k => k.startsWith('acctype_'));
 
-if (acc) {
-    // Значения acctype_*: 0=нет, 1=все, 2=только свои
+    // 2. Auto-created запись для каталога
+    const acc = (await App.fetch(
+        `/db/access_db.json?form[dbmodule]=${catalog}`
+    )).data?.[0];
+    if (!acc) return;
+
+    // 3. Body: все роли = defaultValue
+    const body = {
+        'form[id]': acc.id,
+        'form[alias]': acc.alias,
+        'form[dbmodule]': acc.dbmodule,
+        submit: 1,
+    };
+    for (const field of acctypeFields) {
+        body[`form[${field}]`] = defaultValue;
+    }
+
     await App.fetch(`/db/access_db/${acc.alias}?edit&ajax=1`, {
         method: 'POST',
-        body: {
-            'form[id]': acc.id,
-            'form[alias]': acc.alias,
-            'form[dbmodule]': acc.dbmodule,
-            'form[acctype_adm]': 1,     // менеджеры — полный доступ
-            'form[acctype_b2b2]': 2,    // операторы — только свои
-            submit: 1
-        }
+        body
     });
 }
+
+// В installer:
+await configureAccess('custom_my_notes');         // self всем (default 2)
+await configureAccess('custom_shared_tasks', 1);  // все видят все
 ```
 
-**2. Написать в `about` → «Настройка»** явную инструкцию: «После установки откройте `/db/access_db`, найдите запись для `custom_{catalog}`, пропишите права ролям».
+### Когда отклоняться от default
 
-Список всех `acctype_*` — специфичен для инстанса. Получать через `App.fetch('/db/access_db/sheme.json')`. На `panel.korfix.ru`: acctype_root, acctype_adm, acctype_res, acctype_fin, acctype_ag1..6, acctype_ec1..5, acctype_b2b1..3, acctype_md1..3.
+- **`1` (all)** — коллаборативные каталоги: задачи/поручения (вся команда видит), клиенты, сделки, склад. Пример: «написал задачу — её видят все участники»
+- **`0` (нет)** — технические/служебные каталоги, скрытые от конкретных ролей (например, клиенты не должны видеть внутренние заметки)
+- **Смешанно** — если роли реально отличаются (админ=1, менеджер=1, клиент=2)
+
+### Альтернатива: инструкция админу
+
+Если логика прав сложная или зависит от конкретного деплоя — в `about` → «Настройка»:
+> После установки откройте `/db/access_db`, найдите запись для `custom_{catalog}`, пропишите права ролям.
 
 ## Документация
 

@@ -44,7 +44,9 @@ description: Use during miniapp development to ensure quality and avoid common m
     - Исключение: при создании в `custom_dbtables.dbname` префикс **не указывается** (платформа добавит), а в `custom_dbfields.scheme` — **указывается**
 - [ ] **Права `access_db` прописаны для нужных ролей**:
     - По умолчанию после создания кастомного каталога доступ имеют только `acctype_root` и `acctype_adm` (админы). Остальные роли — нет доступа.
-    - Если миниап для обычных ролей (менеджер, оператор, клиент) — обновить `access_db` через API при установке **или** написать в `about` → «Настройка» инструкцию для админа.
+    - **Best default: `2` (self — только свои записи) всем ролям** — безопасно, подходит большинству миниап-случаев
+    - `1` (все записи организации) — только для коллаборативных каталогов (задачи, клиенты, сделки)
+    - Хелпер `configureAccess(catalog, defaultValue)` из skill `korfix-self-provisioning` — универсально применяет значение всем acctype_* (подтягивает список ролей из схемы, без хардкода)
     - Схема access_db: `dbmodule` = полный alias (`custom_X`), `from_group` = тенант, `acctype_*` = 0/1/2 (нет/все/только свои)
 - [ ] `App.setFrameSize(null, document.body.scrollHeight)` вызывается после рендера
 

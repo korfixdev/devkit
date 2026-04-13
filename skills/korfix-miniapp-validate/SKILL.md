@@ -52,9 +52,11 @@ description: Use before deploying a Korfix miniapp to validate it against the re
     - Evidence: цитата из install-кода (где создавался каталог/поле без префикса) + цитата из usage-кода (где должен быть с префиксом, но нет)
   - **Права в `access_db` для новых каталогов** (self-provisioning apps):
     - После создания `custom_dbtables` платформа автоматически добавляет запись в `access_db`, но **только для root/adm** (остальные роли = 0)
-    - Миниап ДОЛЖЕН либо обновить `access_db` записью с нужными `acctype_*` для ролей, которые будут пользоваться приложением, ЛИБО явно написать в `about` → «Настройка» инструкцию для админа прописать права вручную
-    - FAIL: миниап встраивается в меню/каталоги как виджет для обычных ролей (`acctype_adm`, `acctype_b2b*`, etc.), но установочный код не обновляет `access_db` и в `about` нет инструкции по настройке прав
-    - PASS: либо в install-коде есть вызов `App.fetch('/db/access_db/...?edit&ajax=1')`, либо в `about` → «Настройка» есть текст про access_db с конкретными ролями
+    - Миниап ДОЛЖЕН либо обновить `access_db` записью с нужными `acctype_*`, ЛИБО явно написать в `about` → «Настройка» инструкцию для админа прописать права вручную
+    - **Best default для миниапов: `2` (self) всем ролям** через helper `configureAccess(catalog, 2)` (см. skill `korfix-self-provisioning`). Хелпер подтягивает список ролей из `/db/access_db/sheme.json` — без хардкода acctype_*.
+    - PASS: в install-коде есть вызов `App.fetch('/db/access_db/...?edit&ajax=1')` с обновлением acctype_* (предпочтительно через `configureAccess` helper) **ИЛИ** в `about` → «Настройка» есть явный текст про настройку access_db с конкретными ролями
+    - FAIL: миниап встраивается в меню/каталоги для обычных ролей, но install-код НЕ обновляет access_db **И** в `about` НЕТ инструкции по настройке прав — каталог будет невидим для всех кроме админов
+    - WARN: install-код обновляет access_db хардкодя конкретные acctype_* (acctype_adm, acctype_b2b2 и т.п.) вместо `configureAccess`-паттерна — портит переносимость между инстансами, но функционально работает
     - Evidence: если FAIL — цитата из `catalogs.{custom_X}.*` или `menu.{...}` в config.json + отсутствие update access_db в install-коде + отсутствие упоминания в about
 - **Nice-to-have (WARN, не блокирует):**
   - Оптимизация CSS, читаемость кода
