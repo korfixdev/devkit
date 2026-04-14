@@ -1,7 +1,7 @@
 # JS API — VMCRMUserApp
 
 > **См. также:** [config-json.md](config-json.md) · [data-api.md](data-api.md) · [storage-and-hooks.md](storage-and-hooks.md) · [styling.md](styling.md)
-> **← [INDEX](INDEX.md)**
+> **← [Home](index.md)**
 
 Клиентский JS-класс для взаимодействия миниапа с CRM-платформой через `postMessage`.
 
@@ -25,7 +25,7 @@ const App = new VMCRMUserApp();
 | Метод | Возвращает | Описание |
 |-------|-----------|----------|
 | `App.getRequestParams()` | Promise -> `{data: {app_id, domain, catalog, itemId, items, user}}` | Параметры текущего фрейма |
-| `App.getUser()` | Promise -> `{data: {name, group, role, avatar, alias, id}}` | Информация о текущем пользователе |
+| `App.getUser()` | Promise -> `{data: {name, group, role, avatar, alias, id, tarif, tarif_name}}` | Информация о текущем пользователе, включая тариф |
 | `App.getLocation()` | Promise -> `{data: '/db/projects'}` | URL родительского окна |
 | `App.fetch(url, options?)` | Promise -> response | HTTP-запрос от имени пользователя (через родительское окно, минуя CORS) |
 | `App.fetchAll(url, options?)` | Promise -> response | fetch + автосклейка всех страниц пагинации |
@@ -105,13 +105,15 @@ App.getRequestParams().then(resp => {
 
 ```js
 App.getUser().then(resp => {
-  const { name, group, role, avatar, alias, id } = resp.data;
-  // name   — ФИО (author_comment)
-  // group  — ID группы (from_group)
-  // role   — тип аккаунта (account_type, числовой)
-  // avatar — имя файла аватара (doc)
-  // alias  — alias пользователя
-  // id     — хеш логина (md5)
+  const { name, group, role, avatar, alias, id, tarif, tarif_name } = resp.data;
+  // name        — ФИО (author_comment)
+  // group       — ID группы (from_group)
+  // role        — тип аккаунта (account_type, числовой)
+  // avatar      — имя файла аватара (doc)
+  // alias       — alias пользователя
+  // id          — хеш логина (md5)
+  // tarif       — ID тарифа пользователя (строка с числом, напр. "3")
+  // tarif_name  — название тарифа (напр. "Стандарт")
 });
 ```
 
@@ -127,6 +129,46 @@ if (user.data.avatar) {
         `/reimg/data/auth/${user.data.avatar}?80x80`;
 }
 ```
+
+##### Feature gating по тарифу
+
+Поля `tarif` и `tarif_name` приходят сразу в iframe-параметрах (без дополнительного API-запроса). Используй для условного UI:
+
+```js
+const { tarif, tarif_name } = (await App.getUser()).data;
+
+if (tarif === '3' || tarif === '4') {
+    // Стандарт/Премиум — показываем расширенный функционал
+    showAdvancedFeatures();
+} else {
+    // Базовый тариф — показываем заглушку с предложением апгрейда
+    showUpgradePrompt(tarif_name);
+}
+```
+
+Для **полной биллинговой информации** (баланс, скидка, дата платежа, прайсы) — используй endpoint `/api/user/tariff` (см. ниже).
+
+##### `/api/user/tariff` — детальная биллинговая инфа
+
+Если нужны не только название тарифа, но и баланс, скидки, даты — отдельный endpoint:
+
+```js
+const billing = await App.fetch('/api/user/tariff');
+// billing.data:
+// {
+//   tarif: "3",
+//   tarif_name: "Стандарт",
+//   balance: "1500.00",
+//   discount: "10",
+//   discount_date: "2026-06-01",
+//   payment_date: "2026-05-01",
+//   price: "990.00",
+//   discount_3months: "2700.00",
+//   discount_12months: "9900.00"
+// }
+```
+
+Доступен **только по сессии** (через `App.fetch` из миниапа). Для Bearer-токена endpoint вернёт `401 Unauthorized` — это сделано намеренно, биллинг привязан к авторизованной сессии пользователя.
 
 #### fetch(url, options?)
 
@@ -199,4 +241,4 @@ App.off('page.navigated'); // удалить все обработчики
 
 ---
 
-**Дальше:** [data-api.md](data-api.md) · **← [INDEX](INDEX.md)**
+**Дальше:** [data-api.md](data-api.md) · **← [Home](index.md)**

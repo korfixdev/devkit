@@ -4,6 +4,25 @@
 
 Формат — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), версионирование — [SemVer](https://semver.org/).
 
+## [0.3.0] — 2026-04-14
+
+### Added
+
+- **`korfix-token-audit` skill** — проверка возможностей токена ПЕРЕД разработкой: какие каталоги доступны, какие методы. При недостатке доступа агент **обязан спросить** пользователя (расширить токен, выбрать альтернативный каталог, или сделать `custom_X`) — не молча игнорировать.
+- **«SECOND STEP — token audit»** в системном промпте `korfix-miniapp-dev` — обязательный шаг после env-check.
+- **Endpoint discipline в агенте** — явное правило `/db/` (внутри iframe) vs `/api/db/` (curl/тесты, с Bearer). Запрет молча конвертировать одно в другое.
+- **«Не угадывать имена каталогов»** в агенте — при «клиенты» спросить какой именно (`crm_clients`, `ag_clients`, ...), не писать `/db/clients`.
+
+### Changed
+
+- **`korfix-miniapp-validate`** — добавлены два Critical-правила: endpoint mismatch (Bearer-токен в коде миниапа), generic-имя каталога без префикса (`/db/clients`, `/db/users`).
+- **Bundled docs синхронизированы** из `korfixdev/docs` — включая обновлённые self-provisioning (раздел про access_db с разделением «auth vs visibility»), data-api (новый раздел про endpoint discipline), getting-started (блок про curl/api/db/).
+- Убраны legacy-упоминания `vmcrm-apps/` относительных путей из bundled docs.
+
+### Fixed
+
+- Self-provisioning документация про `access_db` теперь явно различает: **сессия/токен — это аутентификация, access_db — это row-level видимость**. Раньше агент путался, утверждая что «у нас есть сессия, access_db не нужен» — это неверно, без access_db каталог возвращает пустой список даже залогиненному пользователю.
+
 ## [0.2.0] — 2026-04-14
 
 ### Added

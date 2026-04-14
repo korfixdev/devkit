@@ -38,6 +38,8 @@ description: Use before deploying a Korfix miniapp to validate it against the re
   - `config.json` не в корне
   - Используются `window.fetch` / `XMLHttpRequest` вместо `App.fetch`
   - Отсутствует `permissions` или каталог используется без объявления
+  - **Endpoint mismatch**: в миниапе (внутри iframe) используется `/api/db/...` с Bearer-токеном — должно быть `/db/...` через `App.fetch` (сессия). Bearer-токен не должен попадать в код миниапа в zip
+  - **Каталог без префикса** который не существует в дефолтных тарифах: `/db/clients`, `/db/users` и подобное — должно быть `/db/crm_clients`, `/db/auth_pers` или явно указанный каталог из доступных. FAIL если используется generic-имя без проверки.
 - **Must (должно быть, один FAIL = NOT READY):**
   - Все 5 разделов в `about`, прямые ссылки `/db/{catalog}` в «Где появляется в CRM»
   - `App.setFrameSize` вызывается

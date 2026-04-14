@@ -1,9 +1,41 @@
 # Работа с данными каталогов
 
 > **См. также:** [js-api.md](js-api.md) · [storage-and-hooks.md](storage-and-hooks.md) · [self-provisioning.md](self-provisioning.md) · [korfix-catalogs.md](korfix-catalogs.md)
-> **← [INDEX](INDEX.md)**
+> **← [Home](index.md)**
 
 CRUD-операции над каталогами, форматы запросов, фильтрация и пагинация.
+
+---
+
+## ⚠️ Ключевое правило: какой endpoint откуда использовать
+
+У Korfix **два разных endpoint'а** для работы с данными — часто путают. Правило простое:
+
+| Откуда делается запрос | Какой endpoint | Авторизация | Формат полей |
+|---|---|---|---|
+| **Внутри iframe миниапа** (`App.fetch`) | `/db/{catalog}.json` | сессия браузера (cookie) | `form[name]=value` |
+| **Снаружи**: curl, тесты, скрипты, серверные интеграции, webhook'и, n8n, Bitrix24 | `/api/db/{catalog}` | `Authorization: Bearer <token>` | `name=value` (плоско) |
+
+**НЕ перепутай:** `/db/` снаружи iframe вернёт 302-редирект на логин (нет сессии), `/api/db/` внутри iframe без токена — 401. Типичная ловушка: агент видит `/db/...` в коде приложения, копирует в curl, получает редирект, начинает «чинить авторизацию» — не надо, просто замени `/db/` на `/api/db/` и добавь Bearer.
+
+### Проверка доступа к каталогу перед разработкой
+
+Всегда начинай с `curl` в `/api/db/` с токеном — чтобы убедиться что токен имеет доступ:
+
+```bash
+# Проверить что токен видит каталог
+curl -sI "https://panel.korfix.ru/api/db/{catalog}?limit=1" \
+  -H "Authorization: Bearer {TOKEN}"
+# HTTP/2 200 — ок, доступ есть
+# HTTP/2 403 — токен не имеет класса db_{catalog}_get (добавить в /db/api)
+# HTTP/2 404 — каталога не существует (проверь имя, особенно префикс custom_)
+
+# Получить список всех доступных токену каталогов
+curl -s "https://panel.korfix.ru/api/db/getcatalogs" \
+  -H "Authorization: Bearer {TOKEN}"
+```
+
+Никогда не делай `curl https://panel.korfix.ru/db/{catalog}.json` — это только для внутри iframe, curl получит 302 на логин.
 
 ---
 
@@ -37,6 +69,10 @@ const resp = await App.fetch('/api/db/projects?token=YOUR_TOKEN');
 
 // getcatalogs — список доступных каталогов
 const catalogs = await App.fetch('/api/db/getcatalogs?token=YOUR_TOKEN');
+
+// /api/user/tariff — тариф и биллинговая инфа текущего пользователя
+const billing = await App.fetch('/api/user/tariff');
+// data: { tarif, tarif_name, balance, discount, discount_date, payment_date, price, ... }
 ```
 
 **Настройка**: `/db/api` -> создать токен -> указать разрешённые классы API.
@@ -464,4 +500,4 @@ TT (задачи), WH (склад), VRN (выездные работы), CRM, с
 
 ---
 
-**Дальше:** [storage-and-hooks.md](storage-and-hooks.md) · **← [INDEX](INDEX.md)**
+**Дальше:** [storage-and-hooks.md](storage-and-hooks.md) · **← [Home](index.md)**
