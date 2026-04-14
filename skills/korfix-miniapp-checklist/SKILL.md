@@ -60,6 +60,8 @@ description: Use during miniapp development to ensure quality and avoid common m
 
 ## Перед отправкой
 
+- [ ] **`README.md` обновлён** — версия в нём совпадает с `config.json`, упомянуты использованные каталоги, custom-каталоги, история изменений. Запусти `korfix-tech-writer` (haiku-агент) если ещё не вызван
+- [ ] **`README.md` включён в zip** — переносит документацию вместе с приложением, нужно для git и для следующих сессий
 - [ ] Деплой через API: `curl -X POST .../api/db/marketplace/{ID}?token={TOKEN} -F "doc1=@app.zip"`
 - [ ] После деплоя проверить версию: `appconfig.version` в ответе соответствует ожидаемой
 - [ ] Приложение открыто в браузере и протестировано (не только задеплоено)

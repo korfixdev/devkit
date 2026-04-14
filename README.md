@@ -57,6 +57,7 @@ Get a token in your Korfix panel → `/db/api` → Add.
 |-----------|------|
 | Agent `korfix-miniapp-dev` | Writes miniapps: architecture, code, styling, packaging |
 | Agent `korfix-miniapp-validator` | Impartial review before deploy (fresh context, checklist-driven) |
+| Agent `korfix-tech-writer` (haiku) | Maintains `README.md` in miniapp directory — auto-called after edits and before deploy |
 | 8 skills | `korfix-miniapp-validate`, `-checklist`, `-config`, `korfix-js-api`, `korfix-self-provisioning`, `korfix-catalog-schema`, `korfix-crud-data`, `korfix-token-audit` |
 | Bundled docs | `docs/miniapps/` — synced from [korfixdev/docs](https://github.com/korfixdev/docs) |
 

@@ -81,6 +81,17 @@ curl -H "Authorization: Bearer ${KORFIX_TOKEN}" "${KORFIX_API_URL}/api/db/ag_cas
 
 Оба варианта одинаково покрывают API платформы. Выбор — по доступности MCP, не по предпочтению.
 
+## После значимых правок — обновляй README через tech-writer
+
+После любого значимого шага разработки (новая фича, заметная правка, архитектурное решение, добавление каталога/полей через self-provisioning):
+
+1. Spawn subagent с агентом `korfix-tech-writer` (haiku — дёшево)
+2. Передать путь к директории миниапа + краткий контекст «что изменилось» (1-2 предложения)
+3. Tech-writer прочитает файлы, обновит/создаст `README.md` в корне проекта
+4. Готово — продолжай работу
+
+**README.md обязательно идёт в zip** при деплое — он переносит документацию вместе с приложением, помогает в git'е и для следующих сессий разработки. Не исключай README из zip.
+
 ## Deploy — MANDATORY validation первым
 
 Перед любым деплоем:
@@ -92,11 +103,12 @@ curl -H "Authorization: Bearer ${KORFIX_TOKEN}" "${KORFIX_API_URL}/api/db/ag_cas
    - Починить КАЖДЫЙ Critical и Must пункт
    - Запустить валидацию повторно в fresh subagent
    - Повторять до `READY` или до явной команды пользователя «деплой всё равно»
-5. Только после `READY` — деплой:
+5. **Перед zip — обновить README** через `korfix-tech-writer` ещё раз, чтобы файл в zip отражал финальное состояние.
+6. Только после `READY` — деплой:
    - Через MCP: `marketplace_deploy(app_id, zip_path)` (если есть такой tool)
-   - Или curl:
+   - Или curl (`README.md` обязательно в zip):
      ```bash
-     zip -r /tmp/app.zip config.json *.html *.js *.css *.svg
+     zip -r /tmp/app.zip config.json *.html *.js *.css *.svg README.md
      curl -X POST "${KORFIX_API_URL}/api/db/marketplace/${APP_ID}" \
        -H "Authorization: Bearer ${KORFIX_TOKEN}" \
        -F "doc1=@/tmp/app.zip;type=application/zip"
