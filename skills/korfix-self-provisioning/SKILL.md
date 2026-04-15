@@ -37,12 +37,16 @@ async function getCurrentUserId() {
 function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 8) }
 
 // Создать каталог
+// ВАЖНО: form[scheme] ОБЯЗАТЕЛЬНО, без него каталог не создастся.
+// Единственное доступное значение сейчас: 'coredb_def_catalog' (template-схема базового каталога).
+// Проверь актуальный список: App.fetch('/db/custom_dbtables/sheme.json') → data.scheme.arr
 await App.fetch('/db/custom_dbtables/add?edit&ajax=1', {
     method: 'POST',
     body: {
         'form[alias]': uid(),
         'form[name]': 'My Catalog',
-        'form[dbname]': 'mycatalog',   // без custom_ префикса
+        'form[dbname]': 'mycatalog',              // без custom_ префикса
+        'form[scheme]': 'coredb_def_catalog',      // ОБЯЗАТЕЛЬНО (template-схема)
         'form[from_auth]': userId,
         'form[from_group]': userId,
         submit: 1
@@ -103,9 +107,26 @@ document.getElementById('btnInstall')?.addEventListener('click', async () => {
 </script>
 ```
 
-## Права доступа (access_db) — обязательно
+## Права доступа (access_db) — обязательно подумать
 
-После создания кастомного каталога платформа автоматически создаёт запись в `access_db`, но **только для admin/root**. Обычные роли **не увидят** каталог.
+После создания `custom_dbtables` (через UI или API) платформа **автоматически создаёт** запись в `access_db` с дефолтом `acctype_root=1, acctype_adm=1` (остальные роли = 0). Это значит:
+
+- Каталог сразу виден **только admin-ролям** (root + администратор)
+- Обычные роли (менеджер, оператор, клиент и т.п.) получат пустой `data: []` при чтении
+- На таблице стоит `UNIQUE (dbmodule, from_auth, from_group)` — и платформа на сервере подставляет `from_group` из сессии/токена (при INSERT в любой каталог с ролевой моделью), так что клиенту передавать `form[from_group]`/`form[from_auth]` руками не нужно — можно опустить
+
+Если миниап предназначен для обычных ролей — **обязательно обновить существующую access_db-запись** под нужную схему доступа. Не создавать новую: в `access_db` одна запись на `(dbmodule, from_group)` — права закодированы в колонках `acctype_*`.
+
+**Анти-паттерн для access_db:** не использовать `from_auth=0` ("общая для группы") для расширения видимости. В других каталогах `from_auth=0` = "запись доступна всей группе", но в `access_db` видимость задаётся самими `acctype_*` колонками. Делать сразу две записи `(catalog, 0, group)` + `(catalog, user, group)` — бессмысленно и запутывает. Всегда одна запись на `(dbmodule, from_group)`.
+
+**Перед созданием каталога для миниапа — спросить пользователя если не ясно из контекста:**
+> Этот каталог — для какой роли видимости?
+> 1. Только админ (оставить дефолт)
+> 2. Персональные данные — каждая роль видит только свои записи (`acctype_* = 2`)
+> 3. Коллаборация — все роли видят все записи (`acctype_* = 1`)
+> 4. Точечно — указать конкретно для каких ролей и как
+
+Не угадывать. От ответа зависит логика `configureAccess`.
 
 ### Значения acctype_*
 
@@ -121,34 +142,41 @@ document.getElementById('btnInstall')?.addEventListener('click', async () => {
 
 Используй готовый хелпер, который подтягивает актуальный список ролей из схемы — не хардкодить роли (они специфичны для инстанса):
 
+Хелпер идемпотентный — **create-or-update**. Если afteradd-запись уже есть (стандартный случай) — обновит её. Если по какой-то причине отсутствует (старая версия платформы / ошибка в afteradd) — создаст.
+
 ```js
 async function configureAccess(catalog, defaultValue = 2) {
-    // 1. Список acctype_* полей из схемы текущего инстанса
+    // 1. Список acctype_* полей из схемы текущего инстанса (не хардкодить)
     const schema = await App.fetch('/db/access_db/sheme.json');
     const acctypeFields = Object.keys(schema.data || {})
         .filter(k => k.startsWith('acctype_'));
 
-    // 2. Auto-created запись для каталога
-    const acc = (await App.fetch(
+    // 2. Искать существующую запись — одна на (dbmodule, from_group сессии)
+    const existing = (await App.fetch(
         `/db/access_db.json?form[dbmodule]=${catalog}`
     )).data?.[0];
-    if (!acc) return;
 
     // 3. Body: все роли = defaultValue
     const body = {
-        'form[id]': acc.id,
-        'form[alias]': acc.alias,
-        'form[dbmodule]': acc.dbmodule,
+        'form[dbmodule]': catalog,
+        'form[name]': catalog,
         submit: 1,
     };
     for (const field of acctypeFields) {
         body[`form[${field}]`] = defaultValue;
     }
+    // from_group/from_auth не передаём — сервер подставит из сессии
 
-    await App.fetch(`/db/access_db/${acc.alias}?edit&ajax=1`, {
-        method: 'POST',
-        body
-    });
+    if (!existing) {
+        // Create
+        body['form[alias]'] = Date.now().toString(36) + Math.random().toString(36).substr(2, 8);
+        await App.fetch('/db/access_db/add?edit&ajax=1', { method: 'POST', body });
+    } else {
+        // Update (не создаём дубль — UNIQUE на (dbmodule, from_auth, from_group))
+        body['form[id]'] = existing.id;
+        body['form[alias]'] = existing.alias;
+        await App.fetch(`/db/access_db/${existing.alias}?edit&ajax=1`, { method: 'POST', body });
+    }
 }
 
 // В installer:

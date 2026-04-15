@@ -37,17 +37,19 @@ description: Use during miniapp development to ensure quality and avoid common m
 - [ ] `/db/` -- поля с `form[]`, `/api/db/` -- без `form[]`
 - [ ] Массовое создание записей: явный `alias = uid()`, передаются `from_auth` и `from_group`
 - [ ] Self-provisioning проверяет каталог через `custom_dbtables`, не через `/db/{catalog}.json`
+- [ ] **При создании `custom_dbtables` передаётся `form[scheme]='coredb_def_catalog'`** — обязательное template-поле. Без него система не создаст таблицу.
 - [ ] **`custom_` префикс везде при доступе к своим каталогам/полям**:
     - `App.fetch('/db/custom_my_catalog.json')` — не `/db/my_catalog.json`
     - `record.custom_my_field` — не `record.my_field`
     - В `permissions.catalogs` и точках встраивания — тоже с префиксом
     - Исключение: при создании в `custom_dbtables.dbname` префикс **не указывается** (платформа добавит), а в `custom_dbfields.scheme` — **указывается**
-- [ ] **Права `access_db` прописаны для нужных ролей**:
-    - По умолчанию после создания кастомного каталога доступ имеют только `acctype_root` и `acctype_adm` (админы). Остальные роли — нет доступа.
-    - **Best default: `2` (self — только свои записи) всем ролям** — безопасно, подходит большинству миниап-случаев
-    - `1` (все записи организации) — только для коллаборативных каталогов (задачи, клиенты, сделки)
-    - Хелпер `configureAccess(catalog, defaultValue)` из skill `korfix-self-provisioning` — универсально применяет значение всем acctype_* (подтягивает список ролей из схемы, без хардкода)
-    - Схема access_db: `dbmodule` = полный alias (`custom_X`), `from_group` = тенант, `acctype_*` = 0/1/2 (нет/все/только свои)
+- [ ] **Права `access_db` — осознанно выбраны под целевую роль/схему**:
+    - После INSERT `custom_dbtables` платформа **автоматически создаёт** запись `access_db` (root+adm=1, остальные=0). Обновлять, не создавать.
+    - Прежде чем писать код — спросить пользователя если не очевидно: для какой роли каталог, как должны работать разные роли (см. skill `korfix-self-provisioning`).
+    - Если для обычных ролей с персональными данными — `configureAccess(catalog, 2)` (каждый видит свои)
+    - Если коллаборация (общие данные) — `configureAccess(catalog, 1)` (все видят все)
+    - Если оставляем только админам — в `about` явно написать «Каталог доступен только администраторам»
+    - Хелпер `configureAccess` подтягивает список ролей из схемы — портируемо между инстансами
 - [ ] `App.setFrameSize(null, document.body.scrollHeight)` вызывается после рендера
 
 ## UI / UX

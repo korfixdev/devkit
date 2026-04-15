@@ -4,6 +4,18 @@
 
 Формат — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), версионирование — [SemVer](https://semver.org/).
 
+## [0.5.0] — 2026-04-15
+
+### Changed
+
+- **`korfix-self-provisioning` skill** — хелпер `configureAccess` теперь идемпотентный create-or-update (раньше ранний `return` если запись отсутствовала). Упомянут UNIQUE `(dbmodule, from_auth, from_group)`, клиенту теперь можно не передавать `form[from_auth]`/`form[from_group]` — сервер подставит из сессии/токена.
+- **`korfix-miniapp-validate` / `korfix-miniapp-checklist` / `korfix-token-audit`** — синхронизированы с новой семантикой access_db и серверной подстановкой from_group/from_auth.
+- **Bundled docs** (`docs/miniapps/self-provisioning.md`, `checklist.md`) — warning-callout про анти-паттерн `from_auth=0` в access_db, раздел про серверную подстановку от April 2026, правки `configureAccess`.
+
+### Added
+
+- **Анти-паттерн callout** про `from_auth=0` в `access_db`: в обычных каталогах это "запись общая для группы", но в access_db видимость для ролей кодируется колонками `acctype_*` — row-ownership через from_auth платформой там не применяется.
+
 ## [0.4.0] — 2026-04-14
 
 ### Added

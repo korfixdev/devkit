@@ -60,7 +60,8 @@ curl -sI "${KORFIX_API_URL}/api/db/{catalog}?limit=1" \
 | Нужен `crm_clients`, у токена нет | Попросить добавить класс `db_crm_clients_get` и `db_crm_clients_post` |
 | Нужен «clients» (без префикса) — нет такого | Уточни — скорее всего имеется в виду `crm_clients` (дефолтный) или `ag_clients` (AG-модуль). Спроси пользователя «какой именно?» — не угадывай |
 | Нужен MCP-инструмент, нет в `/api/db/getcatalogs` | MCP не зависит от каталог-классов токена, это отдельный канал. Если MCP не работает — отдельная диагностика |
-| Создаёшь `custom_X` через self-provisioning | Токен должен иметь `db_custom_dbtables_post`, `db_custom_dbfields_post`, `db_access_db_post` (для прав ролей) |
+| Создаёшь `custom_X` через self-provisioning | Токен должен иметь: `db_custom_dbtables_get`, `db_custom_dbtables_post`, `db_custom_dbfields_post`, `db_access_db_get`, `db_access_db_post` (для настройки прав ролей). Без них self-provisioning зависнет на первом же запросе. |
+| Программный deploy через API | Токен должен иметь: `marketplace_deploy_post` (атомарный endpoint) или `db_marketplace_post` + `marketplace_refresh_post` (два отдельных вызова). См. [docs](../../docs/miniapps/deploy.md). |
 
 ## Интеграция с workflow
 

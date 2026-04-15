@@ -47,19 +47,20 @@ description: Use before deploying a Korfix miniapp to validate it against the re
   - Кликабельные элементы — `<a>` или `<button>`
   - Массовое создание: `alias = uid()`, `from_auth`, `from_group`
   - Self-provisioning: проверка через `custom_dbtables`, а не `/db/{catalog}.json`
+  - **Создание `custom_dbtables` передаёт `form[scheme]='coredb_def_catalog'`** — это обязательное поле, платформа без него отклоняет запрос. FAIL если в install-коде есть POST на `/db/custom_dbtables/add` без `form[scheme]` параметра. Единственное валидное значение сейчас — `coredb_def_catalog`, но валидатор должен проверять сам факт присутствия параметра.
   - **`custom_` префикс при доступе к своим каталогам и полям** — частая ошибка вайбкодинга:
     - URL: `App.fetch('/db/custom_X.json')`, не `/db/X.json` (FAIL если в коде есть `/db/{name}` где `{name}` совпадает с именем созданного через `custom_dbtables`, без префикса)
     - Поля: `record.custom_field`, не `record.field` (FAIL если в коде читается имя поля, созданного через `custom_dbfields`, без префикса)
     - В `permissions.catalogs` и точках встраивания — тоже с префиксом
     - Evidence: цитата из install-кода (где создавался каталог/поле без префикса) + цитата из usage-кода (где должен быть с префиксом, но нет)
   - **Права в `access_db` для новых каталогов** (self-provisioning apps):
-    - После создания `custom_dbtables` платформа автоматически добавляет запись в `access_db`, но **только для root/adm** (остальные роли = 0)
-    - Миниап ДОЛЖЕН либо обновить `access_db` записью с нужными `acctype_*`, ЛИБО явно написать в `about` → «Настройка» инструкцию для админа прописать права вручную
-    - **Best default для миниапов: `2` (self) всем ролям** через helper `configureAccess(catalog, 2)` (см. skill `korfix-self-provisioning`). Хелпер подтягивает список ролей из `/db/access_db/sheme.json` — без хардкода acctype_*.
-    - PASS: в install-коде есть вызов `App.fetch('/db/access_db/...?edit&ajax=1')` с обновлением acctype_* (предпочтительно через `configureAccess` helper) **ИЛИ** в `about` → «Настройка» есть явный текст про настройку access_db с конкретными ролями
-    - FAIL: миниап встраивается в меню/каталоги для обычных ролей, но install-код НЕ обновляет access_db **И** в `about` НЕТ инструкции по настройке прав — каталог будет невидим для всех кроме админов
-    - WARN: install-код обновляет access_db хардкодя конкретные acctype_* (acctype_adm, acctype_b2b2 и т.п.) вместо `configureAccess`-паттерна — портит переносимость между инстансами, но функционально работает
-    - Evidence: если FAIL — цитата из `catalogs.{custom_X}.*` или `menu.{...}` в config.json + отсутствие update access_db в install-коде + отсутствие упоминания в about
+    - После INSERT в `custom_dbtables` платформа **автоматически** создаёт запись `access_db` с дефолтом `acctype_root=1, acctype_adm=1` (остальные 0). Приложение не должно её создавать — только **обновлять** под нужную схему видимости.
+    - Если миниап предназначен для обычных ролей (менеджер, клиент и т.д.) — install-код **должен обновить** `access_db` с `configureAccess(catalog, 2)` (self всем) или `configureAccess(catalog, 1)` (все видят все) или точечной настройкой.
+    - Предпочтительно через helper `configureAccess` (подтягивает acctype_* из схемы — портируемо между инстансами), не хардкодить acctype_adm/acctype_b2b2/etc.
+    - PASS: в install-коде есть `configureAccess(...)` или прямое обновление `/db/access_db/{alias}?edit` с осознанным выбором значений **ИЛИ** приложение только для админов и в `about` явно указано «только для администраторов».
+    - FAIL: миниап встраивается в меню/каталоги для обычных ролей, install-код НЕ обновляет access_db, в `about` не указана роль доступа — юзеры получат пустой data, багрепорт гарантирован.
+    - WARN: хардкод конкретных acctype_* вместо `configureAccess` — работает на текущем инстансе, но поломается на инстансе с другим набором ролей.
+    - Evidence: цитата из `catalogs.{custom_X}.*` или `menu.{...}` в config.json + отсутствие update access_db в install-коде + отсутствие указания роли в about.
 - **Nice-to-have (WARN, не блокирует):**
   - Оптимизация CSS, читаемость кода
   - Наличие шестерёнки для настроек
