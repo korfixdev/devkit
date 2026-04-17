@@ -25,9 +25,11 @@ const App = new VMCRMUserApp();
 const { app_id, domain, catalog, itemId, items, user } = (await App.getRequestParams()).data
 
 // Текущий пользователь (включая тариф)
-const { name, group, role, id, tarif, tarif_name } = (await App.getUser()).data
-// group       = from_group (тенант)
-// id          = хеш логина
+const { name, group, role, id, from_auth, from_group, tarif, tarif_name } = (await App.getUser()).data
+// from_auth   = author_id пользователя (md5 логина) — передавать в form[from_auth] при создании записей
+// from_group  = ID тенанта — передавать в form[from_group] при создании записей
+// group       = то же что from_group (алиас для удобства)
+// id          = то же что from_auth (алиас для удобства)
 // tarif       = ID тарифа (строка с числом, "3")
 // tarif_name  = название тарифа ("Стандарт")
 // Используй для feature gating: if (tarif === '3') showProFeatures()
@@ -44,7 +46,9 @@ App.fetchAll('/db/catalog.json')   // все страницы автоматич
 App.alert('Готово', 'Заголовок')
 App.modal('/db/todo', { title: 'ToDo' })
 App.closeModal()
-App.navigate('/db/projects')
+App.navigate('/db/projects')                         // переход к каталогу
+App.navigate('/db/installed_apps/ALIAS?frame=main&catalog=marketplace')  // открыть установленное приложение
+App.navigate('/db/marketplace/ALIAS')               // открыть карточку в маркетплейсе
 App.reload()
 App.setFrameSize(null, 600)        // только высота
 
@@ -66,6 +70,7 @@ App.off('page.navigated')           // отписать все
 - **Никогда не использовать `fetch()` напрямую** — CORS. Только `App.fetch()`.
 - URL в `App.fetch()` — только относительные (без домена).
 - Body передаётся как объект, преобразуется в URLSearchParams.
+- **Ресурсы платформы — абсолютные пути**: аватары `/reimg/data/auth/{doc}?80x80`, файлы каталогов `/data/db/f_{catalog}/{doc}`, иконки приложений `/data/db/f_marketplace/{doc}`. Относительные пути в iframe резолвятся к store-URL архива приложения, а не к CRM-домену.
 
 ## Документация
 

@@ -8,32 +8,23 @@ Provides AI agents, skills, and optional MCP connection. After installation, Cla
 
 ## Install
 
-The plugin is distributed via the [Korfix Marketplace](https://github.com/korfixdev/marketplace). Add the marketplace once, then install plugins from it.
+The plugin is distributed via the [Korfix Marketplace](https://github.com/korfixdev/marketplace).
 
-**New Claude Code (interactive `/plugin` UI):**
+**Step 1 — Add Korfix marketplace** (once, before installing any plugin)
 
-1. Type `/plugin` in Claude Code
-2. Choose **Add marketplace** → paste `korfixdev/marketplace`
-3. Once added, find `korfix-devkit` in the list → **Install**
-
-**Older Claude Code (commands):**
+In Claude Code, type `/plugin` → **Add marketplace** → paste:
 
 ```
-/plugin marketplace add korfixdev/marketplace
+korfixdev/marketplace
+```
+
+**Step 2 — Install korfix-devkit**
+
+```
 /plugin install korfix-devkit@korfixdev
 ```
 
-**Manual install** (any version, fallback):
-
-```bash
-git clone https://github.com/korfixdev/devkit ~/.claude/plugins/korfix-devkit
-```
-
-Then enable in Claude Code settings.
-
-### After install — activate in current session
-
-After installing, the plugin is **not active in your current Claude session yet**. To use it immediately:
+**Step 3 — Activate in current session**
 
 ```
 /reload-plugins
@@ -41,15 +32,37 @@ After installing, the plugin is **not active in your current Claude session yet*
 
 Or just restart Claude Code — plugins load automatically on the next start.
 
+**Manual install** (any version, fallback):
+
+```bash
+git clone https://github.com/korfixdev/devkit ~/.claude/plugins/korfix-devkit
+```
+
+Then enable in Claude Code settings → reload.
+
 ## Setup
 
 ```bash
-export KORFIX_API_URL="https://panel.korfix.ru"                      # your Korfix instance
-export KORFIX_TOKEN="your-token-from-db-api"                         # required
-export KORFIX_MCP_URL="https://mcp.korfix.ru/${KORFIX_TOKEN}/sse"    # optional, enables MCP mode
+export KORFIX_API_URL="https://panel.korfix.ru"   # your Korfix instance
+export KORFIX_TOKEN="your-token-from-db-api"       # required
 ```
 
 Get a token in your Korfix panel → `/db/api` → Add.
+
+**Optional: MCP mode** — agents work via `curl` by default. To enable MCP, get your personal MCP URL from your Korfix panel (available after login), then add it to `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "korfix": {
+      "type": "sse",
+      "url": "YOUR_MCP_URL_FROM_KORFIX_PANEL"
+    }
+  }
+}
+```
+
+When MCP is connected, agents automatically use `catalog_schema` / `db_read` / `db_insert` / `db_update` tools instead of curl.
 
 ## What's inside
 
@@ -101,20 +114,29 @@ info@korfix.ru
 
 ## Установка
 
-Плагин распространяется через [маркетплейс Korfix](https://github.com/korfixdev/marketplace). Добавь маркетплейс один раз — потом устанавливай плагины из него.
+Плагин распространяется через [маркетплейс Korfix](https://github.com/korfixdev/marketplace).
 
-**Новый Claude Code (интерактивный `/plugin` UI):**
+**Шаг 1 — Добавь маркетплейс Korfix** (один раз, перед установкой любого плагина)
 
-1. Набери `/plugin` в Claude Code
-2. Выбери **Add marketplace** → вставь `korfixdev/marketplace`
-3. После добавления найди `korfix-devkit` в списке → **Install**
-
-**Старый Claude Code (командой):**
+В Claude Code набери `/plugin` → **Add marketplace** → вставь:
 
 ```
-/plugin marketplace add korfixdev/marketplace
+korfixdev/marketplace
+```
+
+**Шаг 2 — Установи korfix-devkit**
+
+```
 /plugin install korfix-devkit@korfixdev
 ```
+
+**Шаг 3 — Активируй в текущей сессии**
+
+```
+/reload-plugins
+```
+
+Либо перезапусти Claude Code — плагины подтянутся автоматически при следующем старте.
 
 **Ручная установка** (любая версия, fallback):
 
@@ -122,27 +144,31 @@ info@korfix.ru
 git clone https://github.com/korfixdev/devkit ~/.claude/plugins/korfix-devkit
 ```
 
-Потом включи в настройках Claude Code.
-
-### После установки — активация в текущей сессии
-
-После установки плагин **ещё не активен в текущей сессии Claude**. Чтобы пользоваться сразу:
-
-```
-/reload-plugins
-```
-
-Либо просто перезапусти Claude Code — при следующем старте плагины подтянутся автоматически.
+Потом включи в настройках Claude Code → перезагрузи.
 
 ## Настройка
 
 ```bash
-export KORFIX_API_URL="https://panel.korfix.ru"                      # адрес твоего инстанса
-export KORFIX_TOKEN="your-token-from-db-api"                         # обязательно
-export KORFIX_MCP_URL="https://mcp.korfix.ru/${KORFIX_TOKEN}/sse"    # опционально, для MCP-режима
+export KORFIX_API_URL="https://panel.korfix.ru"   # адрес твоего инстанса
+export KORFIX_TOKEN="your-token-from-db-api"       # обязательно
 ```
 
 Получить токен — в панели Korfix → `/db/api` → Добавить.
+
+**Опционально: MCP-режим** — агенты по умолчанию работают через `curl`. Чтобы включить MCP, возьми персональный MCP URL из панели Korfix (доступен после входа) и добавь в `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "korfix": {
+      "type": "sse",
+      "url": "YOUR_MCP_URL_FROM_KORFIX_PANEL"
+    }
+  }
+}
+```
+
+При подключённом MCP агенты автоматически используют инструменты `catalog_schema` / `db_read` / `db_insert` / `db_update` вместо curl.
 
 ## Что внутри
 
