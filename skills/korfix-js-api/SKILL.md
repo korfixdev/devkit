@@ -25,14 +25,16 @@ const App = new VMCRMUserApp();
 const { app_id, domain, catalog, itemId, items, user } = (await App.getRequestParams()).data
 
 // Текущий пользователь (включая тариф)
-const { name, group, role, id, from_auth, from_group, tarif, tarif_name } = (await App.getUser()).data
-// from_auth   = author_id пользователя (md5 логина) — передавать в form[from_auth] при создании записей
+const { name, from_auth, from_group, alias, role, avatar, tarif, tarif_name } = (await App.getUser()).data
+// from_auth   = author_id пользователя — передавать в form[from_auth] при создании записей
 // from_group  = ID тенанта — передавать в form[from_group] при создании записей
-// group       = то же что from_group (алиас для удобства)
-// id          = то же что from_auth (алиас для удобства)
-// tarif       = ID тарифа (строка с числом, "3")
-// tarif_name  = название тарифа ("Стандарт")
-// Используй для feature gating: if (tarif === '3') showProFeatures()
+// alias       = md5(login) — идентификатор пользователя в системе приложений
+// name        = ФИО (author_comment)
+// role        = тип аккаунта (account_type, числовой)
+// avatar      = имя файла аватара → /reimg/data/auth/{avatar}?80x80
+// tarif       = ID тарифа (строка с числом, "7")
+// tarif_name  = название тарифа ("Премиум")
+// Используй для feature gating: if (tarif === '7') showProFeatures()
 
 // Полная биллинг-инфа (баланс, скидки, даты, прайсы):
 const billing = await App.fetch('/api/user/tariff')

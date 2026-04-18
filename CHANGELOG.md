@@ -4,6 +4,19 @@
 
 Формат — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), версионирование — [SemVer](https://semver.org/).
 
+## [0.7.4] — 2026-04-18
+
+### Fixed
+
+- **`korfix-js-api` skill + `docs/miniapps/js-api.md`** — исправлена структура `getUser()`: поля `group` и `id` переименованы в `from_group` и `alias` соответственно; добавлено `from_auth` (author_id для `form[from_auth]`), `avatar`. Убраны несуществующие поля `group`/`id`.
+- **`docs/miniapps/deploy.md`** — добавлен полный флоу создания приложения с нуля: `POST /api/db/marketplace/add` с `name=AppName` + zip без `form[]` обёртки. Добавлены эндпоинты `/api/marketplace/deploy/{id}` (upload + auto-refresh) и `/api/marketplace/refresh/{id}` (только кеш). CI/CD скрипт обновлён на предпочтительный `deploy` эндпоинт.
+
+## [0.7.3] — 2026-04-18
+
+### Fixed
+
+- **korfix-crud-data** skill description расширен: теперь явно покрывает не только iframe/миниапы, но и любые операции с каталогами Korfix — деплой, маркетплейс, серверные скрипты, прямые API-вызовы. Добавлено различие `/db/` (сессия) vs `/api/db/` (Bearer токен).
+
 ## [0.7.2] — 2026-04-17
 
 ### Fixed
