@@ -1,6 +1,6 @@
 ---
 name: korfix-crud-data
-description: Use when a Korfix miniapp needs to create, read, update, or delete catalog records through App.fetch inside iframe. Covers /db/ endpoint form[] format, alias generation, from_auth/from_group requirements, and response normalization.
+description: Use when working with Korfix catalog data in any context — miniapp iframe (App.fetch), server-side scripts, deployment tools, or direct API calls. Covers /db/ endpoint (session auth) vs /api/db/ (Bearer token) differences, marketplace record operations, form[] format, alias generation, from_auth/from_group requirements, and response normalization.
 ---
 
 # korfix-crud-data
@@ -89,6 +89,8 @@ App.fetch('/api/db/tt_tasks?filter[status]=open&order_by=created&order=DESC&limi
 
 ## Документация
 
-- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/data-api.md` — полный справочник с параметрами и примерами
+Перед работой с CRUD прочитай:
+
+- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/data-api.md` — полный справочник: `/db/` vs `/api/db/`, сессионный кеш фильтров (`not_cache=1`), hidden-поля и `select=`, нормализация ответа
 - `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/korfix-catalogs.md` — список доступных каталогов
 - `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/self-provisioning.md` — работа с кастомными каталогами (префикс `custom_`)

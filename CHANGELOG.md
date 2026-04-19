@@ -4,6 +4,14 @@
 
 Формат — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), версионирование — [SemVer](https://semver.org/).
 
+## [0.8.0] — 2026-04-19
+
+### Changed
+
+- **`docs/miniapps/deploy.md`** — исправлена рекомендация по деплою: `POST /api/db/marketplace/{ID}` — основной эндпоинт (уведомляет store через внутренний хук); `/api/marketplace/deploy/{ID}` переопределён как удобный алиас «update + refresh» без статуса «предпочтительного». CI/CD скрипт обновлён.
+- **`docs/miniapps/data-api.md`** — добавлен раздел «Сессионный кеш фильтров»: когда кеш применяется (только при `ajax=1` + совпадение Referer-пути), поведение `not_cache=1` (только запись, не чтение), `/api/db/` и hidden-поля схемы (`from_group`/`from_auth` — через `select=`).
+- **`skills/korfix-crud-data`** — удалён дублированный контент; секции про кеш фильтров и hidden-поля перенесены в `data-api.md`, скилл ссылается на docs.
+
 ## [0.7.4] — 2026-04-18
 
 ### Fixed
