@@ -195,6 +195,50 @@ await configureAccess('custom_shared_tasks', 1);  // все видят все
 Если логика прав сложная или зависит от конкретного деплоя — в `about` → «Настройка»:
 > После установки откройте `/db/access_db`, найдите запись для `custom_{catalog}`, пропишите права ролям.
 
+## MCP-доступ к кастомным каталогам
+
+После self-provisioning кастомный каталог **не виден через MCP по умолчанию**. MCP-агент обнаруживает каталоги через `/api/db/getcatalogs`, который читает поле `custom_catalogs` токена. Поле не заполняется автоматически при создании каталога.
+
+**Способ 1 — Вручную:** `/db/api` → токен → поле «Доступ к кастомным каталогам» → выбрать нужные → сохранить.
+
+**Способ 2 — Из install-фрейма** (требует `db_api_get` + `db_api_post` в `apiclasses_id` токена):
+
+```js
+async function registerCatalogForMCP(catalogAlias, tokenAlias) {
+    if (!tokenAlias) return
+    const apiResp = await App.fetch(`/db/api.json?form[alias]=${encodeURIComponent(tokenAlias)}`)
+    const apiRecord = apiResp?.data?.[0]
+    if (!apiRecord) return
+
+    const existing = (apiRecord.custom_catalogs || '').split(',').map(s => s.trim()).filter(Boolean)
+    const toAdd = [`db_${catalogAlias}_get`, `db_${catalogAlias}_post`].filter(a => !existing.includes(a))
+    if (!toAdd.length) return
+
+    const resp = await App.fetch(`/db/api/${apiRecord.alias}?edit&ajax=1`, {
+        method: 'POST',
+        body: {
+            'form[id]': apiRecord.id,
+            'form[alias]': apiRecord.alias,
+            'form[custom_catalogs]': [...existing, ...toAdd].join(','),
+            submit: 1
+        }
+    })
+    if (!resp || resp.status === 'error' || resp.status === 'no') {
+        throw new Error(`registerCatalogForMCP failed: ${resp?.message || JSON.stringify(resp)}`)
+    }
+}
+
+// В runInstall() — опциональный шаг, MCP-интеграция необязательна:
+try {
+    await registerCatalogForMCP('custom_quicknotes', tokenAlias)
+    logLine('✓ Каталог зарегистрирован для MCP')
+} catch (e) {
+    logLine(`⚠ MCP-регистрация пропущена: ${e.message} — добавьте вручную в /db/api`)
+}
+```
+
+`tokenAlias` — из контекста установки (спросить пользователя или взять из параметров фрейма). **Не хардкодить** в коде приложения.
+
 ## Документация
 
 - `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/self-provisioning.md` — полный справочник, типы полей, FK-связи, раздел про access_db

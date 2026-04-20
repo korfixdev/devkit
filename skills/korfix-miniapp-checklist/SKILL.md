@@ -52,6 +52,19 @@ description: Use during miniapp development to ensure quality and avoid common m
     - Хелпер `configureAccess` подтягивает список ролей из схемы — портируемо между инстансами
 - [ ] `App.setFrameSize(null, document.body.scrollHeight)` вызывается после рендера
 
+## Фреймы
+
+- [ ] **`install`-фрейм** (если есть self-provisioning):
+  - [ ] Каждый мутирующий `App.fetch` → статус ответа проверяется явно (`resp.status === 'error'` → throw)
+  - [ ] Лог устновки сохраняется в `App.storage` — ключ `install.log`
+  - [ ] При повторном открытии: показывает сохранённый лог + «Переустановить» + «Закрыть»
+  - [ ] Если `urls.widget` есть — в конце install вызывается `installWidgetOnDashboard(token)`
+  - [ ] После установки переходит в `main`: `App.navigate('/db/installed_apps/${token}?frame=main')`
+- [ ] **`main`-фрейм** (если есть `urls.install`): при загрузке проверяет `checkCatalogExists`, иначе `App.navigate(... frame=install)`
+- [ ] **`widget`-фрейм**: `permissions.catalogs` содержит `"dashboard_widgets": ["read", "write"]`
+
+Полный паттерн install + виджет + ответы API → `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/frames.md`
+
 ## UI / UX
 
 - [ ] Пустое состояние: если данных нет -- осмысленное сообщение, не ошибка

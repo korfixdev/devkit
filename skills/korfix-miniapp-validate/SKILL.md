@@ -61,6 +61,14 @@ description: Use before deploying a Korfix miniapp to validate it against the re
     - FAIL: миниап встраивается в меню/каталоги для обычных ролей, install-код НЕ обновляет access_db, в `about` не указана роль доступа — юзеры получат пустой data, багрепорт гарантирован.
     - WARN: хардкод конкретных acctype_* вместо `configureAccess` — работает на текущем инстансе, но поломается на инстансе с другим набором ролей.
     - Evidence: цитата из `catalogs.{custom_X}.*` или `menu.{...}` в config.json + отсутствие update access_db в install-коде + отсутствие указания роли в about.
+- **Фреймы (frame conventions из `docs/miniapps/frames.md`):**
+  - **Critical:** `main.html` присутствует + `urls.install` объявлен, но в `main.html` нет `checkCatalogExists` или `App.navigate(... frame=install)` → FAIL
+  - **Critical:** `install.html` содержит мутирующие `App.fetch` (POST на `/db/.../add`, `/db/.../edit`, запись в каталоги) — **каждый** такой вызов должен иметь проверку `if (!resp || resp.status === 'error' || resp.status === 'no') throw new Error(...)`. Проверять не только финальный шаг, но каждый: создание каталога, создание полей, `configureAccess`, `registerCatalogForMCP`. Один пропущенный check → FAIL (пользователь думает что установка прошла, каталог не создался)
+  - **Must:** `urls.widget` объявлен + `urls.install` объявлен, но в `install.html` нет `installWidgetOnDashboard` или аналога → WARN («виджет не установится автоматически при инсталляции»)
+  - **Must:** `urls.widget` объявлен, но `permissions.catalogs` не содержит `dashboard_widgets` → WARN
+  - **Must-WARN:** `install.html` создаёт `custom_dbtables` (есть POST на `/db/custom_dbtables/add`), но нет вызова `registerCatalogForMCP` и в `about`/install-UI нет текста про «добавьте токену доступ к каталогу» → WARN («кастомный каталог не будет виден через MCP — добавьте регистрацию или инструкцию для пользователя»)
+  - Evidence для Must: цитата из `install.html` (отсутствие вызова) + поле `urls.widget` из `config.json`
+
 - **Nice-to-have (WARN, не блокирует):**
   - Оптимизация CSS, читаемость кода
   - Наличие шестерёнки для настроек
@@ -116,6 +124,7 @@ STATUS: NOT READY
 ## Документация
 
 - `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/checklist.md` — rubric (источник правды, читать при каждом запуске)
+- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/frames.md` — стандарты фреймов: install/main/footer/widget, паттерны, правила проверки
 - `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/deploy.md` — что означает готовность к релизу
 - `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/config-json.md` — спека config.json для верификации
 

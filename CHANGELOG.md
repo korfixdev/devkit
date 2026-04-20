@@ -4,6 +4,35 @@
 
 Формат — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), версионирование — [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+## [0.10.0] — 2026-04-21
+
+### Added
+
+- **`korfix-self-provisioning`** — новый раздел «MCP-доступ к кастомным каталогам»: паттерн `registerCatalogForMCP`, два пути (ручной UI + автоматика из install-фрейма)
+- **`korfix-miniapp-validate`** — расширена Critical-проверка install-ответов: каждый мутирующий `App.fetch`, не только последний; новое Must-WARN для кастомных каталогов без MCP-регистрации
+- **`korfix-token-audit`** — обновлена строка про MCP и кастомные каталоги: указывает на поле `custom_catalogs` и `registerCatalogForMCP`
+- **`docs/miniapps/self-provisioning.md`** — раздел «MCP-доступ к кастомным каталогам после установки»
+- **`docs/miniapps/checklist.md`** — пункт про регистрацию кастомного каталога для MCP
+
+## [0.9.0] — 2026-04-20
+
+### Added
+
+- **`docs/miniapps/frames.md`** — новый документ: стандарты и соглашения для типов фреймов (`install`, `main`, `footer`, `widget`). Описывает роль каждого фрейма, обязательные требования, паттерн авто-установки виджета на первый дашборд при install, правило обязательной проверки статуса ответа `App.fetch` в мутирующих запросах.
+- **Валидатор** (`korfix-miniapp-validate`) — новые правила:
+  - Critical: `main.html` без `checkCatalogExists` / `App.navigate(frame=install)` при наличии `urls.install`
+  - Critical: `install.html` с мутирующими `App.fetch` без проверки `resp.status`
+  - Must-WARN: `urls.widget` есть + `urls.install` есть, но нет авто-установки виджета при install
+  - Must-WARN: `urls.widget` без `permissions.catalogs.dashboard_widgets`
+- **Чеклист** (`korfix-miniapp-checklist`) — новый раздел «Фреймы»: install-лог, авто-виджет, redirect main→install, permissions для widget
+- **docs.korfix.info** — новая страница [Update plugins](https://docs.korfix.info/plugin-update/) (EN + RU): ручное обновление через `/plugin marketplace update korfixdev` + `/reload-plugins`, авто-обновление через `/plugin` → Marketplaces → Auto-update, env-флаги `DISABLE_AUTOUPDATER` / `FORCE_AUTOUPDATE_PLUGINS`.
+
+### Changed
+
+- **`docs/miniapps/index.md`** — добавлен раздел «Архитектура приложения» с ссылкой на `frames.md`; таблица «задача → файлы» дополнена строкой про фреймы
+
 ## [0.8.0] — 2026-04-19
 
 ### Changed

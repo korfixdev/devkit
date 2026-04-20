@@ -42,6 +42,11 @@
 | [access-statuses.md](access-statuses.md) | `access_statuses` — права на статусы по ролям |
 | [bitrix24-sync.md](bitrix24-sync.md) | `bitrix24_sync` — двусторонняя синхронизация с Bitrix24 |
 
+### Архитектура приложения
+| Файл | Описание |
+|------|----------|
+| [frames.md](frames.md) | Стандартные типы фреймов: `install`, `main`, `footer`, `widget` — соглашения и паттерны |
+
 ### Фичи платформы
 | Файл | Описание |
 |------|----------|
@@ -68,6 +73,7 @@
 | Добавить пункт главного меню | [config-json.md](config-json.md) + [getting-started.md](getting-started.md) |
 | Читать/писать данные каталога | [data-api.md](data-api.md) + [js-api.md](js-api.md) |
 | Создать свой каталог при установке | [self-provisioning.md](self-provisioning.md) + [data-api.md](data-api.md) |
+| Структурировать фреймы (install/main/widget) | [frames.md](frames.md) |
 | Реагировать на сохранение записи | [catalog-rules.md](catalog-rules.md) (декларативно) **или** [storage-and-hooks.md](storage-and-hooks.md) (вебхук) |
 | Сделать виджет дашборда | [dashboards.md](dashboards.md) + [config-json.md](config-json.md) |
 | Объединить данные двух каталогов | [db-views.md](db-views.md) |
