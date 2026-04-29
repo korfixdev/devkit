@@ -6,6 +6,20 @@
 
 ## [Unreleased]
 
+## [0.11.0] — 2026-04-22
+
+### Added
+
+- **Agent `korfix-gamedev`** — специализированный агент для разработки игровых миниапов (на модуле `korgames`): Korn-экономика, квесты, лидерборды, кросс-игровой профиль, in-game shop, avatar upload. Читает `docs.korfix.info/gamedev/*` и эталоны `etalon-apps/games-hub/`, `etalon-apps/coin-clicker/`.
+- **Skill `korfix-gamedev`** — точка входа со справкой по API, конвенциям и эталонам для агента и разработчика.
+
+### Changed
+
+- **`korfix-analyst`** — раздел «Игровые миниапы»: direct'ит на `korfix-gamedev` если идея игровая; расширенный discovery для gamedev (earn/spend/social/повторяемость).
+- **`korfix-architect`** — блок про gamedev в «документации»: концепты эмиссии, reward_mode, cross-game profile, package convention.
+- **`korfix-miniapp-validator`** — дополнительная проверка gamedev-правил если config имеет секцию `korgames` или `package` начинается с `game-` (сравнение с checklist.md на docs.korfix.info/gamedev).
+- **`korfix-miniapp-dev`** — отсылка на `korfix-gamedev` если задача про игру/гамификацию.
+
 ## [0.10.0] — 2026-04-21
 
 ### Added

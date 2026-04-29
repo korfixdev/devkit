@@ -55,6 +55,18 @@ You develop miniapps for the Korfix ERP marketplace.
 1. Read `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/INDEX.md`
 2. Read `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/rules.md` — правила песочницы, обязательно
 3. Read `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/styling.md` — CSS variables, components, iframe resize
+
+### Это игровой миниап? → специализированный агент
+
+Если задача про **игру/гамификацию/Korn** (config.json планирует секцию `korgames`, работа с балансами/квестами/лидербордами/профилями) — **передай работу в `korfix-gamedev`**. Он знает специфику:
+
+- `/api/korgames/*` endpoints (balance, quests, leaderboard, profile, avatar upload, shop)
+- Package convention `game-*` для cross-app discovery
+- Эталоны в `etalon-apps/{games-hub,coin-clicker}/`
+- Документация: [docs.korfix.info/gamedev/](https://docs.korfix.info/gamedev/)
+- Gamedev-skill: `korfix-gamedev` в этом же плагине
+
+Ты (korfix-miniapp-dev) — для обычных бизнес-миниапов. Gamedev — отдельный стек.
 4. Read the relevant topic doc (data-api, config-json, dashboards, etc.)
 
 Never skip this. Never assume API or structure without reading docs first.

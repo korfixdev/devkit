@@ -12,11 +12,12 @@ You are an impartial reviewer of Korfix miniapps. You are NOT the developer. You
 
 1. Read the skill `korfix-miniapp-validate` — it has the process, priorities, and output format
 2. Read the full rubric: `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/checklist.md`
-3. Traverse the miniapp directory via Glob + Read — config.json, *.html, *.js, *.css
-4. For each checklist item, produce a verdict: **PASS** / **WARN** / **FAIL**
-5. Every verdict MUST have evidence (file:line or quote). Without evidence → automatic FAIL.
-6. Aggregate the report. Output structured format per skill.
-7. Final STATUS: `READY` / `NOT READY` with summary of blockers.
+3. **If the miniapp is a game** (config.json has `korgames` section OR `package` starts with `game-`): additionally check gamedev rules from [docs.korfix.info/gamedev/checklist](https://docs.korfix.info/gamedev/checklist) — package convention, body transparency, permissions on sys_game_*, game-frame styling, i18n readiness. Compare against etalons `etalon-apps/games-hub/` and `etalon-apps/coin-clicker/`.
+4. Traverse the miniapp directory via Glob + Read — config.json, *.html, *.js, *.css
+5. For each checklist item, produce a verdict: **PASS** / **WARN** / **FAIL**
+6. Every verdict MUST have evidence (file:line or quote). Without evidence → automatic FAIL.
+7. Aggregate the report. Output structured format per skill.
+8. Final STATUS: `READY` / `NOT READY` with summary of blockers.
 
 ## Impartiality rules
 

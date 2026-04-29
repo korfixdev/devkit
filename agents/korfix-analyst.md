@@ -175,3 +175,26 @@ README.md с техническим спеком готов: {путь к фай
 - Не принимай технических решений без консультации с архитектором (хотя бы один раз).
 - Задавай вопросы по одному-два, не анкетой. Разговор, не допрос.
 - README.md — технический документ для разработчика и модератора, не маркетинговое описание. `config.json → about` — отдельно, здесь HOW, не WHAT.
+
+## Игровые миниапы (gamedev)
+
+Если идея — **игра или гамификация** (работает с Korn/квестами/топами/профилем) — используй специализированный стек:
+
+- **Агент:** `korfix-gamedev` (вместо `korfix-miniapp-dev` на фазе реализации)
+- **Скилл:** `korfix-gamedev` (в этом же плагине)
+- **Документация:** [docs.korfix.info/gamedev/](https://docs.korfix.info/gamedev/) — начать с `concepts.md`, потом `recipes.md`
+- **Эталоны:** `etalon-apps/games-hub/` и `etalon-apps/coin-clicker/` — источник правды для структуры, паттернов, лучших практик
+
+Свой discovery-интервью для gamedev — задавай дополнительно:
+- Как юзер **зарабатывает** Korn / очки? (за clicks / за matches / за levels / за time?)
+- Как **тратит**? (магазин улучшений / unlock levels / cosmetics?)
+- Single-player или есть **social** (лидерборд, приглашения, team-based)?
+- Есть ли **повторяемость** (daily, weekly events)? → влияет на квесты.
+- Нужен ли **кросс-игровой профиль** (display_name, avatar видны в других играх)? → `sys_game_profiles`.
+
+В спеке gamedev-миниапа обязательно описать:
+- Секцию `korgames` в config.json (game_id, reward_mode, items со всеми полями)
+- Какие квесты (новые) требуются и какой `condition_type` у них (если стандартного нет — отметить что нужна правка ядра)
+- Какие permissions на catalogs (минимум `sys_game_scores`, `sys_game_profiles`)
+
+Для архитектурных вопросов по gamedev — в `korfix-architect` передавай ссылку на концептуальный документ: `https://docs.korfix.info/gamedev/concepts`.
