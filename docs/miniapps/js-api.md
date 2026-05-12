@@ -24,11 +24,13 @@ const App = new VMCRMUserApp();
 
 | Метод | Возвращает | Описание |
 |-------|-----------|----------|
-| `App.getRequestParams()` | Promise -> `{data: {app_id, domain, catalog, itemId, items, user}}` | Параметры текущего фрейма |
-| `App.getUser()` | Promise -> `{data: {name, from_auth, from_group, alias, role, avatar, tarif, tarif_name}}` | Информация о текущем пользователе, включая тариф |
+| `App.getRequestParams()` | Promise -> `{data: {app_id, domain, catalog, itemId, items, user}}` | Параметры текущего фрейма. Результат кешируется — повторные вызовы мгновенные |
+| `App.getUser()` | Promise -> `{data: {name, from_auth, from_group, alias, role, avatar, tarif, tarif_name}}` | Информация о текущем пользователе, включая тариф. Результат кешируется |
 | `App.getLocation()` | Promise -> `{data: '/db/projects'}` | URL родительского окна |
-| `App.fetch(url, options?)` | Promise -> response | HTTP-запрос от имени пользователя (через родительское окно, минуя CORS) |
+| `App.fetch(url, options?)` | Promise -> response | HTTP-запрос от имени пользователя. Дедупликация параллельных запросов с одинаковым URL |
 | `App.fetchAll(url, options?)` | Promise -> response | fetch + автосклейка всех страниц пагинации |
+| `App.prefetch(url)` | void | Запустить фетч в фоне заранее. Когда `App.fetch(url)` вызовется позже — вернёт готовые данные мгновенно |
+| `App.done()` | Promise | Сигнал "установка завершена" из install-фрейма. Setup-экран платформы немедленно переходит к следующему приложению |
 | `App.navigate(url)` | void | SPA-переход родительского окна (без перезагрузки) |
 | `App.reload()` | void | Перезагрузка родительского окна |
 | `App.modal(content, options?)` | void | Открыть модалку: текст, объект или URL |
@@ -71,6 +73,31 @@ App.on('*', ({event, data}) => {
 Фрейм автоматически репортит высоту контента через `ResizeObserver`.
 Хост подхватывает и обновляет размер iframe. `App.setFrameSize()` по-прежнему
 работает как ручной override.
+
+### Абсолютные пути для ресурсов платформы
+
+Миниап живёт в изолированном iframe. **Относительные пути** (`./../img/photo.jpg`) резолвятся
+относительно store-URL самого приложения, а не CRM-домена — это изолированное хранилище zip-архива.
+
+Для ресурсов платформы (аватары, файлы каталогов) используй **абсолютные пути**:
+
+```js
+// Аватар пользователя — абсолютный путь через /reimg/
+const avatarUrl = `/reimg/data/auth/${user.data.avatar}?80x80`;
+
+// Файл из каталога marketplace (иконка приложения) — поле doc
+const iconUrl = `/data/db/f_marketplace/${item.doc}`;
+
+// Вложения из любого каталога — /data/db/f_{catalog}/
+const fileUrl = `/data/db/f_tt_tasks/${attachment}`;
+```
+
+Ключевые пути:
+| Тип ресурса | Путь |
+|-------------|------|
+| Аватар пользователя | `/reimg/data/auth/{doc}?{size}` |
+| Файл каталога `{cat}` | `/data/db/f_{cat}/{doc}` |
+| Иконка приложения (marketplace.doc) | `/data/db/f_marketplace/{doc}` |
 
 ### CORS и fetch
 
@@ -170,6 +197,28 @@ const billing = await App.fetch('/api/user/tariff');
 
 Доступен **только по сессии** (через `App.fetch` из миниапа). Для Bearer-токена endpoint вернёт `401 Unauthorized` — это сделано намеренно, биллинг привязан к авторизованной сессии пользователя.
 
+#### prefetch(url)
+
+Запускает фетч в фоне и сохраняет результат. Когда позже вызывается `App.fetch()` с тем же URL, данные возвращаются мгновенно — без `postMessage`.
+
+Вызывай в начале `init`, параллельно с другими инициализирующими операциями:
+
+```js
+async function init() {
+    // Запускаем в фоне сразу
+    App.prefetch('/db/marketplace.json?limit=200&free_cache=1');
+    App.prefetch('/db/installed_apps.json?limit=200&free_cache=1');
+
+    // ... другой код инициализации ...
+
+    // К этому моменту данные уже готовы — возвращается мгновенно
+    const market = await App.fetch('/db/marketplace.json?limit=200&free_cache=1');
+    const installed = await App.fetch('/db/installed_apps.json?limit=200&free_cache=1');
+}
+```
+
+> URL в `prefetch` и `fetch` должен совпадать точно (включая query-параметры).
+
 #### fetch(url, options?)
 
 ```js
@@ -192,6 +241,8 @@ App.fetch(`/db/projects/${alias}?edit&ajax=1`, {
 
 URL может быть только относительным (без домена).
 Тело запроса преобразуется в `URLSearchParams`.
+
+**Дедупликация:** если два параллельных вызова `App.fetch(url)` с одинаковым URL запущены одновременно — оба получат один и тот же Promise (один реальный запрос). Полезно при `Promise.all`. Чтобы отключить: добавь `not_cache=1` в URL.
 
 #### fetchAll(url, options?)
 
@@ -216,6 +267,39 @@ App.modal({ title: 'Заголовок', content: 'Текст' });
 App.modal('/db/todo', { title: 'Заголовок' });
 ```
 
+#### done()
+
+Сигнал из install-фрейма платформе: "я завершил установку". Используется в `install.html` после self-provisioning.
+
+**Контекст**: при первом входе нового пользователя платформа показывает экран инициализации, который по очереди открывает каждый install-фрейм в скрытом iframe. Когда install-фрейм вызывает `App.done()` — платформа немедленно переходит к следующему приложению, не дожидаясь таймаута (4 секунды по умолчанию).
+
+```js
+// install.html — паттерн: авто-установка + сигнал готовности
+
+import VMCRMUserApp from '/templates/def/db/marketplace/vmcrm-user-app.js';
+const App = new VMCRMUserApp();
+
+async function init() {
+    const exists = await checkCatalogExists('custom_myapp');
+
+    if (!exists) {
+        showProgress('Создаём структуру данных...');
+        await runInstall();     // createCatalog() + configureAccess() + ...
+        showProgress('Готово');
+    }
+
+    // Вызываем в обоих случаях: установили только что, или уже было установлено.
+    // Setup-экран перейдёт к следующему приложению немедленно.
+    App.done();
+}
+
+init();
+```
+
+> **Fallback**: если `App.done()` не вызван (например, приложение ещё не обновлено) — setup-экран ждёт 4 секунды после загрузки iframe, затем всё равно переходит дальше. Незавершённые API-запросы продолжают работать в фоне.
+
+> **За пределами setup-экрана**: вызов `App.done()` безопасен и ничего не делает — хост-обработчик по умолчанию no-op.
+
 #### navigate(url)
 
 SPA-навигация родительского окна без полной перезагрузки страницы.
@@ -225,6 +309,19 @@ SPA-навигация родительского окна без полной �
 App.navigate('/db/projects');           // перейти к каталогу
 App.navigate('/db/orders/ORDER123');    // к конкретному элементу
 ```
+
+##### Паттерны для навигации между приложениями
+
+```js
+// Открыть установленное приложение по его alias из installed_apps
+// frame=main — открыть главный фрейм; catalog=marketplace — контекст маркетплейса
+App.navigate('/db/installed_apps/MY_APP_ALIAS?frame=main&catalog=marketplace');
+
+// Открыть карточку приложения в маркетплейсе
+App.navigate('/db/marketplace/MY_APP_ALIAS');
+```
+
+Эти паттерны используются когда одно приложение хочет открыть другое или направить пользователя в маркетплейс. `MY_APP_ALIAS` — alias записи в соответствующем каталоге.
 
 #### on(event, callback) / off(event, callback?)
 

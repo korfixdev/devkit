@@ -91,6 +91,6 @@ App.fetch('/api/db/tt_tasks?filter[status]=open&order_by=created&order=DESC&limi
 
 Перед работой с CRUD прочитай:
 
-- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/data-api.md` — полный справочник: `/db/` vs `/api/db/`, сессионный кеш фильтров (`not_cache=1`), hidden-поля и `select=`, нормализация ответа
+- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/data-api.md` — полный справочник: `/db/` vs `/api/db/`, сессионный кеш фильтров (`not_cache=1` — не писать, `free_cache=1` — не читать), hidden-поля и `select=`, нормализация ответа
 - `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/korfix-catalogs.md` — список доступных каталогов
 - `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/self-provisioning.md` — работа с кастомными каталогами (префикс `custom_`)

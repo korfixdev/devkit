@@ -138,7 +138,7 @@ curl -s -X POST "https://panel.korfix.ru/api/db/marketplace/{ID}" \
   -F "doc1=@/tmp/my-app.zip;type=application/zip"
 ```
 
-Стандартный эндпоинт загружает zip и уведомляет store через внутренний хук (`_after_edit.html`). В production-конфигурации этого достаточно.
+Стандартный эндпоинт загружает zip и уведомляет store через внутренний хук. В production-конфигурации этого достаточно.
 
 **Укороченный вариант через `deploy`** (update + refresh за один запрос):
 
@@ -191,7 +191,7 @@ curl -s -X POST "https://panel.korfix.ru/api/db/marketplace/add" \
 # → {"status":"success","id":"123","alias":"abc..."}
 
 # Последующие обновления по ID:
-curl -s -X POST "https://panel.korfix.ru/api/marketplace/deploy/123" \
+curl -s -X POST "https://panel.korfix.ru/api/db/marketplace/123" \
   -H "Authorization: Bearer {TOKEN}" \
   -F "doc1=@/tmp/my-app.zip;type=application/zip"
 ```

@@ -88,23 +88,55 @@ await App.fetch('/db/custom_dbfields/add?edit&ajax=1', {
 note.custom_content, note.custom_priority, note.custom_status
 ```
 
-## UI-шаблон
+## UI-шаблон install.html
+
+Install-фрейм открывается платформой двумя способами:
+
+1. **Setup-экран** (первый вход нового пользователя) — скрытый iframe, пользователь ничего не видит и не кликает. Нужно: авто-запуск + `App.done()`.
+2. **Обычный вызов** (пользователь открыл приложение в первый раз вручную) — видимый фрейм, можно показать UI.
+
+Правильный паттерн покрывает оба случая — авто-запуск без кнопки + `App.done()`:
 
 ```html
-<div id="installScreen" style="display:none;">
-    <button id="btnInstall">Установить структуру данных</button>
-</div>
-<div id="mainUI" style="display:none;"></div>
+<div id="status">Проверяем...</div>
 
 <script type="module">
+import VMCRMUserApp from '/templates/def/db/marketplace/vmcrm-user-app.js';
 const App = new VMCRMUserApp();
-const exists = await checkCatalogExists('custom_mycatalog')
-document.getElementById(exists ? 'mainUI' : 'installScreen').style.display = ''
-document.getElementById('btnInstall')?.addEventListener('click', async () => {
-    await runInstall()
-    location.reload()
-})
+
+async function init() {
+    const exists = await checkCatalogExists('custom_mycatalog');
+
+    if (!exists) {
+        document.getElementById('status').textContent = 'Устанавливаем...';
+        const user = await App.getUser();
+        await runInstall(user.data.from_auth, user.data.from_group);
+        document.getElementById('status').textContent = '✓ Готово';
+    }
+
+    // Сигнализируем setup-экрану: этот фрейм завершил работу.
+    // В обычном режиме — no-op, setup-экрана нет.
+    App.done();
+}
+
+init();
 </script>
+```
+
+> **Почему не кнопка**: в setup-экране iframe скрытый — кликнуть некому. Авто-запуск обязателен. Кнопку можно оставить как запасной вариант для повторной установки, но основной путь — авто.
+
+> **App.done() в обоих ветках**: вызывай как после установки, так и если каталог уже существует. Setup-экран должен получить сигнал в любом случае — иначе будет ждать таймаута.
+
+```js
+// Минимальный вариант для простых приложений
+async function init() {
+    const user = await App.getUser();
+    if (!(await checkCatalogExists('custom_mycatalog'))) {
+        await runInstall(user.data.from_auth, user.data.from_group);
+    }
+    App.done();
+}
+init();
 ```
 
 ## Права доступа (access_db) — обязательно подумать

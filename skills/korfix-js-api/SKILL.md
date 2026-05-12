@@ -44,10 +44,17 @@ const billing = await App.fetch('/api/user/tariff')
 App.fetch('/db/catalog.json')
 App.fetchAll('/db/catalog.json')   // все страницы автоматически
 
+// Prefetch — запустить в фоне заранее, чтобы App.fetch() вернул сразу
+App.prefetch('/db/marketplace.json?limit=200&free_cache=1')
+App.prefetch('/db/installed_apps.json?limit=200&free_cache=1')
+// ... позже в том же init:
+const resp = await App.fetch('/db/marketplace.json?limit=200&free_cache=1') // мгновенно
+
 // UI
 App.alert('Готово', 'Заголовок')
 App.modal('/db/todo', { title: 'ToDo' })
 App.closeModal()
+App.done()                                           // сигнал «установка завершена» из install-фрейма
 App.navigate('/db/projects')                         // переход к каталогу
 App.navigate('/db/installed_apps/ALIAS?frame=main&catalog=marketplace')  // открыть установленное приложение
 App.navigate('/db/marketplace/ALIAS')               // открыть карточку в маркетплейсе
@@ -66,6 +73,31 @@ App.on('catalog.selected', (data) => { /* data.catalog, data.ids */ })
 App.on('*', ({event, data}) => { /* wildcard */ })
 App.off('page.navigated')           // отписать все
 ```
+
+## Кеширование и дедупликация (встроено в VMCRMUserApp)
+
+- `getUser()` и `getRequestParams()` — результат кешируется как Promise. Первый вызов идёт в postMessage, последующие в той же сессии iframe — мгновенно.
+- `App.fetch(url)` — дедупликация: два параллельных вызова с одним URL получают один и тот же Promise (полезно при `Promise.all`). Отключить: добавить `not_cache=1`.
+- `App.prefetch(url)` → `App.fetch(url)` — если prefetch завершился до вызова fetch, данные возвращаются без postMessage.
+
+## App.done() — сигнал завершения install-фрейма
+
+Вызывается из `install.html` после self-provisioning. Сообщает setup-экрану платформы, что этот install-фрейм готов — платформа немедленно переходит к следующему приложению без ожидания таймаута.
+
+```js
+async function init() {
+    const user = await App.getUser();
+    if (!(await checkCatalogExists('custom_myapp'))) {
+        await runInstall(user.data.from_auth, user.data.from_group);
+    }
+    App.done();  // всегда — и после установки, и если уже установлено
+}
+init();
+```
+
+- Вызывать в обоих ветках: установка прошла / каталог уже был.
+- За пределами setup-экрана — no-op, безопасен.
+- Если не вызван — fallback: 4 секунды после загрузки iframe.
 
 ## Критично
 

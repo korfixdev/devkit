@@ -61,7 +61,7 @@ description: Use before deploying a Korfix miniapp to validate it against the re
     - FAIL: миниап встраивается в меню/каталоги для обычных ролей, install-код НЕ обновляет access_db, в `about` не указана роль доступа — юзеры получат пустой data, багрепорт гарантирован.
     - WARN: хардкод конкретных acctype_* вместо `configureAccess` — работает на текущем инстансе, но поломается на инстансе с другим набором ролей.
     - Evidence: цитата из `catalogs.{custom_X}.*` или `menu.{...}` в config.json + отсутствие update access_db в install-коде + отсутствие указания роли в about.
-- **Фреймы (frame conventions из `docs/miniapps/frames.md`):**
+- **Фреймы (frame conventions из `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/frames.md`):**
   - **Critical:** `main.html` присутствует + `urls.install` объявлен, но в `main.html` нет `checkCatalogExists` или `App.navigate(... frame=install)` → FAIL
   - **Critical:** `install.html` содержит мутирующие `App.fetch` (POST на `/db/.../add`, `/db/.../edit`, запись в каталоги) — **каждый** такой вызов должен иметь проверку `if (!resp || resp.status === 'error' || resp.status === 'no') throw new Error(...)`. Проверять не только финальный шаг, но каждый: создание каталога, создание полей, `configureAccess`, `registerCatalogForMCP`. Один пропущенный check → FAIL (пользователь думает что установка прошла, каталог не создался)
   - **Must:** `urls.widget` объявлен + `urls.install` объявлен, но в `install.html` нет `installWidgetOnDashboard` или аналога → WARN («виджет не установится автоматически при инсталляции»)

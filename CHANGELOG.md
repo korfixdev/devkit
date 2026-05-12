@@ -4,7 +4,27 @@
 
 Формат — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), версионирование — [SemVer](https://semver.org/).
 
+## [0.13.0] — 2026-05-12
+
+### Added
+
+- **`skills/korfix-js-api`** — `App.done()`: новый метод-сигнал из install-фрейма. Описан паттерн авто-установки + `App.done()` в install.html, поведение в setup-экране и за его пределами.
+- **`skills/korfix-self-provisioning`** — раздел «UI-шаблон install.html»: объяснение двух режимов (setup-экран headless vs ручной запуск), паттерн авто-запуска без кнопки + `App.done()`, минимальный вариант.
+- **`docs/miniapps/js-api.md`** — `App.done()` в таблице методов и полная секция с примером и заметками о fallback-поведении.
+
+## [0.12.0] — 2026-05-03
+
+### Added
+
+- **`skills/korfix-js-api`** — `App.prefetch(url)`: новый метод для фонового prefetch данных. Описаны механики кеширования `getUser()`/`getRequestParams()` (Promise-кеш в сессии iframe) и дедупликация параллельных `App.fetch()` с одинаковым URL.
+- **`docs/miniapps/js-api.md`** — раздел `prefetch(url)` с примером паттерна init + prefetch, заметка про дедупликацию в разделе `fetch()`.
+
 ## [Unreleased]
+
+### Changed
+
+- **`docs/miniapps/data-api.md`** — документация параметра `free_cache=1`: игнорирует закешированные в сессии фильтры при чтении `/db/catalog.json`. Добавлена таблица чтение/запись кеша для `not_cache` и `free_cache`, пример полного байпаса.
+- **`skills/korfix-crud-data`** — упоминание `free_cache=1` в описании ссылки на data-api.md
 
 ## [0.11.0] — 2026-04-22
 

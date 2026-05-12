@@ -121,6 +121,67 @@ curl -X POST "https://panel.korfix.ru/api/db/projects" \
   -F "name=Проект" -F "submit=1"
 ```
 
+### ⚠️ Всегда проверяй `status` write-операций
+
+`App.fetch()` **не бросает исключение** при логической ошибке — он возвращает объект с `{status: 'error'}` или `{status: 'no'}` + HTTP 200. Если ты его не проверяешь, ошибка молча проглатывается, и приложение ведёт себя как будто всё хорошо (пока не упадёт где-то дальше в неочевидном месте).
+
+**Типовая ошибка:**
+
+```js
+// ❌ Нет проверки — ошибка съедается
+await App.fetch('/db/custom_dbtables/add?edit&ajax=1', {
+    method: 'POST',
+    body: { 'form[dbname]': 'my_catalog', submit: 1 }
+});
+// Запись не создалась (например, scheme не передан), но код едет дальше
+```
+
+**Правильно:**
+
+```js
+const resp = await App.fetch('/db/custom_dbtables/add?edit&ajax=1', {
+    method: 'POST',
+    body: {
+        'form[dbname]': 'my_catalog',
+        'form[scheme]': 'coredb_def_catalog',
+        submit: 1
+    }
+});
+if (!resp || resp.status === 'error' || resp.status === 'no') {
+    throw new Error(resp?.message || JSON.stringify(resp));
+}
+```
+
+**Что обозначают status-значения:**
+
+| Значение | Смысл |
+|---|---|
+| `'ok'` / `'success'` | Операция прошла. Есть data. |
+| `'error'` | Явная ошибка (валидация не прошла, поле обязательное и пустое, доступ запрещён). В `message` или `errors` — текст. |
+| `'no'` | Операция не выполнена по содержательной причине (например, запись не найдена при edit). |
+| отсутствует/`null` | Сетевая/серверная ошибка. Относись как к error. |
+
+**Паттерн-хелпер**, чтобы не копировать проверку везде:
+
+```js
+async function appFetch(url, options) {
+    const resp = await App.fetch(url, options);
+    if (!resp || resp.status === 'error' || resp.status === 'no') {
+        throw new Error(`${url}: ${resp?.message || JSON.stringify(resp)}`);
+    }
+    return resp;
+}
+
+// Использование — в коде больше не надо писать проверки:
+const resp = await appFetch('/db/custom_dbtables/add?edit&ajax=1', {
+    method: 'POST',
+    body: { ... }
+});
+// если дошли сюда — всё ок, resp.data содержит результат
+```
+
+Для чтения (`GET /db/.json`) проверка тоже полезна, но там в ошибке обычно HTTP-статус ≠ 200 — `App.fetch` может вернуть сам HTTP response.
+
 ---
 
 ## Работа с данными каталогов
@@ -151,13 +212,24 @@ const all = await App.fetchAll('/db/projects.json');
 > Если же запрос явно содержит `ajax=1`, кеш может примениться. Тогда:
 > - Любой переданный `form[]` (даже пустой) делает `$search` непустым → кеш не загружается.
 > - **`not_cache=1`** предотвращает только **запись** в кеш, не чтение.
+> - **`free_cache=1`** — игнорировать закешированные в сессии фильтры и сортировку (не читать из кеша). Используй для программных запросов, чтобы предыдущий UI-поиск пользователя не влиял на результат.
+>
+> | Параметр | Чтение из кеша | Запись в кеш |
+> |----------|:-:|:-:|
+> | *(без параметров)* | да | да |
+> | `not_cache=1` | да | **нет** |
+> | `free_cache=1` | **нет** | да |
+> | `free_cache=1&not_cache=1` | **нет** | **нет** |
 >
 > ```js
 > // Безопасно: без ajax=1, путь /db/tt_tasks.json ≠ /db/tt_tasks (кеш UI не трогает)
 > App.fetch('/db/tt_tasks.json?limit=20')
 >
+> // Полный байпас кеша — рекомендуется для программных запросов из миниапов:
+> App.fetch('/db/tt_tasks.json?free_cache=1&not_cache=1')
+>
 > // С ajax=1: кеш может примениться если Referer совпадает с путём фильтра
-> // Чтобы обойти — передай явные form[]:
+> // Чтобы обойти — передай явные form[] или free_cache=1:
 > App.fetch('/db/tt_tasks.json?ajax=1&not_cache=1&form[status]=open')
 > // not_cache=1 — не перезаписывает кеш пользователя своим значением
 > ```

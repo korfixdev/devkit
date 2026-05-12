@@ -10,6 +10,15 @@
 Каждое установленное приложение имеет изолированное хранилище
 (привязка по token).
 
+> **Важно: storage изолирован по пользователю, не только по приложению.**
+> Каждая запись хранит `from_auth` (ID пользователя). Менеджер A и менеджер B
+> в одной группе получат **разные** значения для одного и того же ключа.
+> Владелец группы (admin) — исключение: его записи хранятся с `from_auth = 0`
+> и фактически становятся «групповыми» (одними на весь инстанс).
+>
+> Для по-настоящему общего (shared) хранилища используй **кастомный каталог**
+> (`custom_dbtables`) вместо `App.storage`.
+
 ```js
 // Сохранить настройки
 await App.storage.set('my.setting', 'value');
@@ -26,6 +35,26 @@ const all = await App.storage.get('');
 // Удалить
 await App.storage.unset('my.setting');
 ```
+
+> ⚠️ **`get()` возвращает RECORD (объект), а не значение.** Типовая ошибка:
+>
+> ```js
+> // ❌ НЕПРАВИЛЬНО — typecast в строку даёт "[object Object]"
+> const val = await App.storage.get('my.setting');
+> console.log(val);                     // [object Object]
+> element.textContent = val;            // "[object Object]" в UI
+>
+> // ✅ ПРАВИЛЬНО — брать поле .value
+> const rec = await App.storage.get('my.setting');
+> const val = rec?.value ?? '';
+> console.log(val);                     // 'hello'
+> ```
+>
+> Если нужно читать как объект (сохраняли через `JSON.stringify`):
+> ```js
+> const rec = await App.storage.get('my.config');
+> const cfg = rec?.value ? JSON.parse(rec.value) : {};
+> ```
 
 > **Важно: `value` — всегда строка.** `App.storage.set(key, value)` передаёт value как
 > строку через POST. Если передать объект или массив — сохранится `[object Object]`.
