@@ -17,7 +17,9 @@ description: Use when a miniapp needs to create its own catalogs (tables) and cu
 async function checkCatalogExists(catalogName) {
     const tablename = catalogName.replace('custom_', '')
     const resp = await App.fetch('/db/custom_dbtables.json?form[dbname]=' + tablename)
-    return !!(resp?.data && Array.isArray(resp.data) && resp.data.length > 0)
+    // Из iframe postMessage оборачивает ответ: массив в resp.data.data (не resp.data)
+    const items = resp?.data?.data ?? (Array.isArray(resp?.data) ? resp.data : [])
+    return items.length > 0
 }
 ```
 
@@ -25,48 +27,62 @@ async function checkCatalogExists(catalogName) {
 
 ```js
 async function getCurrentUserId() {
-    const schema = await App.fetch('/db/custom_dbtables/sheme.json')
-    const arr = schema?.data?.from_auth?.arr || {}
+    const schemaResp = await App.fetch('/db/custom_dbtables/sheme.json')
+    // Из iframe: поля схемы в schemaResp.data.data (postMessage-обёртка)
+    const fields = schemaResp?.data?.data ?? schemaResp?.data ?? {}
+    const arr = fields.from_auth?.arr || {}
     return Object.keys(arr).find(k => k !== '0') || 0
 }
 ```
 
 ## Создать каталог и поля
 
+**Важно: "уже используется" и "duplicate" — норма, не ошибка.**
+
+Физическая таблица шарится между аккаунтами в одном облаке. Если другой пользователь уже установил приложение — таблица и поля существуют физически. Установщик должен обрабатывать эти ответы как успех и продолжать (нужно только добавить права через `configureAccess`).
+
 ```js
 function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 8) }
 
-// Создать каталог
+// Создать каталог (идемпотентно — "уже используется" = норма)
 // ВАЖНО: form[scheme] ОБЯЗАТЕЛЬНО, без него каталог не создастся.
-// Единственное доступное значение сейчас: 'coredb_def_catalog' (template-схема базового каталога).
-// Проверь актуальный список: App.fetch('/db/custom_dbtables/sheme.json') → data.scheme.arr
-await App.fetch('/db/custom_dbtables/add?edit&ajax=1', {
-    method: 'POST',
-    body: {
-        'form[alias]': uid(),
-        'form[name]': 'My Catalog',
-        'form[dbname]': 'mycatalog',              // без custom_ префикса
-        'form[scheme]': 'coredb_def_catalog',      // ОБЯЗАТЕЛЬНО (template-схема)
-        'form[from_auth]': userId,
-        'form[from_group]': userId,
-        submit: 1
-    }
-})
+async function createTable(name, dbname) {
+    const resp = await App.fetch('/db/custom_dbtables/add?edit&ajax=1', {
+        method: 'POST',
+        body: {
+            'form[alias]': uid(),
+            'form[name]': name,
+            'form[dbname]': dbname,               // без custom_ префикса
+            'form[scheme]': 'coredb_def_catalog',  // ОБЯЗАТЕЛЬНО (template-схема)
+            submit: 1
+        }
+    })
+    const status  = resp?.data?.status ?? resp?.status
+    const message = resp?.data?.message ?? resp?.message ?? ''
+    if (status === 'error' && message.includes('уже использу')) return  // уже создана → ок
+    if (status !== 'ok') throw new Error(`createTable ${dbname}: ${message}`)
+}
 
-// Создать поле
-await App.fetch('/db/custom_dbfields/add?edit&ajax=1', {
-    method: 'POST',
-    body: {
-        'form[alias]': uid(),
-        'form[name]': 'Текст',
-        'form[dbname]': 'content',
-        'form[type]': 'textarea',
-        'form[scheme]': 'custom_mycatalog',   // с custom_ префиксом
-        'form[from_auth]': userId,
-        'form[from_group]': userId,
-        submit: 1
-    }
-})
+// Создать поле (идемпотентно — "duplicate" = норма)
+async function createField(dbname, fieldDef) {
+    const resp = await App.fetch('/db/custom_dbfields/add?edit&ajax=1', {
+        method: 'POST',
+        body: {
+            'form[alias]': uid(),
+            'form[name]': fieldDef.name,
+            'form[dbname]': fieldDef.dbname,
+            'form[type]': fieldDef.type,
+            'form[scheme]': 'custom_' + dbname,  // с custom_ префиксом
+            submit: 1,
+            ...(fieldDef.f_arr ? { 'form[f_arr]': fieldDef.f_arr } : {}),
+            ...(fieldDef.f_default ? { 'form[f_default]': fieldDef.f_default } : {}),
+        }
+    })
+    const status  = resp?.data?.status ?? resp?.status
+    const message = resp?.data?.message ?? resp?.message ?? ''
+    if (status === 'error' && /duplicate|уже использу/i.test(message)) return  // поле есть → ок
+    if (status !== 'ok') throw new Error(`createField ${fieldDef.dbname}: ${message}`)
+}
 ```
 
 ## Типы полей
@@ -179,14 +195,15 @@ init();
 ```js
 async function configureAccess(catalog, defaultValue = 2) {
     // 1. Список acctype_* полей из схемы текущего инстанса (не хардкодить)
-    const schema = await App.fetch('/db/access_db/sheme.json');
-    const acctypeFields = Object.keys(schema.data || {})
-        .filter(k => k.startsWith('acctype_'));
+    const schemaResp = await App.fetch('/db/access_db/sheme.json')
+    // Из iframe postMessage оборачивает: поля в schemaResp.data.data
+    const schemaFields = schemaResp?.data?.data ?? schemaResp?.data ?? {}
+    const acctypeFields = Object.keys(schemaFields)
+        .filter(k => k.startsWith('acctype_'))
 
     // 2. Искать существующую запись — одна на (dbmodule, from_group сессии)
-    const existing = (await App.fetch(
-        `/db/access_db.json?form[dbmodule]=${catalog}`
-    )).data?.[0];
+    const existingResp = await App.fetch(`/db/access_db.json?form[dbmodule]=${catalog}`)
+    const existing = (existingResp?.data?.data ?? (Array.isArray(existingResp?.data) ? existingResp.data : []))?.[0]
 
     // 3. Body: все роли = defaultValue
     const body = {

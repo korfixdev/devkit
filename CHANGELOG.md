@@ -4,6 +4,21 @@
 
 Формат — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), версионирование — [SemVer](https://semver.org/).
 
+## [0.14.0] — 2026-05-18
+
+### Fixed
+
+- **`skills/korfix-self-provisioning`** — исправлена двойная обёртка postMessage при доступе к данным через `App.fetch` из iframe. `checkCatalogExists`: теперь читает `resp.data.data` (не `resp.data`). `getCurrentUserId`: схема через `schemaResp.data.data ?? schemaResp.data`. `configureAccess`: аналогичный фикс для schema и `existing`.
+- **`skills/korfix-self-provisioning`** — `createTable`/`createField` переписаны как идемпотентные хелперы: ответ "уже используется" (createTable) и "duplicate" (createField) корректно обрабатываются как успех. Физическая таблица шарится между аккаунтами в одном облаке — это штатная ситуация при повторной установке.
+- **`docs/miniapps/data-api.md`** — исправлены примеры двойной обёртки: `resp.data.data` для массивов, `resp.data.status` / `resp?.data?.status ?? resp?.status` для проверки статуса, `resp.data.data ?? resp.data` для схем. Хелпер `appFetch` теперь корректно читает `status` и `message`.
+- **`docs/miniapps/data-api.md`** — `asArray()`: проверка `resp.data.data` вынесена первой (iframe-путь, более частый случай). Добавлен паттерн для доступа к полям схемы.
+- **`docs/miniapps/self-provisioning.md`** — аналогичные фиксы двойной обёртки в `checkCatalogExists`, `configureAccess` (обе копии). Добавлена секция «Идемпотентность установщика».
+
+### Added
+
+- **`docs/miniapps/checklist.md`** — раздел «Проектирование»: вопросы про мультиязычность, inline-формы, скачивание файлов из iframe.
+- **`docs/miniapps/styling.md`** — раздел «UX-ограничения iframe-контекста»: inline vs popup формы, blob download альтернативы, i18n-архитектура.
+
 ## [0.13.0] — 2026-05-12
 
 ### Added
