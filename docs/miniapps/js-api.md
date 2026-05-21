@@ -122,10 +122,19 @@ const resp = await App.fetch('/db/currency_rate.json');
 ```js
 App.getRequestParams().then(resp => {
   const { app_id, token, domain, catalog, itemId, items, user } = resp.data;
-  // app_id  — alias приложения в каталоге marketplace (идентификатор приложения)
-  // token   — alias записи в installed_apps (уникален на каждую инсталляцию, используется App.storage)
-  // items   — алиасы выбранных элементов (через запятую, если список)
+  // app_id  — alias записи в marketplace (хеш, не числовой id). Идентификатор приложения как продукта.
+  // token   — alias записи в installed_apps (уникален на каждую инсталляцию). Используется в App.storage.
+  // domain  — домен CRM-инстанса (напр. "panel.korfix.info")
+  // catalog — имя каталога контекста, в котором открыт фрейм (напр. "installed_apps", "accounts", "tt_tasks")
+  // itemId  — alias текущей записи в catalog. Когда виджет открыт с дашборда: catalog="installed_apps", itemId=alias установки
+  // items   — алиасы выбранных элементов списка (через запятую, если несколько)
+  // user    — данные текущего пользователя (то же, что getUser())
 });
+
+// Пример: виджет открыт с дашборда
+// catalog  = "installed_apps"
+// itemId   = alias записи в installed_apps (≠ числовой id)
+// app_id   = alias записи в marketplace (не используй как числовой id для запросов!)
 ```
 
 #### getUser()
