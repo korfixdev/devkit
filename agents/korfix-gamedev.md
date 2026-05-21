@@ -68,7 +68,7 @@ Cross-app discovery работает через поиск по package — ин
 5. **Deploy**:
    - Первый раз: `POST /api/db/marketplace` с zip — получишь `id`.
    - Обновления: `POST /api/marketplace/deploy/{id}` (update + refresh appconfig).
-6. **Тест** через установку под all-demo@korfix.ru — проверь запись score в sys_game_scores, магазин, профиль.
+6. **Тест** через установку под all-demo@korfix.info — проверь запись score в sys_game_scores, магазин, профиль.
 
 ### Расширение Games Hub или других системных gamedev-миниапов
 

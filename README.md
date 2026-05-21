@@ -1,10 +1,10 @@
 # korfix-devkit
 
-**Claude Code plugin for developing marketplace miniapps on the [Korfix](https://korfix.ru) ERP platform.**
+**Claude Code plugin for developing marketplace miniapps on the [Korfix](https://korfix.info) ERP platform.**
 
 Provides AI agents, skills, and optional MCP connection. After installation, Claude Code can develop miniapps end-to-end: scaffold, write code, validate against the release checklist, package, and deploy.
 
-**Platform:** [korfix.ru](https://korfix.ru) · **Docs:** [docs.korfix.info](https://docs.korfix.info) · **Related plugin:** [korfixdev/assistant](https://github.com/korfixdev/assistant)
+**Platform:** [korfix.info](https://korfix.info) · **Docs:** [docs.korfix.info](https://docs.korfix.info) · **Related plugin:** [korfixdev/assistant](https://github.com/korfixdev/assistant)
 
 ## Install
 
@@ -43,7 +43,7 @@ Then enable in Claude Code settings → reload.
 ## Setup
 
 ```bash
-export KORFIX_API_URL="https://panel.korfix.ru"   # your Korfix instance
+export KORFIX_API_URL="https://panel.korfix.info"   # your Korfix instance
 export KORFIX_TOKEN="your-token-from-db-api"       # required
 ```
 
@@ -102,7 +102,7 @@ MIT — see [LICENSE](LICENSE).
 
 ## Contact
 
-info@korfix.ru
+info@korfix.info
 
 ---
 
@@ -149,7 +149,7 @@ git clone https://github.com/korfixdev/devkit ~/.claude/plugins/korfix-devkit
 ## Настройка
 
 ```bash
-export KORFIX_API_URL="https://panel.korfix.ru"   # адрес твоего инстанса
+export KORFIX_API_URL="https://panel.korfix.info"   # адрес твоего инстанса
 export KORFIX_TOKEN="your-token-from-db-api"       # обязательно
 ```
 
@@ -207,4 +207,4 @@ MIT — см. [LICENSE](LICENSE).
 
 ## Контакт
 
-info@korfix.ru
+info@korfix.info

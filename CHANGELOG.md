@@ -4,6 +4,43 @@
 
 Формат — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), версионирование — [SemVer](https://semver.org/).
 
+## [0.17.0] — 2026-05-21
+
+### Added
+- **`CLAUDE.md`** (plugin root) — правила эскалации агентов/skills; «новый миниап → analyst first»; деплой через validator
+- **`skills/korfix-pre-deploy`** — пошаговый деплой-чеклист (версия → README → validator → zip → curl → smoke-test)
+- **`skills/korfix-test-guide`** — ручная проверка в браузере по типам фреймов (main, widget, install)
+- **`skills/korfix-miniapp-config`** — триггер «если новое приложение — сначала korfix-analyst»
+- **`skills/korfix-miniapp-checklist`** — триггеры на `korfix-pre-deploy` и `korfix-miniapp-validator`; добавлен в deploy-workflow агента
+
+### Changed
+- **`agents/korfix-miniapp-dev`** — deploy-секция: явно включает `korfix-miniapp-checklist` и `korfix-pre-deploy` перед validator; добавлены «Версионирование миниапа» и «Workflow: доработка существующего»
+- **`docs/miniapps/index.md`** — удалена мёртвая ссылка на несуществующий `../backend/index.md`; добавлена ссылка на `codex-integration.md`
+
+## [0.16.0] — 2026-05-21
+
+### Changed
+- **Домены** — все ссылки `korfix.ru` заменены на `korfix.info` во всех файлах плагина
+- **`agents/korfix-miniapp-dev`** — добавлена секция «Версионирование миниапа» (PATCH/MINOR/MAJOR для config.json), секция «Workflow: доработка существующего приложения»
+- **`docs/miniapps/js-api.md`** — `getRequestParams()` теперь включает `token` в сигнатуре; добавлены комментарии к `app_id` и `token`
+
+### Added
+- **`CLAUDE.md`** (plugin root) — правила эскалации: когда запускать агентов, когда skills; жёсткое правило «новый миниап → analyst first»; деплой всегда через validator
+- **`skills/korfix-pre-deploy`** — новый skill: пошаговый чеклист деплоя (версия → README → validator → zip → curl → smoke-test)
+- **`skills/korfix-test-guide`** — новый skill: процедура ручной проверки в браузере по типам фреймов (main, widget, install); дополняет статический validator
+- **`docs/miniapps/storage-and-hooks.md`** — предупреждение: переустановка приложения уничтожает данные storage; рекомендация кастомного каталога для критичных данных
+- **`docs/miniapps/codex-integration.md`** — как использовать skills и docs без Claude Code (Codex, Cursor, Gemini CLI и др.)
+- **`docs/miniapps/index.md`** — ссылка на `codex-integration.md`
+- **`skills/korfix-miniapp-config`** — триггер «если новое приложение — сначала korfix-analyst»
+- **`skills/korfix-miniapp-checklist`** — триггеры на `korfix-pre-deploy` и `korfix-miniapp-validator`
+
+## [0.15.0] — 2026-05-19
+
+### Added
+
+- **`skills/korfix-miniapp-config`** — раздел «Категория (обязательно)» с таблицей id↔название (1=AI-agents, 2=Business, 3=Games, 4=Tools, 5=Other). При вайбкоде агент ставит `category` в config.json — платформа подтягивает значение в БД при первом install (если поле пусто).
+- **`skills/korfix-miniapp-config` чеклист** — пункт «`category` проставлен (int 1..5)».
+
 ## [0.14.0] — 2026-05-18
 
 ### Fixed
@@ -213,7 +250,7 @@
 - 2 агента: `korfix-miniapp-dev` (разработка миниапов), `korfix-miniapp-validator` (беспристрастное ревью перед деплоем).
 - 7 skills: `korfix-miniapp-validate`, `-checklist`, `-config`, `korfix-js-api`, `korfix-self-provisioning`, `korfix-catalog-schema`, `korfix-crud-data`.
 - Bundled docs (`docs/miniapps/`) — 21 файл документации.
-- MCP connection config для `mcp.korfix.ru` (опционально, через `${KORFIX_MCP_URL}`).
+- MCP connection config для `mcp.korfix.info` (опционально, через `${KORFIX_MCP_URL}`).
 
 ---
 

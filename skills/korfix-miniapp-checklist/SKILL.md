@@ -8,6 +8,9 @@ description: Use during miniapp development to ensure quality and avoid common m
 **ОБЯЗАТЕЛЬНО** запускать этот чеклист перед каждым деплоем миниаппа.
 Не пропускать пункты, не считать что "и так понятно что сделано правильно".
 
+> **После этого чеклиста:** запусти `korfix-pre-deploy` — он проведёт тебя через сборку zip и деплой.
+> **Для независимой валидации:** агент `korfix-miniapp-validator` в fresh subagent.
+
 ## config.json
 
 - [ ] JSON валидный (нет trailing comma, нет необработанных `\` или спецсимволов)

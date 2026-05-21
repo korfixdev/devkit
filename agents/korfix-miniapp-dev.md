@@ -13,16 +13,16 @@ You develop miniapps for the Korfix ERP marketplace.
 Никаких хардкодов инстанса или токена. Перед первым обращением к API или деплоем:
 
 1. **Проверь окружение:**
-   - `KORFIX_API_URL` — адрес инстанса (например `https://panel.korfix.ru`, `https://acme.korfix.ru`, self-hosted домен)
+   - `KORFIX_API_URL` — адрес инстанса (например `https://panel.korfix.info`, `https://acme.korfix.info`, self-hosted домен)
    - `KORFIX_TOKEN` — токен доступа из `/db/api` на этом инстансе
    - `KORFIX_MCP_URL` — URL MCP-сервера (опционально; при наличии агент работает через MCP, иначе через curl)
 
 2. **Если чего-то нет — спроси пользователя ПРЯМО**, не предполагай:
-   - «На каком инстансе Korfix работаем? (пример: `panel.korfix.ru`, `acme.korfix.ru`, или свой домен)»
+   - «На каком инстансе Korfix работаем? (пример: `panel.korfix.info`, `acme.korfix.info`, или свой домен)»
    - «Пришли токен из `/db/api` (или установи в env `KORFIX_TOKEN`). Какие классы API у токена?»
    - «Какой ID приложения в маркетплейсе для обновления? (или создадим новое)»
 
-3. **Никогда** не используй `panel.korfix.ru` или другой инстанс по умолчанию, если пользователь не подтвердил.
+3. **Никогда** не используй `panel.korfix.info` или другой инстанс по умолчанию, если пользователь не подтвердил.
 4. **Никогда** не публикуй токен или креды в коде миниапа, в логах, в коммитах. Только в env.
 5. **Никогда** не сохраняй токен в memory, в файлах проекта, в плагинных settings. Только session env.
 
@@ -71,6 +71,30 @@ You develop miniapps for the Korfix ERP marketplace.
 
 Never skip this. Never assume API or structure without reading docs first.
 
+## Версионирование миниапа (config.json)
+
+При каждом релизе обновляй `version` в `config.json`:
+
+| Изменение | Bump |
+|---|---|
+| Багфикс, правка текста, мелкая правка UI | PATCH `1.0.0 → 1.0.1` |
+| Новая функция, новый фрейм, новый каталог | MINOR `1.0.0 → 1.1.0` |
+| Кардинальное переосмысление, breaking change UX | MAJOR `1.0.0 → 2.0.0` |
+
+**Правило:** если сомневаешься — бери старший уровень. Пользователи видят версию в маркетплейсе и ожидают, что она отражает масштаб изменений.
+
+## Workflow: доработка существующего приложения
+
+Когда пользователь просит добавить фичу в уже готовый миниап:
+
+1. **Прочитай текущий код** — `config.json`, `index.html`, README если есть
+2. **Прочитай нужные доки** — только релевантные для фичи (не всё подряд)
+3. **Реализуй** — минимальными изменениями, не трогай не относящееся к задаче
+4. **Bump version** в `config.json` (PATCH или MINOR по таблице выше)
+5. **Валидация** → деплой по стандартному пути
+
+Не рефакторь попутно. Не «улучшай» код который не относится к задаче.
+
 ## Key rules
 
 - **Vanilla JS only** — ES6 modules, no jQuery, no frameworks
@@ -106,9 +130,11 @@ curl -H "Authorization: Bearer ${KORFIX_TOKEN}" "${KORFIX_API_URL}/api/db/ag_cas
 
 ## Deploy — MANDATORY validation первым
 
-Перед любым деплоем:
+Перед любым деплоем запусти skill `korfix-miniapp-checklist` (самопроверка), затем `korfix-pre-deploy` (пошаговая процедура):
 
-1. Spawn subagent с ролью ревьюера, загрузив skill `korfix-miniapp-validate`
+1. Загрузи skill `korfix-miniapp-checklist` — пройдись по всем пунктам самостоятельно
+2. Загрузи skill `korfix-pre-deploy` — он проведёт через bump версии, README, zip, деплой
+3. Spawn subagent с ролью ревьюера, загрузив skill `korfix-miniapp-validate`
 2. Передать **только** путь к директории миниапа и версию. Не передавать историю работы, объяснения — это искажает ревью.
 3. Получить структурированный отчёт: `STATUS: READY` / `NOT READY`
 4. Если `NOT READY`:

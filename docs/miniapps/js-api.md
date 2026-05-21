@@ -24,7 +24,7 @@ const App = new VMCRMUserApp();
 
 | Метод | Возвращает | Описание |
 |-------|-----------|----------|
-| `App.getRequestParams()` | Promise -> `{data: {app_id, domain, catalog, itemId, items, user}}` | Параметры текущего фрейма. Результат кешируется — повторные вызовы мгновенные |
+| `App.getRequestParams()` | Promise -> `{data: {app_id, token, domain, catalog, itemId, items, user}}` | Параметры текущего фрейма. Результат кешируется — повторные вызовы мгновенные |
 | `App.getUser()` | Promise -> `{data: {name, from_auth, from_group, alias, role, avatar, tarif, tarif_name}}` | Информация о текущем пользователе, включая тариф. Результат кешируется |
 | `App.getLocation()` | Promise -> `{data: '/db/projects'}` | URL родительского окна |
 | `App.fetch(url, options?)` | Promise -> response | HTTP-запрос от имени пользователя. Дедупликация параллельных запросов с одинаковым URL |
@@ -121,8 +121,10 @@ const resp = await App.fetch('/db/currency_rate.json');
 
 ```js
 App.getRequestParams().then(resp => {
-  const { app_id, domain, catalog, itemId, items, user } = resp.data;
-  // items -- алиасы выбранных элементов (через запятую, если список)
+  const { app_id, token, domain, catalog, itemId, items, user } = resp.data;
+  // app_id  — alias приложения в каталоге marketplace (идентификатор приложения)
+  // token   — alias записи в installed_apps (уникален на каждую инсталляцию, используется App.storage)
+  // items   — алиасы выбранных элементов (через запятую, если список)
 });
 ```
 

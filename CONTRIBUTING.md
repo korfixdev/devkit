@@ -88,4 +88,4 @@ AI-агент, меняющий конфиг плагина (skill, агент, 
 
 ## Контакт
 
-info@korfix.ru
+info@korfix.info

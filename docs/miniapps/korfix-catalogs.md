@@ -654,6 +654,6 @@ const schema = await App.fetch('/db/ag_cashflows/sheme.json');
 
 ---
 
-*Каталоги: /modules/db/ в panel.korfix.ru*
+*Каталоги: /modules/db/ в panel.korfix.info*
 
 **← [Home](index.md)**

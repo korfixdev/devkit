@@ -7,6 +7,9 @@ description: Use when writing or editing config.json for a Korfix miniapp. Cover
 
 Правила создания config.json для миниаппов Korfix. Основные грабли при вайб-кодинге.
 
+> **Создаёшь новое приложение с нуля?** — сначала запусти агента `korfix-analyst`.
+> Он уточнит требования и спроектирует решение, прежде чем ты напишешь первую строку config.json.
+
 ## Обязательная структура
 
 ```json
@@ -50,6 +53,29 @@ description: Use when writing or editing config.json for a Korfix miniapp. Cover
    }
    ```
 
+## Категория (обязательно)
+
+В `config.json` ставится поле `"category": <int>` — числовой id из канон-таблицы:
+
+| id | category   | Когда выбирать                                                           |
+|----|------------|--------------------------------------------------------------------------|
+| 1  | AI-agents  | ИИ-помощники, чат-боты, генеративные инструменты, агенты                |
+| 2  | Business   | CRM-расширения, отчёты, дашборды, B2B-интеграции                        |
+| 3  | Games      | Игры, развлекательные миниапы                                            |
+| 4  | Tools      | Утилиты, конвертеры, виджеты, dev-инструменты                            |
+| 5  | Other      | Всё остальное / не подошло никуда                                        |
+
+Платформа автоматически запишет category в БД при первом install приложения (если поле ещё пусто). Дальнейшие правки — через UI каталога `/db/marketplace`, и они НЕ перетираются при повторном deploy.
+
+Пример:
+
+    {
+      "name": "Coin Clicker",
+      "category": 3,
+      "package": "coin-clicker",
+      ...
+    }
+
 ## Точки встраивания
 
 ```json
@@ -73,6 +99,7 @@ description: Use when writing or editing config.json for a Korfix miniapp. Cover
 - [ ] JSON валиден (нет trailing comma, нет необработанных `\`)
 - [ ] `urls` используют относительные пути
 - [ ] `permissions` явно объявлены
+- [ ] `category` проставлен (int 1..5)
 
 ## Документация
 

@@ -24,18 +24,18 @@ CRUD-операции над каталогами, форматы запросо
 
 ```bash
 # Проверить что токен видит каталог
-curl -sI "https://panel.korfix.ru/api/db/{catalog}?limit=1" \
+curl -sI "https://panel.korfix.info/api/db/{catalog}?limit=1" \
   -H "Authorization: Bearer {TOKEN}"
 # HTTP/2 200 — ок, доступ есть
 # HTTP/2 403 — токен не имеет класса db_{catalog}_get (добавить в /db/api)
 # HTTP/2 404 — каталога не существует (проверь имя, особенно префикс custom_)
 
 # Получить список всех доступных токену каталогов
-curl -s "https://panel.korfix.ru/api/db/getcatalogs" \
+curl -s "https://panel.korfix.info/api/db/getcatalogs" \
   -H "Authorization: Bearer {TOKEN}"
 ```
 
-Никогда не делай `curl https://panel.korfix.ru/db/{catalog}.json` — это только для внутри iframe, curl получит 302 на логин.
+Никогда не делай `curl https://panel.korfix.info/db/{catalog}.json` — это только для внутри iframe, curl получит 302 на логин.
 
 ---
 
@@ -116,7 +116,7 @@ App.fetch('/api/db/custom_dbtables', {
 
 ```bash
 # curl к /api/ — тоже без form[]
-curl -X POST "https://panel.korfix.ru/api/db/projects" \
+curl -X POST "https://panel.korfix.info/api/db/projects" \
   -H "Authorization: Bearer TOKEN" \
   -F "name=Проект" -F "submit=1"
 ```
