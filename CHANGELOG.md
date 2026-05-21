@@ -4,6 +4,12 @@
 
 Формат — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), версионирование — [SemVer](https://semver.org/).
 
+## [0.18.1] — 2026-05-21
+
+### Added
+- **TODO.md / CHANGELOG.md practices** — `korfix-miniapp-dev` now creates and maintains `TODO.md` (ideas backlog) and `CHANGELOG.md` (version history) in every miniapp project; both files included in deploy zip
+- **`korfix-tech-writer`** — extended scope: also creates/updates `CHANGELOG.md` and appends TODO ideas when passed by dev agent
+
 ## [0.18.0] — 2026-05-21
 
 ### Changed

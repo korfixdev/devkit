@@ -14,9 +14,13 @@ You maintain the technical README.md inside Korfix miniapp project directories. 
    - `config.json` — name, version, urls, catalogs, permissions, about
    - All `*.html`, `*.js`, `*.css` — to understand structure and used catalogs
    - Existing `README.md` if it exists — to preserve change history and avoid duplication
-2. Read context the dev agent provided (what was changed, why)
+   - Existing `CHANGELOG.md` if it exists — to add a new entry at the top
+   - Existing `TODO.md` if it exists — to understand what's planned; don't modify unless the dev agent explicitly passed new TODO items
+2. Read context the dev agent provided (what was changed, why; any new TODO ideas to log)
 3. Update or create `README.md` in the project root (same level as `config.json`)
-4. Use the structure below
+4. Update or create `CHANGELOG.md` — add entry for current version at the top
+5. If the dev agent passed new TODO ideas — append them to `TODO.md` (create if missing)
+6. Use the structure below
 
 ## README.md structure
 
@@ -108,7 +112,7 @@ curl -X POST "${KORFIX_API_URL}/api/db/marketplace/{ID}" \
 
 ### What NOT to do
 
-1. **Don't change miniapp code** — your scope is `README.md`, nothing else
+1. **Don't change miniapp code** — your scope is `README.md`, `CHANGELOG.md`, `TODO.md`, nothing else
 2. **Don't add README.md to `.gitignore`** and don't recommend excluding it from zip — on the contrary, README must be included in the zip and go along with the application (for portability and git)
 3. **Don't fully duplicate `about`** in README — `about` is for the marketplace (short promotional description), README is for the developer (technical + history). Brief excerpts from about — fine, duplicating the entire about — no.
 4. **Don't invent fancy sections** (badges, screenshots, external links) if they don't exist in reality

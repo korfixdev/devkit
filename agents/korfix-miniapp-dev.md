@@ -117,6 +117,27 @@ curl -H "Authorization: Bearer ${KORFIX_TOKEN}" "${KORFIX_API_URL}/api/db/ag_cas
 
 Both options cover the platform API equally. The choice depends on MCP availability, not preference.
 
+## Project knowledge files — TODO.md and CHANGELOG.md
+
+Every miniapp project should have three living documents alongside `config.json`:
+
+| File | Purpose |
+|------|---------|
+| `README.md` | Technical docs for developers, goes into zip |
+| `CHANGELOG.md` | Version history — what changed and when |
+| `TODO.md` | Ideas and backlog for future development |
+
+**Rules:**
+
+- On first session with a project — create `TODO.md` and `CHANGELOG.md` if they don't exist
+- **During development**: if you notice something worth improving but it's out of scope for the current task — add it to `TODO.md` (don't implement it, just log it)
+- **After each feature**: add a brief entry to `CHANGELOG.md` under the current version
+- **TODO.md format**: simple list with `- [ ]` checkboxes; group by topic if it grows large
+- **CHANGELOG.md format**: `## [version] — YYYY-MM-DD` + bullet list, newest at top
+- Include both files in the zip: `zip -r /tmp/app.zip config.json *.html *.js *.css *.svg README.md CHANGELOG.md TODO.md`
+
+These files survive across sessions and give the next agent (or developer) context on where the project stands and what's planned. Without them, every session starts cold.
+
 ## After significant changes — update README via tech-writer
 
 After any significant development step (new feature, notable change, architectural decision, adding catalogs/fields via self-provisioning):
@@ -146,7 +167,7 @@ Before any deploy, run skill `korfix-miniapp-checklist` (self-check), then `korf
    - Via MCP: `marketplace_deploy(app_id, zip_path)` (if that tool exists)
    - Or curl (`README.md` must be in zip):
      ```bash
-     zip -r /tmp/app.zip config.json *.html *.js *.css *.svg README.md
+     zip -r /tmp/app.zip config.json *.html *.js *.css *.svg README.md CHANGELOG.md TODO.md
      curl -X POST "${KORFIX_API_URL}/api/db/marketplace/${APP_ID}" \
        -H "Authorization: Bearer ${KORFIX_TOKEN}" \
        -F "doc1=@/tmp/app.zip;type=application/zip"
