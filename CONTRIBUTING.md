@@ -1,60 +1,59 @@
 # Contributing to korfix-devkit
 
-## Release workflow — версии и CHANGELOG
+## Release workflow — versions and CHANGELOG
 
-**Каждый push, который меняет поведение агентов/skills/документации — сопровождается bump версии и записью в CHANGELOG.**
+**Every push that changes agent/skill/documentation behavior must be accompanied by a version bump and a CHANGELOG entry.**
 
-### 1. Bump version в `.claude-plugin/plugin.json`
+### 1. Bump version in `.claude-plugin/plugin.json`
 
-Формат — [SemVer](https://semver.org/). Правило выбора уровня:
+Format — [SemVer](https://semver.org/). Rules for choosing the level:
 
-| Уровень | Когда применять | Примеры |
+| Level | When to apply | Examples |
 |---|---|---|
-| **PATCH** `0.2.0 → 0.2.1` | Багфикс, опечатка, уточнение формулировки, небольшая правка примера | Исправил опечатку в skill, уточнил пункт чеклиста, починил неработающий пример кода |
-| **MINOR** `0.2.0 → 0.3.0` | Новая фича, новое правило проверки, новый skill, новый паттерн/хелпер, расширение существующего skill'а | Добавили `access_db` правила, добавили `custom_` check, новый skill `korfix-X`, новый helper |
-| **MAJOR** `0.9.0 → 1.0.0` | Breaking change, удаление/переименование агента/skill'а, несовместимое изменение формата конфига | Удалили `korfix-old-skill`, переименовали агент, изменили обязательный env-var |
+| **PATCH** `0.2.0 → 0.2.1` | Bug fix, typo, wording clarification, minor example update | Fixed typo in skill, clarified checklist item, fixed broken code example |
+| **MINOR** `0.2.0 → 0.3.0` | New feature, new validation rule, new skill, new pattern/helper, extension of an existing skill | Added `access_db` rules, added `custom_` check, new skill `korfix-X`, new helper |
+| **MAJOR** `0.9.0 → 1.0.0` | Breaking change, removal/rename of an agent/skill, incompatible config format change | Removed `korfix-old-skill`, renamed an agent, changed a required env var |
 
-Если сомнения между уровнями — **бери старший**. Лучше «лишний» MINOR чем слишком консервативный PATCH, который пользователи пропустят.
+If in doubt between levels — **take the higher one**. A "extra" MINOR is better than an overly conservative PATCH that users will miss.
 
-**Не bump'ать если:**
-- Правка только в CHANGELOG.md / README.md / CONTRIBUTING.md (мета-документы)
-- Только форматирование / whitespace в коде
-- Только комментарии без изменения инструкции
+**Do not bump if:**
+- Change is only in CHANGELOG.md / README.md / CONTRIBUTING.md (meta-documents)
+- Only formatting / whitespace in code
+- Only comments with no change to instructions
 
-### 2. Добавь запись в CHANGELOG.md
+### 2. Add an entry to CHANGELOG.md
 
-Новая версия **сверху**, под заголовком `# Changelog`. Формат [Keep a Changelog](https://keepachangelog.com/en/1.1.0/):
+New version goes **at the top**, under the `# Changelog` heading. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/):
 
 ```markdown
 ## [0.3.0] — YYYY-MM-DD
 
 ### Added
-- Новая фича A — что делает, зачем
-- Новый skill `korfix-X` — use case
+- New feature A — what it does, why
 
 ### Changed
-- Правило Y теперь работает иначе — почему
+- Rule Y now works differently — why
 
 ### Fixed
-- Баг Z — что было сломано
+- Bug Z — what was broken
 
 ### Removed
-- Удалён устаревший Q — как мигрировать (если применимо)
+- Removed outdated Q — migration guide (if applicable)
 ```
 
-**Разделы** (используй только нужные): `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`.
+**Sections** (use only those needed): `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`.
 
-**Пиши с точки зрения пользователя плагина**, не разработчика: «добавлено правило для access_db», не «коммит с правкой validator.md».
+**Write from the plugin user's perspective**, not the developer's: "added rule for access_db", not "commit with validator.md fix".
 
 ### 3. Commit message
 
-Рекомендуется префикс:
+Recommended prefixes:
 
-- `release: vX.Y.Z` — если bump версии (entry в CHANGELOG)
-- `docs:` — правка доки без функциональных последствий
-- `skill(<name>):` — правка конкретного skill
-- `agent(<name>):` — правка агента
-- `fix:` — багфикс
+- `release: vX.Y.Z` — if version is bumped (entry in CHANGELOG)
+- `docs:` — documentation change with no functional impact
+- `skill(<name>):` — change to a specific skill
+- `agent(<name>):` — change to an agent
+- `fix:` — bug fix
 
 ### 4. Push
 
@@ -64,28 +63,28 @@ git commit -m "release: v0.3.0"
 git push
 ```
 
-После push пользователи увидят «Update available» в `/plugin` UI.
+After push, users will see "Update available" in the `/plugin` UI.
 
-## Для breaking changes (MAJOR)
+## For breaking changes (MAJOR)
 
-Дополнительно к CHANGELOG:
+In addition to CHANGELOG:
 
-1. Создать GitHub Release с тегом `vX.0.0`
-2. В release notes явно написать **миграционную инструкцию** — что пользователю сделать чтобы не сломать свою работу
-3. В PR/commit message упомянуть `BREAKING CHANGE:` чтобы было очевидно на github
+1. Create a GitHub Release with the tag `vX.0.0`
+2. In release notes, explicitly write a **migration guide** — what the user needs to do to avoid breaking their workflow
+3. Mention `BREAKING CHANGE:` in the PR/commit message so it's visible on GitHub
 
-## Когда агент делает эти изменения
+## When an agent makes these changes
 
-AI-агент, меняющий конфиг плагина (skill, агент, структуру), **обязан**:
+An AI agent changing the plugin config (skill, agent, structure) **must**:
 
-1. Перед commit — определить уровень bump по таблице выше
-2. Обновить `version` в `.claude-plugin/plugin.json`
-3. Добавить запись в CHANGELOG.md **сверху**, с точной датой (сегодняшней) и конкретными пунктами
-4. Использовать правильный префикс в commit message
-5. Push одним атомарным коммитом (версия + CHANGELOG + сами изменения вместе)
+1. Before commit — determine the bump level using the table above
+2. Update `version` in `.claude-plugin/plugin.json`
+3. Add an entry to CHANGELOG.md **at the top**, with today's exact date and specific items
+4. Use the correct prefix in the commit message
+5. Push as one atomic commit (version + CHANGELOG + the actual changes together)
 
-**Нарушение:** push без bump'а = пользователи не увидят уведомления об обновлении = потенциально пропустят важные правила валидации или bug fixes.
+**Violation:** push without a bump = users won't see the update notification = they may miss important validation rules or bug fixes.
 
-## Контакт
+## Contact
 
 info@korfix.info

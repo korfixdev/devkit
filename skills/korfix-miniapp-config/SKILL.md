@@ -5,45 +5,45 @@ description: Use when writing or editing config.json for a Korfix miniapp. Cover
 
 # korfix-miniapp-config
 
-Правила создания config.json для миниаппов Korfix. Основные грабли при вайб-кодинге.
+Rules for creating config.json for Korfix miniapps. Common pitfalls in vibe-coding.
 
-> **Создаёшь новое приложение с нуля?** — сначала запусти агента `korfix-analyst`.
-> Он уточнит требования и спроектирует решение, прежде чем ты напишешь первую строку config.json.
+> **Building a new app from scratch?** — run the `korfix-analyst` agent first.
+> It clarifies requirements and designs the solution before you write the first line of config.json.
 
-## Обязательная структура
+## Required structure
 
 ```json
 {
-    "name": "Название",
+    "name": "App Name",
     "version": "1.0.0",
-    "description": "Краткое описание",
-    "about": "## Что делает\n...\n## Где появляется в CRM\n...\n## Возможности\n...\n## Как пользоваться\n...\n## Настройка\n...",
+    "description": "Brief description",
+    "about": "## What it does\n...\n## Where it appears in CRM\n...\n## Features\n...\n## How to use\n...\n## Configuration\n...",
     "logo": "icon.svg",
     "urls": { "main": "index.html" },
     "urlsConf": { "main": { "method": "get" } },
     "menu": {
-        "some_catalog": { "frame": "main", "name": "Название в меню" }
+        "some_catalog": { "frame": "main", "name": "Menu item name" }
     }
 }
 ```
 
-## Критичные правила (причина большинства syntax error и ошибок)
+## Critical rules (cause of most syntax errors and failures)
 
-1. **`about` обязателен.** Без него — предупреждение, с плохим содержимым — ошибка маркетплейса.
+1. **`about` is required.** Without it — a warning; with poor content — a marketplace error.
 
-2. **`about` = строка, не объект.** Весь markdown внутри одной строки с `\n`.
-   Не помещать markdown как вложенный объект — это невалидный JSON.
+2. **`about` is a string, not an object.** All markdown inside a single string with `\n`.
+   Do not place markdown as a nested object — that is invalid JSON.
 
-3. **Экранирование в `about`:** только `\n` (перенос) и `\"` (кавычки). Никаких `--`, `***`, сложных спецсимволов.
+3. **Escaping in `about`:** only `\n` (newline) and `\"` (quotes). No `--`, `***`, or complex special characters.
 
-4. **`urls` — всегда относительные пути** для zip-приложений (`"main": "index.html"`).
-   Абсолютные URL — только для remote-приложений.
+4. **`urls` — always relative paths** for zip apps (`"main": "index.html"`).
+   Absolute URLs — only for remote apps.
 
-5. **`logo` — имя файла** из zip-архива. Должен существовать в zip (иначе ошибка при установке).
+5. **`logo` — filename** from the zip archive. Must exist in the zip (otherwise an error at install time).
 
-6. **`menu` ключ** = алиас каталога, **после** которого появится пункт меню.
+6. **`menu` key** = catalog alias **after** which the menu item appears.
 
-7. **`permissions`** — если не указать, полный доступ (legacy, получишь warning). Для безопасности:
+7. **`permissions`** — if omitted, full access is granted (legacy, you'll get a warning). For security:
    ```json
    "permissions": {
        "catalogs": { "my_catalog": ["read", "write"] },
@@ -53,21 +53,21 @@ description: Use when writing or editing config.json for a Korfix miniapp. Cover
    }
    ```
 
-## Категория (обязательно)
+## Category (required)
 
-В `config.json` ставится поле `"category": <int>` — числовой id из канон-таблицы:
+Set `"category": <int>` in `config.json` — a numeric id from the canonical table:
 
-| id | category   | Когда выбирать                                                           |
+| id | category   | When to use                                                              |
 |----|------------|--------------------------------------------------------------------------|
-| 1  | AI-agents  | ИИ-помощники, чат-боты, генеративные инструменты, агенты                |
-| 2  | Business   | CRM-расширения, отчёты, дашборды, B2B-интеграции                        |
-| 3  | Games      | Игры, развлекательные миниапы                                            |
-| 4  | Tools      | Утилиты, конвертеры, виджеты, dev-инструменты                            |
-| 5  | Other      | Всё остальное / не подошло никуда                                        |
+| 1  | AI-agents  | AI assistants, chatbots, generative tools, agents                        |
+| 2  | Business   | CRM extensions, reports, dashboards, B2B integrations                    |
+| 3  | Games      | Games, entertainment miniapps                                            |
+| 4  | Tools      | Utilities, converters, widgets, dev tools                                |
+| 5  | Other      | Everything else / doesn't fit anywhere                                   |
 
-Платформа автоматически запишет category в БД при первом install приложения (если поле ещё пусто). Дальнейшие правки — через UI каталога `/db/marketplace`, и они НЕ перетираются при повторном deploy.
+The platform automatically writes the category to the DB on first app install (if the field is still empty). Further edits go through the catalog UI at `/db/marketplace` and are NOT overwritten on re-deploy.
 
-Пример:
+Example:
 
     {
       "name": "Coin Clicker",
@@ -76,33 +76,33 @@ description: Use when writing or editing config.json for a Korfix miniapp. Cover
       ...
     }
 
-## Точки встраивания
+## Embed points
 
 ```json
 "catalogs": {
     "ag_clients": {
-        "tabs": [{ "name": "Таб", "frame": "main" }],
-        "itemsActions": [{ "name": "Действие", "frame": "main" }],
-        "catalog.item.view.footer": { "name": "Виджет", "frame": "main" },
-        "catalog.items.footer": { "name": "Под списком", "frame": "main" },
+        "tabs": [{ "name": "Tab", "frame": "main" }],
+        "itemsActions": [{ "name": "Action", "frame": "main" }],
+        "catalog.item.view.footer": { "name": "Widget", "frame": "main" },
+        "catalog.items.footer": { "name": "Below list", "frame": "main" },
         "afterSave": "remote"
     },
-    "": { "itemsActions": [{ "name": "Для всех", "frame": "main" }] }
+    "": { "itemsActions": [{ "name": "For all", "frame": "main" }] }
 }
 ```
 
-## Чеклист перед деплоем
+## Pre-deploy checklist
 
-- [ ] `about` заполнен и содержит все 5 разделов
-- [ ] Все файлы из `urls` существуют в zip
-- [ ] `logo` файл существует в zip
-- [ ] JSON валиден (нет trailing comma, нет необработанных `\`)
-- [ ] `urls` используют относительные пути
-- [ ] `permissions` явно объявлены
-- [ ] `category` проставлен (int 1..5)
+- [ ] `about` is filled in and contains all 5 sections
+- [ ] All files from `urls` exist in the zip
+- [ ] `logo` file exists in the zip
+- [ ] JSON is valid (no trailing comma, no unescaped `\`)
+- [ ] `urls` use relative paths
+- [ ] `permissions` are explicitly declared
+- [ ] `category` is set (int 1..5)
 
-## Документация
+## Documentation
 
-- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/config-json.md` — все точки встраивания и permissions
-- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/getting-started.md` — первое приложение с нуля
-- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/deploy.md` — деплой и обновление
+- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/config-json.md` — all embed points and permissions
+- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/getting-started.md` — first app from scratch
+- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/deploy.md` — deploy and update

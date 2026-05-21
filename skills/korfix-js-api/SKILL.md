@@ -5,9 +5,9 @@ description: Use when writing JS inside a Korfix miniapp iframe that needs to in
 
 # korfix-js-api
 
-VMCRMUserApp — JS-класс для взаимодействия миниаппа с CRM через postMessage.
+VMCRMUserApp — JS class for miniapp interaction with the CRM via postMessage.
 
-## Подключение
+## Connecting
 
 ```html
 <script type="module">
@@ -16,73 +16,73 @@ const App = new VMCRMUserApp();
 </script>
 ```
 
-Путь абсолютный — всегда такой, не менять.
+The path is absolute — always use it as-is, do not change.
 
-## Ключевые методы
+## Key methods
 
 ```js
-// Контекст фрейма
+// Frame context
 const { app_id, domain, catalog, itemId, items, user } = (await App.getRequestParams()).data
 
-// Текущий пользователь (включая тариф)
+// Current user (including plan)
 const { name, from_auth, from_group, alias, role, avatar, tarif, tarif_name } = (await App.getUser()).data
-// from_auth   = author_id пользователя — передавать в form[from_auth] при создании записей
-// from_group  = ID тенанта — передавать в form[from_group] при создании записей
-// alias       = md5(login) — идентификатор пользователя в системе приложений
-// name        = ФИО (author_comment)
-// role        = тип аккаунта (account_type, числовой)
-// avatar      = имя файла аватара → /reimg/data/auth/{avatar}?80x80
-// tarif       = ID тарифа (строка с числом, "7")
-// tarif_name  = название тарифа ("Премиум")
-// Используй для feature gating: if (tarif === '7') showProFeatures()
+// from_auth   = user's author_id — pass in form[from_auth] when creating records
+// from_group  = tenant ID — pass in form[from_group] when creating records
+// alias       = md5(login) — user identifier in the app system
+// name        = full name (author_comment)
+// role        = account type (account_type, numeric)
+// avatar      = avatar filename → /reimg/data/auth/{avatar}?80x80
+// tarif       = plan ID (string with number, "7")
+// tarif_name  = plan name ("Premium")
+// Use for feature gating: if (tarif === '7') showProFeatures()
 
-// Полная биллинг-инфа (баланс, скидки, даты, прайсы):
+// Full billing info (balance, discounts, dates, prices):
 const billing = await App.fetch('/api/user/tariff')
 // data: { tarif, tarif_name, balance, discount, discount_date, payment_date, price, discount_3months, discount_12months }
 
-// Fetch (всегда через App, не через window.fetch — CORS)
+// Fetch (always via App, not window.fetch — CORS)
 App.fetch('/db/catalog.json')
-App.fetchAll('/db/catalog.json')   // все страницы автоматически
+App.fetchAll('/db/catalog.json')   // all pages automatically
 
-// Prefetch — запустить в фоне заранее, чтобы App.fetch() вернул сразу
+// Prefetch — start in background early so App.fetch() returns immediately
 App.prefetch('/db/marketplace.json?limit=200&free_cache=1')
 App.prefetch('/db/installed_apps.json?limit=200&free_cache=1')
-// ... позже в том же init:
-const resp = await App.fetch('/db/marketplace.json?limit=200&free_cache=1') // мгновенно
+// ... later in the same init:
+const resp = await App.fetch('/db/marketplace.json?limit=200&free_cache=1') // instant
 
 // UI
-App.alert('Готово', 'Заголовок')
+App.alert('Done', 'Title')
 App.modal('/db/todo', { title: 'ToDo' })
 App.closeModal()
-App.done()                                           // сигнал «установка завершена» из install-фрейма
-App.navigate('/db/projects')                         // переход к каталогу
-App.navigate('/db/installed_apps/ALIAS?frame=main&catalog=marketplace')  // открыть установленное приложение
-App.navigate('/db/marketplace/ALIAS')               // открыть карточку в маркетплейсе
+App.done()                                           // "install complete" signal from install frame
+App.navigate('/db/projects')                         // navigate to catalog
+App.navigate('/db/installed_apps/ALIAS?frame=main&catalog=marketplace')  // open installed app
+App.navigate('/db/marketplace/ALIAS')               // open marketplace card
 App.reload()
-App.setFrameSize(null, 600)        // только высота
+App.setFrameSize(null, 600)        // height only
 
-// KV-хранилище
+// KV storage
 App.storage.get('key', defaultVal)
 App.storage.set('key', value)
 App.storage.unset('key')
 
-// События
+// Events
 App.on('page.navigated', (data) => { /* ... */ })
 App.on('modal.closed', (data) => refreshData())
 App.on('catalog.selected', (data) => { /* data.catalog, data.ids */ })
 App.on('*', ({event, data}) => { /* wildcard */ })
-App.off('page.navigated')           // отписать все
+App.off('page.navigated')           // unsubscribe all
 ```
 
-## Кеширование и дедупликация (встроено в VMCRMUserApp)
+## Caching and deduplication (built into VMCRMUserApp)
 
-- `getUser()` и `getRequestParams()` — результат кешируется как Promise. Первый вызов идёт в postMessage, последующие в той же сессии iframe — мгновенно.
-- `App.fetch(url)` — дедупликация: два параллельных вызова с одним URL получают один и тот же Promise (полезно при `Promise.all`). Отключить: добавить `not_cache=1`.
-- `App.prefetch(url)` → `App.fetch(url)` — если prefetch завершился до вызова fetch, данные возвращаются без postMessage.
+- `getUser()` and `getRequestParams()` — result is cached as a Promise. The first call goes through postMessage; subsequent calls in the same iframe session return instantly.
+- `App.fetch(url)` — deduplication: two parallel calls with the same URL share the same Promise (useful with `Promise.all`). Disable: add `not_cache=1`.
+- `App.prefetch(url)` → `App.fetch(url)` — if prefetch completes before fetch is called, data is returned without postMessage.
 
-## App.done() — сигнал завершения install-фрейма
+## App.done() — install frame completion signal
 
-Вызывается из `install.html` после self-provisioning. Сообщает setup-экрану платформы, что этот install-фрейм готов — платформа немедленно переходит к следующему приложению без ожидания таймаута.
+Called from `install.html` after self-provisioning. Tells the platform setup screen that this install frame is done — the platform immediately moves to the next app without waiting for a timeout.
 
 ```js
 async function init() {
@@ -90,24 +90,24 @@ async function init() {
     if (!(await checkCatalogExists('custom_myapp'))) {
         await runInstall(user.data.from_auth, user.data.from_group);
     }
-    App.done();  // всегда — и после установки, и если уже установлено
+    App.done();  // always — both after install and if already installed
 }
 init();
 ```
 
-- Вызывать в обоих ветках: установка прошла / каталог уже был.
-- За пределами setup-экрана — no-op, безопасен.
-- Если не вызван — fallback: 4 секунды после загрузки iframe.
+- Call in both branches: install completed / catalog already existed.
+- Outside the setup screen — no-op, safe to call.
+- If not called — fallback: 4 seconds after the iframe loads.
 
-## Критично
+## Critical
 
-- **Никогда не использовать `fetch()` напрямую** — CORS. Только `App.fetch()`.
-- URL в `App.fetch()` — только относительные (без домена).
-- Body передаётся как объект, преобразуется в URLSearchParams.
-- **Ресурсы платформы — абсолютные пути**: аватары `/reimg/data/auth/{doc}?80x80`, файлы каталогов `/data/db/f_{catalog}/{doc}`, иконки приложений `/data/db/f_marketplace/{doc}`. Относительные пути в iframe резолвятся к store-URL архива приложения, а не к CRM-домену.
+- **Never use `fetch()` directly** — CORS. Only `App.fetch()`.
+- URLs in `App.fetch()` — relative only (no domain).
+- Body is passed as an object, converted to URLSearchParams.
+- **Platform resources — absolute paths**: avatars `/reimg/data/auth/{doc}?80x80`, catalog files `/data/db/f_{catalog}/{doc}`, app icons `/data/db/f_marketplace/{doc}`. Relative paths inside the iframe resolve to the app archive store URL, not the CRM domain.
 
-## Документация
+## Documentation
 
-- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/js-api.md` — полный справочник методов и событий
-- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/storage-and-hooks.md` — App.storage и вебхуки
-- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/data-api.md` — форматы запросов и фильтры
+- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/js-api.md` — full method and event reference
+- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/storage-and-hooks.md` — App.storage and webhooks
+- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/data-api.md` — request formats and filters

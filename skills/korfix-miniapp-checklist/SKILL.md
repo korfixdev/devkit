@@ -5,91 +5,91 @@ description: Use during miniapp development to ensure quality and avoid common m
 
 # korfix-miniapp-checklist
 
-**ОБЯЗАТЕЛЬНО** запускать этот чеклист перед каждым деплоем миниаппа.
-Не пропускать пункты, не считать что "и так понятно что сделано правильно".
+**REQUIRED** — run this checklist before every miniapp deploy.
+Do not skip items; do not assume "it's obviously done correctly".
 
-> **После этого чеклиста:** запусти `korfix-pre-deploy` — он проведёт тебя через сборку zip и деплой.
-> **Для независимой валидации:** агент `korfix-miniapp-validator` в fresh subagent.
+> **After this checklist:** run `korfix-pre-deploy` — it will walk you through zip assembly and deploy.
+> **For independent validation:** use the `korfix-miniapp-validator` agent in a fresh subagent.
 
 ## config.json
 
-- [ ] JSON валидный (нет trailing comma, нет необработанных `\` или спецсимволов)
-- [ ] `name` заполнен
-- [ ] `package` заполнен (имя пакета / папки)
-- [ ] `description` -- краткое (1-2 предложения)
-- [ ] `about` -- строка с markdown через `\n`, содержит все разделы:
-  - `## Что делает`
-  - `## Где появляется в CRM` (с прямыми ссылками `/db/catalog`)
-  - `## Возможности`
-  - `## Как пользоваться`
-  - `## Настройка`
-- [ ] `logo` -- файл существует в zip
-- [ ] `urls` -- все пути относительные (для zip-приложений), без домена
-- [ ] `urlsConf` -- для локальных фреймов `"method": "get"`
-- [ ] `permissions` -- явно объявлены все используемые каталоги и операции
+- [ ] JSON is valid (no trailing comma, no unescaped `\` or special characters)
+- [ ] `name` is filled in
+- [ ] `package` is filled in (package name / folder)
+- [ ] `description` — brief (1-2 sentences)
+- [ ] `about` — a string with markdown via `\n`, contains all sections:
+  - `## What it does`
+  - `## Where it appears in CRM` (with direct links `/db/catalog`)
+  - `## Features`
+  - `## How to use`
+  - `## Configuration`
+- [ ] `logo` — file exists in zip
+- [ ] `urls` — all paths are relative (for zip apps), no domain
+- [ ] `urlsConf` — for local frames `"method": "get"`
+- [ ] `permissions` — all used catalogs and operations are explicitly declared
 
-## Файлы в zip
+## Files in zip
 
-- [ ] `config.json` лежит в корне архива, не в папке
-- [ ] Все файлы из `urls` существуют в архиве
-- [ ] Нет запрещённых расширений: php, exe, sh
+- [ ] `config.json` is in the archive root, not inside a folder
+- [ ] All files from `urls` exist in the archive
+- [ ] No forbidden extensions: php, exe, sh
 
-## Код
+## Code
 
-- [ ] `App.fetch()` используется для всех запросов (не `window.fetch`)
-- [ ] `/db/` -- поля с `form[]`, `/api/db/` -- без `form[]`
-- [ ] Массовое создание записей: явный `alias = uid()`, передаются `from_auth` и `from_group`
-- [ ] Self-provisioning проверяет каталог через `custom_dbtables`, не через `/db/{catalog}.json`
-- [ ] **При создании `custom_dbtables` передаётся `form[scheme]='coredb_def_catalog'`** — обязательное template-поле. Без него система не создаст таблицу.
-- [ ] **`custom_` префикс везде при доступе к своим каталогам/полям**:
-    - `App.fetch('/db/custom_my_catalog.json')` — не `/db/my_catalog.json`
-    - `record.custom_my_field` — не `record.my_field`
-    - В `permissions.catalogs` и точках встраивания — тоже с префиксом
-    - Исключение: при создании в `custom_dbtables.dbname` префикс **не указывается** (платформа добавит), а в `custom_dbfields.scheme` — **указывается**
-- [ ] **Права `access_db` — осознанно выбраны под целевую роль/схему**:
-    - После INSERT `custom_dbtables` платформа **автоматически создаёт** запись `access_db` (root+adm=1, остальные=0). Обновлять, не создавать.
-    - Прежде чем писать код — спросить пользователя если не очевидно: для какой роли каталог, как должны работать разные роли (см. skill `korfix-self-provisioning`).
-    - Если для обычных ролей с персональными данными — `configureAccess(catalog, 2)` (каждый видит свои)
-    - Если коллаборация (общие данные) — `configureAccess(catalog, 1)` (все видят все)
-    - Если оставляем только админам — в `about` явно написать «Каталог доступен только администраторам»
-    - Хелпер `configureAccess` подтягивает список ролей из схемы — портируемо между инстансами
-- [ ] `App.setFrameSize(null, document.body.scrollHeight)` вызывается после рендера
+- [ ] `App.fetch()` is used for all requests (not `window.fetch`)
+- [ ] `/db/` — fields with `form[]`, `/api/db/` — without `form[]`
+- [ ] Bulk record creation: explicit `alias = uid()`, `from_auth` and `from_group` are passed
+- [ ] Self-provisioning checks for the catalog via `custom_dbtables`, not via `/db/{catalog}.json`
+- [ ] **When creating `custom_dbtables`, `form[scheme]='coredb_def_catalog'` is passed** — required template field. Without it the system will not create the table.
+- [ ] **`custom_` prefix everywhere when accessing own catalogs/fields**:
+    - `App.fetch('/db/custom_my_catalog.json')` — not `/db/my_catalog.json`
+    - `record.custom_my_field` — not `record.my_field`
+    - In `permissions.catalogs` and embed points — also with the prefix
+    - Exception: when creating in `custom_dbtables.dbname` the prefix is **not specified** (the platform adds it), but in `custom_dbfields.scheme` — it **is specified**
+- [ ] **`access_db` permissions — consciously chosen for the target role/schema**:
+    - After INSERT into `custom_dbtables`, the platform **automatically creates** an `access_db` record (root+adm=1, others=0). Update, do not create.
+    - Before writing code — ask the user if it's not obvious: for which role is the catalog, how should different roles behave (see the `korfix-self-provisioning` skill).
+    - If for regular roles with personal data — `configureAccess(catalog, 2)` (each sees their own)
+    - If collaboration (shared data) — `configureAccess(catalog, 1)` (everyone sees everything)
+    - If leaving only for admins — explicitly write in `about` "Catalog is accessible to administrators only"
+    - The `configureAccess` helper fetches the role list from the schema — portable across instances
+- [ ] `App.setFrameSize(null, document.body.scrollHeight)` is called after rendering
 
-## Фреймы
+## Frames
 
-- [ ] **`install`-фрейм** (если есть self-provisioning):
-  - [ ] Каждый мутирующий `App.fetch` → статус ответа проверяется явно (`resp.status === 'error'` → throw)
-  - [ ] Лог устновки сохраняется в `App.storage` — ключ `install.log`
-  - [ ] При повторном открытии: показывает сохранённый лог + «Переустановить» + «Закрыть»
-  - [ ] Если `urls.widget` есть — в конце install вызывается `installWidgetOnDashboard(token)`
-  - [ ] После установки переходит в `main`: `App.navigate('/db/installed_apps/${token}?frame=main')`
-- [ ] **`main`-фрейм** (если есть `urls.install`): при загрузке проверяет `checkCatalogExists`, иначе `App.navigate(... frame=install)`
-- [ ] **`widget`-фрейм**: `permissions.catalogs` содержит `"dashboard_widgets": ["read", "write"]`
+- [ ] **`install` frame** (if self-provisioning is present):
+  - [ ] Every mutating `App.fetch` → response status is checked explicitly (`resp.status === 'error'` → throw)
+  - [ ] Install log is saved to `App.storage` — key `install.log`
+  - [ ] On repeated open: shows saved log + "Reinstall" + "Close"
+  - [ ] If `urls.widget` exists — `installWidgetOnDashboard(token)` is called at end of install
+  - [ ] After install, navigates to `main`: `App.navigate('/db/installed_apps/${token}?frame=main')`
+- [ ] **`main` frame** (if `urls.install` exists): checks `checkCatalogExists` on load, otherwise `App.navigate(... frame=install)`
+- [ ] **`widget` frame**: `permissions.catalogs` contains `"dashboard_widgets": ["read", "write"]`
 
-Полный паттерн install + виджет + ответы API → `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/frames.md`
+Full install + widget + API response pattern → `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/frames.md`
 
 ## UI / UX
 
-- [ ] Пустое состояние: если данных нет -- осмысленное сообщение, не ошибка
-- [ ] Адаптивная вёрстка: таблицы на мобильных не обрезаются
-- [ ] Шрифт полей ввода >= 16px (иначе iOS Safari зумит)
-- [ ] Кликабельные элементы: `<a>` или `<button>`, не `<div>` (iOS не обрабатывает клик на div)
-- [ ] Есть шестерёнка (⚙) для настроек или экрана установки (если есть self-provisioning)
+- [ ] Empty state: if there's no data — a meaningful message, not an error
+- [ ] Responsive layout: tables are not clipped on mobile
+- [ ] Input field font size >= 16px (otherwise iOS Safari zooms in)
+- [ ] Clickable elements: `<a>` or `<button>`, not `<div>` (iOS doesn't handle click on div)
+- [ ] A gear icon (⚙) exists for settings or the install screen (if self-provisioning is present)
 
-## Перед отправкой
+## Before submitting
 
-- [ ] **`README.md` обновлён** — версия в нём совпадает с `config.json`, упомянуты использованные каталоги, custom-каталоги, история изменений. Запусти `korfix-tech-writer` (haiku-агент) если ещё не вызван
-- [ ] **`README.md` включён в zip** — переносит документацию вместе с приложением, нужно для git и для следующих сессий
-- [ ] Деплой через API: `curl -X POST .../api/db/marketplace/{ID}?token={TOKEN} -F "doc1=@app.zip"`
-- [ ] После деплоя проверить версию: `appconfig.version` в ответе соответствует ожидаемой
-- [ ] Приложение открыто в браузере и протестировано (не только задеплоено)
+- [ ] **`README.md` is updated** — version matches `config.json`, used catalogs and custom catalogs are mentioned, changelog included. Run `korfix-tech-writer` (haiku agent) if not yet called
+- [ ] **`README.md` is included in the zip** — carries documentation with the app, needed for git and future sessions
+- [ ] Deploy via API: `curl -X POST .../api/db/marketplace/{ID}?token={TOKEN} -F "doc1=@app.zip"`
+- [ ] After deploy, verify version: `appconfig.version` in the response matches the expected value
+- [ ] App is opened in the browser and tested (not just deployed)
 
 ---
 
-Если хоть один пункт не выполнен -- исправить до деплоя. После самопроверки — запусти `korfix-miniapp-validate` в subagent для беспристрастного ревью.
+If even one item is not done — fix it before deploying. After self-review — run `korfix-miniapp-validate` in a subagent for an impartial review.
 
-## Документация
+## Documentation
 
-- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/checklist.md` -- полный оригинальный чеклист с расширенными пояснениями
-- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/deploy.md` -- деплой и обновление
-- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/config-json.md` -- точки встраивания и permissions
+- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/checklist.md` -- full original checklist with extended explanations
+- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/deploy.md` -- deploy and update
+- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/config-json.md` -- embed points and permissions

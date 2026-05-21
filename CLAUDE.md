@@ -1,44 +1,44 @@
-# korfix-devkit — правила эскалации и маршрутизации
+# korfix-devkit — escalation and routing rules
 
-Этот плагин предоставляет агентов и skills для разработки миниапов на платформе Korfix.
+This plugin provides agents and skills for developing miniapps on the Korfix platform.
 
-## Когда запускать агентов (не skills)
+## When to launch agents (not skills)
 
-| Ситуация | Агент |
+| Situation | Agent |
 |----------|-------|
-| Новый миниап с нуля | **всегда** `korfix-analyst` первым — уточняет требования, проектирует решение |
-| Архитектурный выбор (какие каталоги, как хранить данные) | `korfix-architect` |
-| Разработка / доработка миниапа | `korfix-miniapp-dev` |
-| Игровой миниап (Korn, квесты, лидерборд) | `korfix-gamedev` |
-| Деплой / публикация | `korfix-miniapp-dev` → он вызовет валидатор перед деплоем |
-| Независимая валидация перед деплоем | `korfix-miniapp-validator` (отдельный subagent, свежий контекст) |
-| Обновить README / документацию приложения | `korfix-tech-writer` |
+| New miniapp from scratch | **always** `korfix-analyst` first — clarifies requirements, designs the solution |
+| Architectural decision (which catalogs, how to store data) | `korfix-architect` |
+| Miniapp development / refinement | `korfix-miniapp-dev` |
+| Game miniapp (Korn, quests, leaderboard) | `korfix-gamedev` |
+| Deploy / publish | `korfix-miniapp-dev` → it will call the validator before deploying |
+| Independent validation before deploy | `korfix-miniapp-validator` (separate subagent, fresh context) |
+| Update README / app documentation | `korfix-tech-writer` |
 
-## Когда использовать skills (не агентов)
+## When to use skills (not agents)
 
-Skills — для конкретного технического вопроса внутри разработки:
+Skills — for a specific technical question within development:
 
-| Нужна информация о... | Skill |
+| Need information about... | Skill |
 |-----------------------|-------|
-| config.json структура | `korfix-miniapp-config` |
-| App.fetch, getUser, постMessage | `korfix-js-api` |
-| CRUD каталогов, form[], alias | `korfix-crud-data` |
-| Поля и типы конкретного каталога | `korfix-catalog-schema` |
-| Self-provisioning (создание каталогов) | `korfix-self-provisioning` |
-| Проверка прав токена | `korfix-token-audit` |
-| Чеклист разработчика (самопроверка) | `korfix-miniapp-checklist` |
-| Деплой шаги + чеклист | `korfix-pre-deploy` |
-| Ручная проверка в браузере | `korfix-test-guide` |
+| config.json structure | `korfix-miniapp-config` |
+| App.fetch, getUser, postMessage | `korfix-js-api` |
+| Catalog CRUD, form[], alias | `korfix-crud-data` |
+| Fields and types of a specific catalog | `korfix-catalog-schema` |
+| Self-provisioning (catalog creation) | `korfix-self-provisioning` |
+| Token permissions audit | `korfix-token-audit` |
+| Developer checklist (self-check) | `korfix-miniapp-checklist` |
+| Deploy steps + checklist | `korfix-pre-deploy` |
+| Manual browser testing | `korfix-test-guide` |
 
-## Железное правило: новый миниап → analyst first
+## Hard rule: new miniapp → analyst first
 
-Если пользователь говорит «сделай приложение», «создай миниап», «нужно приложение для X» —
-**не начинай писать код**. Запусти `korfix-analyst`. Он задаст нужные вопросы,
-спроектирует решение и передаст спецификацию в `korfix-miniapp-dev`.
+If the user says "make an app", "create a miniapp", "I need an app for X" —
+**do not start writing code**. Launch `korfix-analyst`. It will ask the right questions,
+design the solution, and pass the specification to `korfix-miniapp-dev`.
 
-Исключение: пользователь явно сказал «просто создай без обсуждения» или передал готовую спецификацию.
+Exception: the user explicitly said "just create it without discussion" or provided a ready specification.
 
-## Деплой всегда через валидатор
+## Deploy always goes through the validator
 
-Перед любым деплоем — `korfix-miniapp-validator` в fresh subagent.
-Без валидации деплой запрещён, кроме явного «деплой без валидации» от пользователя.
+Before any deploy — `korfix-miniapp-validator` in a fresh subagent.
+Deploy without validation is forbidden, except for an explicit "deploy without validation" from the user.

@@ -5,35 +5,35 @@ description: Use when a miniapp needs to know catalog field types, select option
 
 # korfix-catalog-schema
 
-Получение схемы каталога: поля, типы, варианты select, FK-связи.
+Fetching a catalog schema: fields, types, select options, FK relationships.
 
-## Запрос схемы
+## Schema request
 
 ```js
 // iframe
 const schema = await App.fetch('/db/tt_tasks/sheme.json')
-// schema.data — объект: { fieldName: { type, arr, catalog, ... } }
+// schema.data — object: { fieldName: { type, arr, catalog, ... } }
 ```
 
-## Типы полей
+## Field types
 
-| type | Что содержит |
-|------|-------------|
-| `text` / `textarea` | строка |
-| `select` | `arr: {id: label}` — варианты |
-| `select_from_table` | `arr`, `catalog` (связанный каталог), `total` |
-| `date` / `datetime` | строка даты |
-| `multiselect_from_table` | то же что select_from_table, мультивыбор |
+| type | Contains |
+|------|----------|
+| `text` / `textarea` | string |
+| `select` | `arr: {id: label}` — options |
+| `select_from_table` | `arr`, `catalog` (related catalog), `total` |
+| `date` / `datetime` | date string |
+| `multiselect_from_table` | same as select_from_table, multi-select |
 
-## Получить варианты select
+## Get select options
 
 ```js
 const schema = await App.fetch('/db/tt_tasks/sheme.json')
 const options = schema.data.status.arr
-// {0: 'Новый', 10: 'В работе', 40: 'Завершено'}
+// {0: 'New', 10: 'In progress', 40: 'Done'}
 ```
 
-## Пагинация вариантов (total > 200)
+## Option pagination (total > 200)
 
 ```js
 const field = schema.data.client_id
@@ -42,7 +42,7 @@ if (field.total > Object.keys(field.arr).length) {
 }
 ```
 
-## Определить ID текущего пользователя
+## Get current user ID
 
 ```js
 const schema = await App.fetch('/db/dashboard_widgets/sheme.json')
@@ -50,15 +50,15 @@ const arr = schema?.data?.from_auth?.arr || {}
 const currentUserId = Object.keys(arr).find(k => k !== '0') || 0
 ```
 
-## load_values — читаемые значения вместо ID
+## load_values — human-readable values instead of IDs
 
 ```js
-// Без: person_id = "1715761701"
-// С:   person_id = "Алексей Григорьев"
+// Without: person_id = "1715761701"
+// With:    person_id = "Alex Grigoriev"
 GET /api/db/tt_tasks?load_values=1
 ```
 
-## Документация
+## Documentation
 
-- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/data-api.md` — раздел «Получение схемы каталога»
-- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/korfix-catalogs.md` — полный список каталогов по модулям
+- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/data-api.md` — section "Getting catalog schema"
+- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/korfix-catalogs.md` — full list of catalogs by module

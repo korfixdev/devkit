@@ -5,61 +5,61 @@ description: Use immediately before deploying a Korfix miniapp. Step-by-step pre
 
 # korfix-pre-deploy
 
-Пошаговый чеклист перед деплоем миниапа. Выполняй последовательно — не пропускать шаги.
+Step-by-step checklist before deploying a miniapp. Follow sequentially — do not skip steps.
 
-## Шаг 1 — Версия бамплена?
+## Step 1 — Is the version bumped?
 
-Открой `config.json`. Проверь `version`. Определи уровень изменений:
+Open `config.json`. Check `version`. Determine the level of changes:
 
-| Что изменилось | Bump |
-|----------------|------|
-| Только багфиксы, правки текста | PATCH `x.y.Z+1` |
-| Новая функция, новый фрейм, новый каталог | MINOR `x.Y+1.0` |
-| Кардинальные изменения UX/архитектуры | MAJOR `X+1.0.0` |
+| What changed | Bump |
+|--------------|------|
+| Bug fixes only, text corrections | PATCH `x.y.Z+1` |
+| New feature, new frame, new catalog | MINOR `x.Y+1.0` |
+| Major UX/architecture changes | MAJOR `X+1.0.0` |
 
-Если версия не изменена со времени последнего деплоя — **обновить обязательно**.
+If the version hasn't changed since the last deploy — **update it, required**.
 
-## Шаг 2 — README актуален?
+## Step 2 — Is the README up to date?
 
-Запусти `korfix-tech-writer` (subagent, haiku):
-- Передай путь к директории миниапа
-- Передай «что изменилось» в 1-2 предложениях
-- Дождись обновления README.md
+Run `korfix-tech-writer` (subagent, haiku):
+- Pass the path to the miniapp directory
+- Pass "what changed" in 1-2 sentences
+- Wait for README.md to be updated
 
-README.md идёт в zip — он должен отражать текущее состояние.
+README.md goes into the zip — it must reflect the current state.
 
-## Шаг 3 — Независимая валидация
+## Step 3 — Independent validation
 
-Запусти `korfix-miniapp-validator` в **fresh subagent**:
-- Передай только путь к директории и версию
-- Не передавай историю разработки
-- Получи `STATUS: READY` или `NOT READY`
+Run `korfix-miniapp-validator` in a **fresh subagent**:
+- Pass only the directory path and version
+- Do not pass the development history
+- Receive `STATUS: READY` or `NOT READY`
 
-Если `NOT READY` — исправь все Critical и Must пункты, повтори валидацию.
+If `NOT READY` — fix all Critical and Must items, repeat validation.
 
-## Шаг 4 — Собери zip
+## Step 4 — Build the zip
 
 ```bash
 cd /path/to/app-dir
 zip -r /tmp/app.zip config.json *.html *.js *.css *.svg README.md
 ```
 
-Проверь что в zip:
-- [ ] `config.json` в корне (не в папке)
-- [ ] все фреймы из `urls` присутствуют
-- [ ] `logo` файл присутствует
-- [ ] `README.md` присутствует
+Verify the zip contains:
+- [ ] `config.json` in the root (not inside a folder)
+- [ ] all frames from `urls` are present
+- [ ] `logo` file is present
+- [ ] `README.md` is present
 
-## Шаг 5 — Деплой
+## Step 5 — Deploy
 
-**Update existing** (есть ID):
+**Update existing** (ID exists):
 ```bash
 curl -X POST "${KORFIX_API_URL}/api/marketplace/deploy/${APP_ID}" \
   -H "Authorization: Bearer ${KORFIX_TOKEN}" \
   -F "doc1=@/tmp/app.zip;type=application/zip"
 ```
 
-**Новое приложение** (нет ID):
+**New app** (no ID):
 ```bash
 curl -X POST "${KORFIX_API_URL}/api/db/marketplace" \
   -H "Authorization: Bearer ${KORFIX_TOKEN}" \
@@ -67,11 +67,11 @@ curl -X POST "${KORFIX_API_URL}/api/db/marketplace" \
   -F "doc1=@/tmp/app.zip;type=application/zip"
 ```
 
-Проверь ответ: `"status": "ok"`. Если ошибка — не повторяй слепо, разберись с причиной.
+Check the response: `"status": "ok"`. If there's an error — do not retry blindly, investigate the cause.
 
-## Шаг 6 — Smoke-test после деплоя
+## Step 6 — Smoke test after deploy
 
-Открой приложение на инстансе:
-1. Убедись что версия в маркетплейсе обновилась
-2. Открой главный фрейм — нет ли 404, белого экрана, ошибок в консоли
-3. Если есть widget — проверь что он грузится
+Open the app on the instance:
+1. Verify the version in the marketplace has updated
+2. Open the main frame — check for 404, white screen, console errors
+3. If there's a widget — verify it loads

@@ -5,72 +5,72 @@ description: Use BEFORE starting Korfix miniapp development to verify what catal
 
 # korfix-token-audit
 
-Перед началом разработки миниапа — **проверить что токен реально может**, чтобы не строить против каталогов к которым нет доступа.
+Before starting miniapp development — **verify what the token can actually do**, so you don't build against catalogs you have no access to.
 
-## Когда срабатывает
+## When it triggers
 
-- Перед первым обращением к любому конкретному каталогу для разработки/тестирования
-- При новой задаче — «нужно работать с каталогом X»
-- Когда видишь HTTP 403/404 на `/api/db/{catalog}` — надо разобраться, проблема в токене или в имени
+- Before the first access to any specific catalog for development/testing
+- On a new task — "need to work with catalog X"
+- When you see HTTP 403/404 on `/api/db/{catalog}` — need to determine if it's a token problem or a name problem
 
-## Процесс
+## Process
 
-### Шаг 1. Получить список доступных токену каталогов
+### Step 1. Get the list of catalogs available to the token
 
 ```bash
 curl -s "${KORFIX_API_URL}/api/db/getcatalogs" \
   -H "Authorization: Bearer ${KORFIX_TOKEN}" | head -c 2000
 ```
 
-Возвращает JSON со списком каталогов и доступных методов (`get`/`post`/`put`/`delete`). Это **реальный набор**, заданный при создании токена в `/db/api`.
+Returns JSON with a list of catalogs and available methods (`get`/`post`/`put`/`delete`). This is the **actual set** defined when the token was created in `/db/api`.
 
-### Шаг 2. Проверить нужный каталог точечно
+### Step 2. Check a specific catalog
 
 ```bash
-# Чтение
+# Read
 curl -sI "${KORFIX_API_URL}/api/db/{catalog}?limit=1" \
   -H "Authorization: Bearer ${KORFIX_TOKEN}"
 
-# Возможные ответы:
-# HTTP/2 200 — доступ есть
-# HTTP/2 403 — токен НЕ имеет класса db_{catalog}_get
-# HTTP/2 404 — каталога не существует
-# HTTP/2 401 — токен невалиден или истёк
+# Possible responses:
+# HTTP/2 200 — access granted
+# HTTP/2 403 — token does NOT have the db_{catalog}_get class
+# HTTP/2 404 — catalog does not exist
+# HTTP/2 401 — token is invalid or expired
 ```
 
-### Шаг 3. Если доступа нет — ОБЯЗАТЕЛЬНО спроси пользователя
+### Step 3. If access is missing — ALWAYS ask the user
 
-**Не молчи. Не пробуй обходить. Не используй другой каталог без подтверждения.**
+**Do not stay silent. Do not try to work around it. Do not use another catalog without confirmation.**
 
-Возможные варианты:
+Possible options:
 
-**A. Попросить расширить токен:**
-> «Для работы с каталогом `{catalog}` токену не хватает класса `db_{catalog}_{method}`. Можешь ли ты добавить его? В `/db/api` найди свой токен → раздел "Классы API" → отметь нужное → сохрани.»
+**A. Ask to extend the token:**
+> "To work with catalog `{catalog}`, the token is missing the class `db_{catalog}_{method}`. Can you add it? In `/db/api` find your token → 'API Classes' section → check the needed one → save."
 
-**B. Предложить альтернативу** если знаешь:
-> «Каталог `{catalog}` недоступен, но похожую функциональность даёт `{alternative}` (он у токена есть). Использовать его?»
+**B. Suggest an alternative** if you know one:
+> "Catalog `{catalog}` is not accessible, but `{alternative}` provides similar functionality (the token has it). Use it?"
 
-**C. Если задача требует структуру которой нет в токене:**
-> «Альтернатив в текущем токене нет. Создать кастомный каталог через self-provisioning (`custom_{name}`)? Или расширить токен?»
+**C. If the task requires a structure not in the token:**
+> "There are no alternatives in the current token. Create a custom catalog via self-provisioning (`custom_{name}`)? Or extend the token?"
 
-## Типовые случаи
+## Common cases
 
-| Случай | Что делать |
-|---|---|
-| Нужен `crm_clients`, у токена нет | Попросить добавить класс `db_crm_clients_get` и `db_crm_clients_post` |
-| Нужен «clients» (без префикса) — нет такого | Уточни — скорее всего имеется в виду `crm_clients` (дефолтный) или `ag_clients` (AG-модуль). Спроси пользователя «какой именно?» — не угадывай |
-| Кастомный каталог создан, но не виден в MCP (`/api/db/getcatalogs`) | Для кастомных каталогов MCP читает поле `custom_catalogs` токена. Добавить: `/db/api` → токен → «Доступ к кастомным каталогам» → выбрать каталог → сохранить. Или автоматически из install-фрейма через `registerCatalogForMCP` (см. `korfix-self-provisioning` skill) |
-| Создаёшь `custom_X` через self-provisioning | Токен должен иметь: `db_custom_dbtables_get`, `db_custom_dbtables_post`, `db_custom_dbfields_post`, `db_access_db_get`, `db_access_db_post` (для настройки прав ролей). Без них self-provisioning зависнет на первом же запросе. |
-| Программный deploy через API | Токен должен иметь: `marketplace_deploy_post` (атомарный endpoint) или `db_marketplace_post` + `marketplace_refresh_post` (два отдельных вызова). См. [docs](${CLAUDE_PLUGIN_ROOT}/docs/miniapps/deploy.md). |
+| Case | What to do |
+|------|-----------|
+| Need `crm_clients`, token doesn't have it | Ask to add class `db_crm_clients_get` and `db_crm_clients_post` |
+| Need "clients" (no prefix) — doesn't exist | Clarify — most likely it's `crm_clients` (default) or `ag_clients` (AG module). Ask the user "which one?" — do not guess |
+| Custom catalog created, not visible in MCP (`/api/db/getcatalogs`) | For custom catalogs MCP reads the `custom_catalogs` field of the token. To add: `/db/api` → token → "Custom catalog access" → select catalog → save. Or automatically from install frame via `registerCatalogForMCP` (see `korfix-self-provisioning` skill) |
+| Creating `custom_X` via self-provisioning | Token must have: `db_custom_dbtables_get`, `db_custom_dbtables_post`, `db_custom_dbfields_post`, `db_access_db_get`, `db_access_db_post` (for role permission setup). Without them self-provisioning will stall on the first request. |
+| Programmatic deploy via API | Token must have: `marketplace_deploy_post` (atomic endpoint) or `db_marketplace_post` + `marketplace_refresh_post` (two separate calls). See [docs](${CLAUDE_PLUGIN_ROOT}/docs/miniapps/deploy.md). |
 
-## Интеграция с workflow
+## Integration with workflow
 
-1. **`korfix-miniapp-dev` агент** должен запускать этот skill при старте сессии разработки или при первом обращении к каталогу.
-2. **Не использовать каталог, доступ к которому не подтверждён** — иначе ошибки выползут на этапе деплоя/использования, а не сразу.
-3. **При создании self-provisioned каталога** — сразу проверить что у токена есть `db_custom_*` и `db_access_db_post` (для настройки прав).
+1. The **`korfix-miniapp-dev` agent** must run this skill at the start of a development session or on first access to a catalog.
+2. **Do not use a catalog whose access has not been confirmed** — otherwise errors surface at deploy/usage time, not immediately.
+3. **When creating a self-provisioned catalog** — immediately check that the token has `db_custom_*` and `db_access_db_post` (for permission setup).
 
-## Документация
+## Documentation
 
-- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/data-api.md` — раздел «Ключевое правило: какой endpoint откуда»
-- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/self-provisioning.md` — про access_db
-- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/korfix-catalogs.md` — каталоги Korfix ERP
+- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/data-api.md` — section "Key rule: which endpoint from where"
+- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/self-provisioning.md` — about access_db
+- `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/korfix-catalogs.md` — Korfix ERP catalogs

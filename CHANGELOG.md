@@ -4,6 +4,14 @@
 
 Формат — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), версионирование — [SemVer](https://semver.org/).
 
+## [0.18.0] — 2026-05-21
+
+### Changed
+- **Full English translation** — all agents, skills, CLAUDE.md, CONTRIBUTING.md, README.md translated to English. `docs/miniapps/` (read-on-demand, mirror of korfix-docs) kept in Russian.
+
+### Added
+- **`sync-docs.sh`** — script to sync `docs/miniapps/` from sibling `korfix-docs/` repo (`rsync --delete`)
+
 ## [0.17.0] — 2026-05-21
 
 ### Added

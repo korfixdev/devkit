@@ -5,55 +5,55 @@ description: Use after deploying a Korfix miniapp to verify it works correctly i
 
 # korfix-test-guide
 
-Процедура ручной проверки миниапа в браузере после деплоя. Статический validator (`korfix-miniapp-validate`) проверяет файлы — этот guide проверяет живое поведение.
+Manual miniapp testing procedure in the browser after deploy. The static validator (`korfix-miniapp-validate`) checks files — this guide checks live behavior.
 
-## Подготовка
+## Preparation
 
-1. Открой инстанс в браузере (авторизуйся)
-2. Убедись что приложение установлено: `/db/installed_apps` → найди приложение
-3. Открой DevTools → Console (F12) — держи открытой всё время проверки
+1. Open the instance in the browser (log in)
+2. Verify the app is installed: `/db/installed_apps` → find the app
+3. Open DevTools → Console (F12) — keep it open throughout the check
 
 ---
 
-## Проверка фрейма `main` (основной экран)
+## Checking the `main` frame (main screen)
 
-- [ ] Фрейм открывается без белого экрана и без 404
-- [ ] В консоли нет красных ошибок при загрузке
-- [ ] Данные загружаются (нет бесконечного спиннера)
-- [ ] Высота iframe подстраивается под контент (нет лишнего скролла страницы)
-- [ ] Кнопки / формы работают — выполни базовый сценарий
-- [ ] После действия (сохранение, удаление) UI обновляется корректно
-- [ ] Нет XHR/fetch ошибок в Network tab (не 403, не 500)
+- [ ] Frame opens without a white screen and without 404
+- [ ] No red errors in console on load
+- [ ] Data loads (no infinite spinner)
+- [ ] iframe height adjusts to content (no extra page scroll)
+- [ ] Buttons / forms work — perform the basic scenario
+- [ ] After an action (save, delete) UI updates correctly
+- [ ] No XHR/fetch errors in the Network tab (no 403, no 500)
 
-## Проверка фрейма `widget` (дашборд-виджет)
+## Checking the `widget` frame (dashboard widget)
 
-- [ ] Добавь виджет на дашборд (если не добавлен автоматически installer'ом)
-- [ ] Виджет грузится без ошибок
-- [ ] Данные в виджете актуальны (не кеш из прошлой сессии)
-- [ ] Размер виджета корректен — не обрезан, не переполнен
-- [ ] Если виджет кликабельный — клик переходит куда нужно
+- [ ] Add the widget to the dashboard (if not added automatically by the installer)
+- [ ] Widget loads without errors
+- [ ] Data in the widget is current (not cached from a previous session)
+- [ ] Widget size is correct — not clipped, not overflowing
+- [ ] If the widget is clickable — click navigates to the correct destination
 
-## Проверка фрейма `install` (установщик)
+## Checking the `install` frame (installer)
 
-- [ ] При повторной установке — installer не крешит, завершает корректно
-- [ ] `App.done()` вызывается — платформа переходит к следующему шагу setup
-- [ ] Если installer создаёт каталог — убедись что каталог создан (`/db/custom_xxx.json`)
-- [ ] Повторный запуск installer'а — идемпотентен (не дублирует данные)
+- [ ] On repeated install — installer does not crash, completes correctly
+- [ ] `App.done()` is called — platform moves to the next setup step
+- [ ] If installer creates a catalog — verify the catalog was created (`/db/custom_xxx.json`)
+- [ ] Repeated installer run is idempotent (no duplicate data)
 
-## Проверка изоляции данных
+## Data isolation check
 
-- [ ] Войди под другим пользователем — данные storage не видны чужие
-- [ ] Данные каталога фильтруются по `from_group` корректно
+- [ ] Log in as a different user — storage data from another user is not visible
+- [ ] Catalog data is filtered by `from_group` correctly
 
-## Проверка мобильного вида
+## Mobile view check
 
-- [ ] Переключи DevTools в mobile-режим (iPhone / Android)
-- [ ] Контент не вылезает за экран
-- [ ] Кнопки достаточного размера для касания
+- [ ] Switch DevTools to mobile mode (iPhone / Android)
+- [ ] Content does not overflow the screen
+- [ ] Buttons are large enough for touch
 
-## Что делать при нахождении бага
+## What to do when a bug is found
 
-1. Запиши: какой шаг, что ожидал, что получил, сообщение из консоли
-2. Открой `korfix-miniapp-dev` агента, передай описание бага
-3. После фикса — повтори только затронутые пункты этого guide
-4. Не пропускай повторный деплой через `korfix-pre-deploy`
+1. Record: which step, what was expected, what happened, the message from console
+2. Open the `korfix-miniapp-dev` agent, pass the bug description
+3. After the fix — repeat only the affected items of this guide
+4. Do not skip re-deployment through `korfix-pre-deploy`
