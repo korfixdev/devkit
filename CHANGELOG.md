@@ -4,6 +4,11 @@
 
 Формат — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), версионирование — [SemVer](https://semver.org/).
 
+## [0.19.0] — 2026-05-22
+
+### Added
+- **`docs/miniapps/backend-development.md`** (synced from korfix-docs) — backend (PHP) разработка миниапов: когда нужен, lifecycle (quarantine → review → approve), sandbox limits, security requirements F1-F11 (включая SSRF guard с DNS-resolve + CURLOPT_RESOLVE), best practices, эталон n8n-monitor, pre-deploy checklist. Доступ ограничен сертифицированными разработчиками — упомянуто в introduction. Bilingual (ru/en) на сайте docs.korfix.info, дефолтная русская копия в плагине.
+
 ## [0.18.1] — 2026-05-21
 
 ### Added
