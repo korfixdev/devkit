@@ -4,6 +4,11 @@
 
 Формат — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), версионирование — [SemVer](https://semver.org/).
 
+## [0.19.1] — 2026-05-22
+
+### Changed
+- **`docs/miniapps/backend-development.md`** — added six best-practice recommendations from peer review: HTTP method whitelist, header whitelist with CRLF-injection guard, request body and response size caps, IPv6 brackets in `CURLOPT_RESOLVE`, generic upstream error responses. Aligned with reference `n8n-monitor` v1.4.2.
+
 ## [0.19.0] — 2026-05-22
 
 ### Added
