@@ -4,6 +4,14 @@
 
 Формат — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), версионирование — [SemVer](https://semver.org/).
 
+## [0.20.0] — 2026-06-02
+
+### Added
+- **deploy_miniapp MCP support** in `korfix-miniapp-dev`: when MCP tool `deploy_miniapp` is available, agent uses it instead of curl — required for cloud Claude Code where external HTTP is blocked by egress proxy. Agent reads files via `Read` tool and passes `[{path, content}]` array; ZIP and POST are handled by the MCP server backend.
+
+### Changed
+- **Instance URL examples** updated from `panel.korfix.info` to `vibe.korfix.app` across `agents/korfix-miniapp-dev.md`, `README.md`, and `docs/miniapps/js-api.md` — platform has fully migrated to `vibe.korfix.app`.
+
 ## [0.19.1] — 2026-05-22
 
 ### Changed

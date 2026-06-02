@@ -120,7 +120,7 @@ zip -r /tmp/my-app.zip config.json widget.html *.js *.css *.svg
 **Создание нового приложения** (ID ещё не известен):
 
 ```bash
-curl -s -X POST "https://panel.korfix.info/api/db/marketplace/add" \
+curl -s -X POST "https://panel.korfix.ru/api/db/marketplace/add" \
   -H "Authorization: Bearer {TOKEN}" \
   -F "name=My App Name" \
   -F "doc1=@/tmp/my-app.zip;type=application/zip"
@@ -133,7 +133,7 @@ curl -s -X POST "https://panel.korfix.info/api/db/marketplace/add" \
 **Обновление существующего приложения** (ID известен):
 
 ```bash
-curl -s -X POST "https://panel.korfix.info/api/db/marketplace/{ID}" \
+curl -s -X POST "https://panel.korfix.ru/api/db/marketplace/{ID}" \
   -H "Authorization: Bearer {TOKEN}" \
   -F "doc1=@/tmp/my-app.zip;type=application/zip"
 ```
@@ -145,7 +145,7 @@ curl -s -X POST "https://panel.korfix.info/api/db/marketplace/{ID}" \
 ```bash
 # /api/marketplace/deploy/{ID} — это просто update + refresh в одном вызове.
 # Удобно если нужно явно сбросить appconfig (например в локальной конфигурации).
-curl -s -X POST "https://panel.korfix.info/api/marketplace/deploy/{ID}" \
+curl -s -X POST "https://panel.korfix.ru/api/marketplace/deploy/{ID}" \
   -H "Authorization: Bearer {TOKEN}" \
   -F "doc1=@/tmp/my-app.zip;type=application/zip"
 ```
@@ -155,7 +155,7 @@ curl -s -X POST "https://panel.korfix.info/api/marketplace/deploy/{ID}" \
 **Только инвалидировать кеш** (если zip уже загружен):
 
 ```bash
-curl -s -X POST "https://panel.korfix.info/api/marketplace/refresh/{ID}" \
+curl -s -X POST "https://panel.korfix.ru/api/marketplace/refresh/{ID}" \
   -H "Authorization: Bearer {TOKEN}"
 ```
 
@@ -184,14 +184,14 @@ curl -s -X POST "https://panel.korfix.info/api/marketplace/refresh/{ID}" \
 zip -r /tmp/my-app.zip config.json widget.html *.js *.css
 
 # Первый раз — создаём, получаем ID:
-curl -s -X POST "https://panel.korfix.info/api/db/marketplace/add" \
+curl -s -X POST "https://panel.korfix.ru/api/db/marketplace/add" \
   -H "Authorization: Bearer {TOKEN}" \
   -F "name=My App" \
   -F "doc1=@/tmp/my-app.zip;type=application/zip"
 # → {"status":"success","id":"123","alias":"abc..."}
 
 # Последующие обновления по ID:
-curl -s -X POST "https://panel.korfix.info/api/db/marketplace/123" \
+curl -s -X POST "https://panel.korfix.ru/api/db/marketplace/123" \
   -H "Authorization: Bearer {TOKEN}" \
   -F "doc1=@/tmp/my-app.zip;type=application/zip"
 ```
@@ -200,14 +200,14 @@ curl -s -X POST "https://panel.korfix.info/api/db/marketplace/123" \
 
 ```bash
 curl -H "Authorization: Bearer {TOKEN}" \
-  "https://panel.korfix.info/api/db/marketplace?filter[name]=My App"
+  "https://panel.korfix.ru/api/db/marketplace?filter[name]=My App"
 ```
 
 ### Проверка версии после деплоя
 
 ```bash
 curl -H "Authorization: Bearer {TOKEN}" \
-  "https://panel.korfix.info/api/db/marketplace/{ID}"
+  "https://panel.korfix.ru/api/db/marketplace/{ID}"
 # В поле appconfig.version — версия из config.json
 ```
 
@@ -216,7 +216,7 @@ curl -H "Authorization: Bearer {TOKEN}" \
 ```bash
 #!/bin/bash
 APP_DIR="./my-app"
-API_URL="https://panel.korfix.info"
+API_URL="https://panel.korfix.ru"
 TOKEN="your-api-token"
 APP_ID="50"
 

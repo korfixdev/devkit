@@ -13,16 +13,16 @@ You develop miniapps for the Korfix ERP marketplace.
 No hardcoded instance or token. Before the first API call or deploy:
 
 1. **Check environment:**
-   - `KORFIX_API_URL` — instance address (e.g. `https://panel.korfix.info`, `https://acme.korfix.info`, self-hosted domain)
+   - `KORFIX_API_URL` — instance address (e.g. `https://vibe.korfix.app`, `https://acme.korfix.info`, self-hosted domain)
    - `KORFIX_TOKEN` — access token from `/db/api` on that instance
    - `KORFIX_MCP_URL` — MCP server URL (optional; if present, agent works via MCP, otherwise via curl)
 
 2. **If anything is missing — ask the user DIRECTLY**, don't assume:
-   - "Which Korfix instance are we working with? (e.g. `panel.korfix.info`, `acme.korfix.info`, or a custom domain)"
+   - "Which Korfix instance are we working with? (e.g. `vibe.korfix.app`, `acme.korfix.info`, or a custom domain)"
    - "Please provide the token from `/db/api` (or set `KORFIX_TOKEN` in env). What API classes does the token have?"
    - "What is the marketplace app ID for the update? (or should we create a new one)"
 
-3. **Never** use `panel.korfix.info` or any other instance as default without user confirmation.
+3. **Never** use `vibe.korfix.app` or any other instance as default without user confirmation.
 4. **Never** expose the token or credentials in miniapp code, logs, or commits. Environment only.
 5. **Never** store the token in memory, project files, or plugin settings. Session env only.
 
@@ -163,14 +163,25 @@ Before any deploy, run skill `korfix-miniapp-checklist` (self-check), then `korf
    - Run validation again in a fresh subagent
    - Repeat until `READY` or until user explicitly says "deploy anyway"
 5. **Before zip — update README** via `korfix-tech-writer` once more, so the file in the zip reflects the final state.
-6. Only after `READY` — deploy:
-   - Via MCP: `marketplace_deploy(app_id, zip_path)` (if that tool exists)
-   - Or curl (`README.md` must be in zip):
-     ```bash
-     zip -r /tmp/app.zip config.json *.html *.js *.css *.svg README.md CHANGELOG.md TODO.md
-     curl -X POST "${KORFIX_API_URL}/api/db/marketplace/${APP_ID}" \
-       -H "Authorization: Bearer ${KORFIX_TOKEN}" \
-       -F "doc1=@/tmp/app.zip;type=application/zip"
+6. Only after `READY` — deploy. Choose the method based on environment:
+
+   **Option A — curl** (local Claude Code with filesystem and network access):
+   ```bash
+   zip -r /tmp/app.zip config.json *.html *.js *.css *.svg README.md CHANGELOG.md TODO.md
+   curl -X POST "${KORFIX_API_URL}/api/db/marketplace/${APP_ID}" \
+     -H "Authorization: Bearer ${KORFIX_TOKEN}" \
+     -F "doc1=@/tmp/app.zip;type=application/zip"
+   ```
+
+   **Option B — deploy_miniapp MCP tool** (cloud Claude Code or when curl to external hosts is blocked):
+   - Check if `deploy_miniapp` is available in the current MCP tools (it appears when the Korfix MCP server is connected to vibe.korfix.app).
+   - If available: read each miniapp file via the `Read` tool and call:
      ```
+     deploy_miniapp(app_id=APP_ID, files=[{path: "index.html", content: "..."}, {path: "config.json", content: "..."}, ...])
+     ```
+     The MCP server handles ZIP packaging and POST on the backend — no local filesystem access required.
+   - If neither curl nor `deploy_miniapp` is available: ask the user to connect the Korfix MCP server (MCP URL is available in the Korfix panel after login) or provide a Bearer token so you can guide a manual deploy.
+
+   > **Cloud Claude Code note:** In claude.ai cloud sessions, outbound HTTP to external hosts is blocked by an egress proxy — `curl` will fail silently or time out. `deploy_miniapp` via MCP is the **only** way to deploy from cloud Claude Code.
 
 **Do not skip validation.** Do not rationalize "I already know it's fine". The independent validator exists precisely to eliminate that rationalization.

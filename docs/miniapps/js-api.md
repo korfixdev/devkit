@@ -124,7 +124,7 @@ App.getRequestParams().then(resp => {
   const { app_id, token, domain, catalog, itemId, items, user } = resp.data;
   // app_id  — alias записи в marketplace (хеш, не числовой id). Идентификатор приложения как продукта.
   // token   — alias записи в installed_apps (уникален на каждую инсталляцию). Используется в App.storage.
-  // domain  — домен CRM-инстанса (напр. "panel.korfix.info")
+  // domain  — домен CRM-инстанса (напр. "vibe.korfix.app")
   // catalog — имя каталога контекста, в котором открыт фрейм (напр. "installed_apps", "accounts", "tt_tasks")
   // itemId  — alias текущей записи в catalog. Когда виджет открыт с дашборда: catalog="installed_apps", itemId=alias установки
   // items   — алиасы выбранных элементов списка (через запятую, если несколько)

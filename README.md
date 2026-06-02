@@ -43,7 +43,7 @@ Then enable in Claude Code settings → reload.
 ## Setup
 
 ```bash
-export KORFIX_API_URL="https://panel.korfix.info"   # your Korfix instance
+export KORFIX_API_URL="https://vibe.korfix.app"     # your Korfix instance
 export KORFIX_TOKEN="your-token-from-db-api"       # required
 ```
 

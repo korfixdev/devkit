@@ -118,11 +118,11 @@ requestAnimationFrame(() => App.setFrameSize(null, document.body.scrollHeight));
 await App.fetch('/db/tt_tasks.json')                       # ← работает
 
 # Снаружи (curl, тесты, автоматизация):
-curl "https://panel.korfix.info/api/db/tt_tasks?limit=10" \
+curl "https://panel.korfix.ru/api/db/tt_tasks?limit=10" \
   -H "Authorization: Bearer YOUR_TOKEN"                    # ← работает
 
 # НЕ ДЕЛАЙ так снаружи — получишь 302 на логин:
-curl https://panel.korfix.info/db/tt_tasks.json              # ✗ 302
+curl https://panel.korfix.ru/db/tt_tasks.json              # ✗ 302
 ```
 
 Подробнее: [data-api.md](data-api.md) — раздел «Ключевое правило: какой endpoint откуда».
@@ -133,7 +133,7 @@ curl https://panel.korfix.info/db/tt_tasks.json              # ✗ 302
 cd my-app
 zip -r /tmp/my-app.zip config.json widget.html logo.svg
 
-curl -X POST "https://panel-korfix.vnn.ru/api/db/marketplace/{ID}?token={TOKEN}" \
+curl -X POST "https://vibe.korfix.app/api/db/marketplace/{ID}?token={TOKEN}" \
   -F "doc1=@/tmp/my-app.zip;type=application/zip"
 ```
 
