@@ -57,12 +57,18 @@ Do not skip items; do not assume "it's obviously done correctly".
 
 ## Frames
 
-- [ ] **`install` frame** (if self-provisioning is present):
-  - [ ] Every mutating `App.fetch` → response status is checked explicitly (`resp.status === 'error'` → throw)
-  - [ ] Install log is saved to `App.storage` — key `install.log`
-  - [ ] On repeated open: shows saved log + "Reinstall" + "Close"
-  - [ ] If `urls.widget` exists — `installWidgetOnDashboard(token)` is called at end of install
-  - [ ] After install, navigates to `main`: `App.navigate('/db/installed_apps/${token}?frame=main')`
+- [ ] **`install` frame** — any type (self-provisioning or widget setup):
+  - [ ] **"Open App" button is present** on the done/success screen — navigates to `main`:
+    ```js
+    const params = await App.getRequestParams();
+    const selfToken = params?.data?.token || '';
+    // in done screen:
+    App.navigate('/db/installed_apps/' + selfToken + '?frame=main');
+    ```
+  - [ ] *(self-provisioning only)* Every mutating `App.fetch` → response status is checked explicitly
+  - [ ] *(self-provisioning only)* Install log is saved to `App.storage` — key `install.log`
+  - [ ] *(self-provisioning only)* On repeated open: shows saved log + "Reinstall" + "Close"
+  - [ ] *(self-provisioning only)* If `urls.widget` exists — `installWidgetOnDashboard(token)` is called
 - [ ] **`main` frame** (if `urls.install` exists): checks `checkCatalogExists` on load, otherwise `App.navigate(... frame=install)`
 - [ ] **`widget` frame**: `permissions.catalogs` contains `"dashboard_widgets": ["read", "write"]`
 

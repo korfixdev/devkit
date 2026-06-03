@@ -4,6 +4,11 @@
 
 Формат — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), версионирование — [SemVer](https://semver.org/).
 
+## [0.20.2] — 2026-06-03
+
+### Fixed
+- **`skills/korfix-miniapp-checklist`** — added mandatory "Open App" button check for all installer frames (not just self-provisioning). Installers without a link to `frame=main` leave users stranded after widget setup.
+
 ## [0.20.1] — 2026-06-03
 
 ### Fixed
