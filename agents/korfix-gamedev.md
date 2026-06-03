@@ -81,8 +81,9 @@ Cross-app discovery works by searching by package — otherwise your game will n
 
 1. **The game doesn't mint Korn.** Emission via Games::earnCorn, source from whitelist. Only through quests/mechanics defined in sys_quests.
 2. **Body in `App.fetch`** — object, not `JSON.stringify`. Don't pass `undefined` as the second argument.
-3. **Unwrap** `r?.data ?? r` after `App.fetch` (postMessage wrapper).
-4. **`absUrl()`** for `/reimg/` and `/data/` — iframe on the store domain.
+3. **Unwrap** `r?.data ?? r` after `App.fetch` (postMessage wrapper). For `/db/*.json` lists, rows are nested: `r?.data?.data || r?.data || []` (this order — `r?.data` is a truthy `{total,data}` object and wins otherwise).
+4. **`absUrl()`** for `/reimg/` and `/data/` — iframe on the store domain. Must return `https://` + `App.requestParams.domain`, never bare domain or `window.location.origin`.
+4a. **Profile strip — 3 recurring bugs** (hit every game): name = `display_name` only (no `name`/`username` field → eternal "Anonymous"); avatar needs `absUrl()`; edit link = `/db/installed_apps/{alias}?frame=main&tab=profile` where alias comes from `installed_apps` by `form[app_id]` (not `marketplace_id`, not `/app/{alias}/profile`).
 5. **`body { background: transparent }`** — atmosphere in `.game-frame`, not body.
 6. **`await App.getRequestParams()`** before i18n.init / storage ops.
 7. **i18n via URL + localStorage + App.storage** — don't rely on a single channel.

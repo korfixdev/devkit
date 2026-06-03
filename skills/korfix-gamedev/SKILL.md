@@ -58,6 +58,16 @@ description: Use when building or modifying game/gamification miniapps for the K
 ### URLs
 - `/reimg/`, `/data/` — абсолютизируй через `App.requestParams.domain` (iframe на store, ресурсы на CRM)
 
+### Profile strip — 3 систематические ошибки (проверь все три!)
+Эти баги повторялись во всех играх (snake, tetris, memory, space-invaders). Полный рецепт — [recipes.md](https://docs.korfix.info/gamedev/recipes) § «Полоса профиля в хедере (canonical)».
+
+1. **Имя** — только `p.display_name`. Полей `name`/`username` в ответе `/api/korgames/profile` **нет** → fallback на них даёт вечный «Anonymous».
+2. **Аватар** — `avatar_url` приходит как `/reimg/...` относительно store-домена → **обязателен `absUrl()`**, иначе 404. И `absUrl` должен давать `https://` + domain (не голый domain, не `window.location.origin`).
+3. **Edit-ссылка** — только `/db/installed_apps/{alias}?frame=main&tab=profile`. Алиас берётся из `installed_apps` по `form[app_id]={hub.id}` (НЕ `marketplace_id`). Неверные варианты `/app/{alias}/profile`, `/{alias}?tab=profile`, `/{alias}#profile` → 404.
+
+### Распаковка списков `/db/*.json`
+`kg()` снимает postMessage-обёртку (`r?.data ?? r`), но список каталога — это `{total, data:[...]}`. Значит строки в `r.data.data`. Порядок проверки: `const rows = r?.data?.data || r?.data || []` (НЕ наоборот — `r?.data` это truthy-объект и всегда победит, массив не достанется).
+
 ### HTML/CSS
 - `body { background: transparent }` — тематика в `.game-frame`, не body
 - Кнопки Korfix-style: `border-radius: 3px`, `border-bottom: 3px solid darker`

@@ -4,6 +4,15 @@
 
 Формат — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), версионирование — [SemVer](https://semver.org/).
 
+## [0.21.0] — 2026-06-03
+
+### Added
+- **`skills/korfix-gamedev`** — new "Profile strip — 3 систематические ошибки" rule and "Распаковка списков `/db/*.json`" rule. Captures bugs that hit every game (snake, tetris, memory, space-invaders): `display_name`-only naming, mandatory `absUrl()` for avatars, correct Games Hub profile navigation (`/db/installed_apps/{alias}?frame=main&tab=profile` by `form[app_id]`), and the `r?.data?.data || r?.data` unwrap order for catalog lists.
+- **`agents/korfix-gamedev`** — same gotchas added to the Key Rules section (rule 4a + expanded rules 3, 4).
+
+### Changed
+- These are doc/skill fixes mirroring corrections also pushed to `korfix-docs` gamedev recipes & client-api (canonical profile-strip recipe, `goToProfileTab` helper, fixed `findAppByPackage` unwrap order, `#absolute-urls` anchor).
+
 ## [0.20.2] — 2026-06-03
 
 ### Fixed
