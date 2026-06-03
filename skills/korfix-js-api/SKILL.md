@@ -66,13 +66,66 @@ App.storage.get('key', defaultVal)
 App.storage.set('key', value)
 App.storage.unset('key')
 
-// Events
-App.on('page.navigated', (data) => { /* ... */ })
-App.on('modal.closed', (data) => refreshData())
+// Events — data.url is the URL of the modal that closed
+App.on('page.navigated', (data) => { /* data.url, data.title */ })
+App.on('modal.closed', (data) => { /* data.url */ })
 App.on('catalog.selected', (data) => { /* data.catalog, data.ids */ })
 App.on('*', ({event, data}) => { /* wildcard */ })
 App.off('page.navigated')           // unsubscribe all
 ```
+
+### Pattern: reload list after editing a specific catalog
+
+`modal.closed` fires when the user closes a modal opened via `App.modal()`.
+`data.url` is the same URL passed to `App.modal()` — use it to filter.
+**Debounce 50 ms** required: multiple host instances relay the same event, causing double-fire.
+
+```js
+// Open edit modal for a record
+App.modal('/db/tt_projects/' + alias + '?edit', { title: 'Edit' });
+
+// React to close — data.url matches the URL from App.modal()
+let _reloadTimer = 0;
+App.on('modal.closed', (data) => {
+    if (data?.url?.includes('/tt_projects/')) {
+        clearTimeout(_reloadTimer);
+        _reloadTimer = setTimeout(() => loadRecords(), 50);
+    }
+});
+```
+
+### Pattern: background polling for external changes
+
+**`ts` is NOT returned by the API** (hidden schema field). Track a snapshot: total count +
+top-5 record IDs by `ts_desc`. Any edit moves the record to the top, changing the signature.
+Seed after first load so the first tick never fires a spurious reload.
+
+```js
+let _pollSnap = { total: -1, topIds: '' };
+
+async function loadRecords() {
+    const resp = await App.fetch('/db/MY_CATALOG.json?...');
+    allRecords = asArray(resp);
+    _pollSnap = { total: allRecords.length, topIds: allRecords.slice(0,5).map(r=>r.id).join(',') };
+    render();
+}
+
+setInterval(async () => {
+    try {
+        const r = await App.fetch('/db/MY_CATALOG.json?limit=5&order=ts_desc&not_cache=1');
+        const rows = Array.isArray(r?.data) ? r.data : (r?.data?.data ?? []);
+        const total = Number(r?.total ?? rows.length);
+        const topIds = rows.map(r => r.id).join(',');
+        if (_pollSnap.total >= 0 && (total !== _pollSnap.total || topIds !== _pollSnap.topIds)) {
+            loadRecords();
+        }
+        _pollSnap = { total, topIds };
+    } catch (_) {}
+}, 60000);
+```
+
+Use both together: `modal.closed` reacts instantly to user's own edits; polling catches
+changes made by another user or outside the miniapp.
 
 ## Caching and deduplication (built into VMCRMUserApp)
 

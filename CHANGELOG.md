@@ -4,6 +4,11 @@
 
 Формат — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), версионирование — [SemVer](https://semver.org/).
 
+## [0.20.1] — 2026-06-03
+
+### Fixed
+- **`skills/korfix-js-api`** — corrected `modal.closed` pattern: debounce 50 ms required (multiple host instances relay same event); added concrete `App.modal()` + handler example showing the URL connection. Corrected polling pattern: `ts` field is not returned by API — use total + top-5 IDs snapshot via `order=ts_desc` instead.
+
 ## [0.20.0] — 2026-06-02
 
 ### Added
