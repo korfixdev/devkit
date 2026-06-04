@@ -73,6 +73,13 @@ description: Use when building or modifying game/gamification miniapps for the K
 - Кнопки Korfix-style: `border-radius: 3px`, `border-bottom: 3px solid darker`
 - Все кликабельное с `:hover` и `:active` feedback
 
+### Раскладка canvas-игры (частая ошибка)
+iframe **авто-ресайзится под контент** (ResizeObserver репортит высоту body хосту). Отсюда правила:
+- **Не делай `#app { height:100% }` + `.canvas-wrap { flex:1 }`.** Контейнер растянется на всю высоту iframe, а canvas/оверлеи останутся фиксированной высоты → game-over оверлей (`position:absolute; inset:0`) окажется ВЫШЕ канваса (оверлей 980px, канвас 640px).
+- **Оборачивай всё в центрированную колонку** (паттерн coin-clicker): `#app { max-width: 380px; margin: 0 auto }`. Тогда header, canvas и оверлеи одной ширины — портретное поле, а не 320px, потерянные в 1000px-строке.
+- **Canvas заполняет ширину колонки**, высота — по аспекту (`ch = cw * ratio`); контейнер canvas — высотой по канвасу (не `flex:1`). iframe сам подтянет высоту под контент.
+- Полноширинная раскладка на десктопе делает портретный аспект (напр. 1.69) абсурдно высоким (половина за экраном) — узкая колонка решает и это.
+
 ### i18n
 - Три канала: URL `?lang=X` → localStorage → App.storage (приоритет)
 - После setLang: history.replaceState + localStorage + App.storage

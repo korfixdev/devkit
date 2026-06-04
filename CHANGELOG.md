@@ -4,6 +4,13 @@
 
 Формат — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), версионирование — [SemVer](https://semver.org/).
 
+## [0.22.0] — 2026-06-04
+
+### Added
+- **`skills/korfix-js-api`** — Critical: never pass `undefined`/`null` as the 2nd arg to `App.fetch`. A GET wrapper `App.fetch(url, opts)` with `opts===undefined` serializes to `null`, the host fetch hits `typeof null==='object'` → `null.body` → the request hangs until the 60s timeout (silent: nothing loads). Branch on opts instead. (Found debugging Flappy: profile/avatar never loaded.)
+- **`skills/korfix-gamedev`** — canvas-game layout rule: the iframe auto-resizes to content, so `#app{height:100%}`+`.canvas-wrap{flex:1}` stretches overlays taller than the canvas (980 vs 640). Use a centered `max-width` column (coin-clicker pattern); canvas fills column width, height by aspect.
+- Mirrored both to `korfix-docs` (ru + en): `miniapps/js-api.md` fetch trap, `gamedev/styling.md` Rule #1.5 layout.
+
 ## [0.21.0] — 2026-06-03
 
 ### Added

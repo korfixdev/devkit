@@ -157,6 +157,18 @@ init();
 - **Never use `fetch()` directly** — CORS. Only `App.fetch()`.
 - URLs in `App.fetch()` — relative only (no domain).
 - Body is passed as an object, converted to URLSearchParams.
+- **Never pass `undefined`/`null` as the 2nd arg.** A GET wrapper like
+  `const r = await App.fetch(url, opts)` where `opts` is `undefined` is a trap:
+  `undefined` serializes to `null` over postMessage, the host-side fetch hits
+  `typeof null === 'object'` → reads `null.body` → throws, and the request **hangs
+  until the 60s timeout** (silent: no profile/data loads, no obvious error). For a
+  wrapper, branch on opts:
+  ```js
+  async function apiFetch(url, opts) {
+      const r = opts ? await App.fetch(url, opts) : await App.fetch(url);
+      return r?.data ?? r;
+  }
+  ```
 - **Platform resources — absolute paths**: avatars `/reimg/data/auth/{doc}?80x80`, catalog files `/data/db/f_{catalog}/{doc}`, app icons `/data/db/f_marketplace/{doc}`. Relative paths inside the iframe resolve to the app archive store URL, not the CRM domain.
 
 ## Documentation
