@@ -4,6 +4,20 @@
 
 Формат — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), версионирование — [SemVer](https://semver.org/).
 
+## [0.23.0] — 2026-06-05
+
+### Added
+- **`skills/korfix-js-api` + `docs/miniapps/storage-and-hooks.md`** — `App.storage.getValue(key, default)` returns the bare stored value (`default` if the key is absent), symmetric with `set()` — the recommended way to read. `App.storage.getRow(key)` is an explicit alias of `get()` returning the full `{name, value, alias, app_id, ...}` record. Replaced the misleading cheat-sheet line `App.storage.get('key', defaultVal)` (which implied `get()` returns the value) with the correct forms.
+- **`docs/miniapps/deploy.md` + `docs/miniapps/checklist.md` + `skills/korfix-miniapp-checklist`** — deploy-time manifest validation. The platform now validates the bundled `config.json` + archive on deploy and returns the verdict in the API response (both `POST /api/db/marketplace/{id}` and `POST /api/marketplace/deploy/{id}`): `errors` block the deploy (invalid JSON; missing `name`; missing/non-object `urls`; any `urls.*` or `logo` file absent from the zip); `warnings` come back on success (missing recommended `package`/`permissions`/`about`). Read them straight from the deploy response instead of opening the app to discover a broken manifest.
+
+### Fixed
+- **`docs/miniapps/data-api.md`** — corrected the `/api/db/` auth guidance. The previous note ("`App.fetch('/api/db/...')` is unauthenticated inside the iframe → 401, always use `/db/`") was WRONG: `App.fetch` proxies through the logged-in parent window, so `/api/db/` authenticates via the user **session** (no token needed). Removed the false "401 in iframe" claim and the **antipattern** in-app `?token=YOUR_TOKEN` examples. Inside a miniapp: prefer `/db/...` (with `form[]`) and pass no token; the Bearer / `?token=` path is for **external** callers (curl / CI / server / n8n); never hard-code a platform token in a shipped miniapp (marketplace-review failure).
+
+### Changed
+- All of the above mirrored to `korfix-docs` (ru + en).
+
+> The storage (`getValue`/`getRow`) and deploy-validation items document **platform (sited_core3php8) changes** — they require the corresponding core deployed on the instances you target.
+
 ## [0.22.0] — 2026-06-04
 
 ### Added

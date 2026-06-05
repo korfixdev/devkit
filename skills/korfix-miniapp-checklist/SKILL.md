@@ -13,7 +13,7 @@ Do not skip items; do not assume "it's obviously done correctly".
 
 ## config.json
 
-- [ ] JSON is valid (no trailing comma, no unescaped `\` or special characters)
+- [ ] JSON is valid (no trailing comma, no unescaped `\` or special characters) — `config.json` is validated server-side on deploy (manifest + archive). Fix whatever the deploy response reports: `errors` block the deploy (`{"status":"error","message":"..."}`), `warnings` (`"warnings":[...]`) succeed but should be addressed. Pre-flight locally before zipping: `python3 -m json.tool config.json` / `jq . config.json`
 - [ ] `name` is filled in
 - [ ] `package` is filled in (package name / folder)
 - [ ] `description` — brief (1-2 sentences)

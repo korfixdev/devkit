@@ -9,7 +9,7 @@
 
 ## config.json
 
-- [ ] Валидный JSON
+- [ ] Валидный JSON — `config.json` is validated server-side on deploy (manifest + archive). Fix whatever the deploy response reports: `errors` block the deploy (`{"status":"error","message":"..."}`), `warnings` (`"warnings":[...]`) succeed but should be addressed. Pre-flight locally before zipping: `python3 -m json.tool config.json` / `jq . config.json`
 - [ ] Поле `name` — название приложения
 - [ ] Поле `package` — имя пакета (имя папки приложения)
 - [ ] Поле `description` — краткое описание (1-2 предложения)

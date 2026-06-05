@@ -104,6 +104,36 @@ zip -r /tmp/my-app.zip config.json widget.html *.js *.css *.svg
 
 **Запрещённые**: php, exe, sh — платформа отклонит zip.
 
+#### Deploy-time manifest validation
+
+The platform now validates the bundled `config.json` and the archive **on deploy** and returns the
+verdict in the API response. Applies to both `POST /api/db/marketplace/{ID}` and
+`POST /api/marketplace/deploy/{ID}`.
+
+- **Errors → deploy is BLOCKED.** Response: `{"status":"error","message":"...list of problems..."}`.
+  Causes: invalid JSON; missing `name`; missing or non-object `urls`; any file referenced in `urls.*`
+  or `logo` not present in the zip.
+- **Warnings → deploy SUCCEEDS.** Response includes a `"warnings":[...]` array. Causes: missing
+  recommended fields `package`, `permissions`, `about`.
+
+Read `message` / `warnings` straight from the deploy response and fix accordingly — you don't need to
+open the app to find a broken manifest.
+
+```jsonc
+// errors → blocked
+{"status":"error","message":"config.json: invalid JSON; logo: file 'logo.svg' not found in archive"}
+```
+
+```jsonc
+// success with warnings
+{"status":"success","id":"123","warnings":["missing recommended field 'permissions'","missing recommended field 'about'"]}
+```
+
+> Still good practice to validate `config.json` locally **before** zipping, as a pre-flight:
+> ```bash
+> python3 -m json.tool config.json   # or: jq . config.json
+> ```
+
 ### Шаг 7: Загрузить в маркетплейс
 
 Загрузка приложения = создание/обновление записи в каталоге `/db/marketplace`.

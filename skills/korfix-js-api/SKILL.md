@@ -62,7 +62,9 @@ App.reload()
 App.setFrameSize(null, 600)        // height only
 
 // KV storage
-App.storage.get('key', defaultVal)
+App.storage.getValue('key', defaultVal)  // bare value + default (recommended)
+App.storage.get('key')                   // full record {name,value,alias,...} — read .value
+App.storage.getRow('key')                // explicit alias of get()
 App.storage.set('key', value)
 App.storage.unset('key')
 

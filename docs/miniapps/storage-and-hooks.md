@@ -81,6 +81,27 @@ await App.storage.unset('my.setting');
 > - Все записи (`get('')`): возвращает массив объектов `[{name, value, ...}, ...]`
 > - Не найдено: возвращает `undefined` или второй аргумент (default)
 
+### `getValue()` / `getRow()` — read helpers
+
+`get()` returns the full storage **record** (you must read `.value`). Two newer core
+methods make intent explicit:
+
+- **`getValue(key, def)`** — returns the **bare value** (a string), or `def` if the key is
+  absent. Symmetric with `set()`: after `set(k, v)`, `getValue(k) === v`. **Recommended for
+  reading** — no `.value` unwrapping, no `[object Object]` trap.
+- **`getRow(key)`** — explicit alias of `get()`: returns the full record. Use when you need
+  `alias`, `app_id`, or other metadata, not just the value.
+
+```js
+// Preferred read pattern — bare value with a default:
+const lang = await App.storage.getValue('lang', 'en');
+
+// When you need metadata (alias / app_id):
+const row = await App.storage.getRow('my.config');   // {name, value, alias, app_id, ...}
+```
+
+The `def` (2nd arg) is returned **only when the key is absent** — same rule as `get()`.
+
 ### Вебхуки через storage
 
 Приложение может подписаться на вебхуки через storage:

@@ -16,7 +16,13 @@ CRUD-операции над каталогами, форматы запросо
 | **Внутри iframe миниапа** (`App.fetch`) | `/db/{catalog}.json` | сессия браузера (cookie) | `form[name]=value` |
 | **Снаружи**: curl, тесты, скрипты, серверные интеграции, webhook'и, n8n, Bitrix24 | `/api/db/{catalog}` | `Authorization: Bearer <token>` | `name=value` (плоско) |
 
-**НЕ перепутай:** `/db/` снаружи iframe вернёт 302-редирект на логин (нет сессии), `/api/db/` внутри iframe без токена — 401. Типичная ловушка: агент видит `/db/...` в коде приложения, копирует в curl, получает редирект, начинает «чинить авторизацию» — не надо, просто замени `/db/` на `/api/db/` и добавь Bearer.
+**НЕ перепутай:** `/db/` снаружи iframe вернёт 302-редирект на логин (нет сессии). Типичная ловушка: агент видит `/db/...` в коде приложения, копирует в curl, получает редирект, начинает «чинить авторизацию» — не надо, просто замени `/db/` на `/api/db/` и добавь Bearer.
+
+> ℹ **Inside a miniapp, prefer `/db/...` (with `form[]`) and pass no token.** `App.fetch` proxies
+> through the logged-in parent window, so requests authenticate via the user **session** — you
+> never need a token, and you must never hard-code a platform token in a shipped miniapp
+> (marketplace-review failure). The Bearer-token path (`/api/db/...` + `Authorization: Bearer`)
+> is for **external** callers — curl / CI / server / n8n.
 
 ### Проверка доступа к каталогу перед разработкой
 
@@ -64,13 +70,10 @@ const all = await App.fetchAll('/db/installed_apps.json');
 Токен из `/db/api`, определяет доступные каталоги и методы.
 
 ```js
-// Из приложения — с токеном в query string
-const resp = await App.fetch('/api/db/projects?token=YOUR_TOKEN');
+// Token auth is for EXTERNAL callers (curl / server / n8n) — see the Bearer/curl examples below.
+// Never hard-code a platform token inside a shipped miniapp (marketplace-review failure).
 
-// getcatalogs — список доступных каталогов
-const catalogs = await App.fetch('/api/db/getcatalogs?token=YOUR_TOKEN');
-
-// /api/user/tariff — тариф и биллинговая инфа текущего пользователя
+// /api/user/tariff — тариф и биллинговая инфа текущего пользователя (из апа — по сессии, без токена)
 const billing = await App.fetch('/api/user/tariff');
 // data: { tarif, tarif_name, balance, discount, discount_date, payment_date, price, ... }
 ```
