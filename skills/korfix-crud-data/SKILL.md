@@ -34,8 +34,8 @@ App.fetch('/db/tt_tasks/add?edit&ajax=1', {
     body: {
         'form[name]': 'Task',
         'form[alias]': uid(),
-        'form[from_auth]': userId,
-        'form[from_group]': userId,
+        // from_group: omit — server forces it to your group.
+        // from_auth: omit → personal record; pass 0 → shared with the whole group.
         submit: 1
     }
 })
@@ -43,7 +43,10 @@ App.fetch('/db/tt_tasks/add?edit&ajax=1', {
 
 **Critical:**
 - `alias` — always generate explicitly for bulk creation. Otherwise collisions and confusion.
-- `from_auth` and `from_group` — **required**. Without them the record belongs to the superadmin and is not visible to regular users.
+- **Don't pass `from_group`**, and pass `from_auth` only to choose ownership (omit = personal, `0` =
+  whole group) — full rules in *Common mistakes → Record ownership* below. (On Korfix the server fills
+  these via `kat_admin.php`; the old "pass both or it goes to the admin" advice applies only to legacy
+  instances without `FEATURES_USED.auth_role`.)
 
 ## Editing
 
@@ -121,9 +124,17 @@ App.fetch('/api/db/tt_tasks?filter[status]=open&order_by=created&order=DESC&limi
   exact alias via `/api/db/getcatalogs` before coding — a guessed generic name 404s.
 - **Delete is not the HTTP `DELETE` verb.** Soft-delete is `POST /db/{cat}/{alias}?udel&ajax=1`. There is
   no REST `DELETE` method — using `method: 'DELETE'` does nothing.
-- **`from_auth` + `from_group` are required on create.** Omit them and the record belongs to the
-  superadmin and is invisible to the user (looks like "saved but nothing appears"). Take both from
-  `App.getUser()` (`from_auth`, `from_group`) — don't hardcode or swap them.
+- **Record ownership — `from_group` / `from_auth`** (with `FEATURES_USED.auth_role`, enforced server-side
+  in `kat_admin.php` → `KAT::save`; this is the case on Korfix instances):
+  - **`from_group`** — don't pass it. The server forces it to your session group (a non-admin can't leave
+    their group, and it can't be empty). Passing it is a no-op for normal apps.
+  - **`from_auth`** — controls personal vs group ownership, by your app logic:
+    - omit → defaults to the current user (personal record).
+    - `form[from_auth]=0` → record is **shared with the whole group** (everyone in the group sees it);
+      allowed everywhere **except `access_db`**.
+    - `form[from_auth]=<userId>` → assign to a specific user.
+  - (Only on a legacy instance *without* `auth_role` would omitting these matter — there the record could
+    fall to the admin/0. On Korfix the server fills them as above.)
 
 ## Documentation
 

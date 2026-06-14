@@ -4,6 +4,34 @@ All notable changes to the plugin are recorded here.
 
 Format — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning — [SemVer](https://semver.org/).
 
+## [0.25.1] — 2026-06-14
+
+External-review follow-up (stale-snapshot reconciliation). Most A/B/C items were already shipped in
+0.23–0.25.0; this patch closes the two genuine residuals + corrects record-ownership docs against core.
+
+### Fixed
+- **`checklist.md` aligned with the all-fields-required rule** (0.25.0 gap): `package` was still listed as
+  "recommended" — now **required**, matching `validate-bundle.js` / `config-json.md` / schema / the
+  validate skill.
+- **Record ownership (`from_group` / `from_auth`) corrected against core `kat_admin.php`** across
+  `data-api.md`, `checklist.md`, `korfix-crud-data`, `korfix-js-api` (en+ru). The previous "always pass
+  both, else it goes to the super-admin" advice was wrong for Korfix instances (`FEATURES_USED.auth_role`):
+  - `from_group` — **don't pass it**, the server forces it to your session group (non-admin can't override,
+    can't be empty).
+  - `from_auth` — omit → server assigns owner; **`form[from_auth]=0` → shared with the whole group**
+    (allowed everywhere except `access_db`); `=<id>` → specific user. The "super-admin / unmanageable"
+    failure mode only applies to legacy instances without `auth_role`.
+  - Removed now-dead `loadUserId()`/`currentUserId` scaffolding from self-provisioning examples and the
+    redundant `from_group: userId` lines from db-views / frames / self-provisioning create snippets.
+- **`deploy.md`** clarifies server (lenient, warns) vs local gate (strict, FAIL) for missing metadata,
+  so the warning example no longer undercuts the all-required rule.
+
+### Note
+- A1 (`INDEX.md`), A2 (etalon-apps refs), A5 (README skill count), A6 (deploy step numbering), B1
+  (analyst auto-spawns dev), B2 (SPEC vs README), B3 (local gamedev docs), and all of Block C
+  (validate-bundle / schema / pre-zip hook) were already present in `main` before this review — no change
+  needed. The review was taken from a pre-0.24 snapshot.
+
 ## [0.25.0] — 2026-06-14
 
 Consistency + correctness pass across docs, skills, agents, and the bundle gate (external review follow-up).

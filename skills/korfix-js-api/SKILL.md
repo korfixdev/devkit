@@ -26,8 +26,8 @@ const { app_id, domain, catalog, itemId, items, user } = (await App.getRequestPa
 
 // Current user (including plan)
 const { name, from_auth, from_group, alias, role, avatar, tarif, tarif_name } = (await App.getUser()).data
-// from_auth   = user's author_id — pass in form[from_auth] when creating records
-// from_group  = tenant ID — pass in form[from_group] when creating records
+// from_auth   = user's author_id — owner of records. Omit on create → personal; form[from_auth]=0 → shared with the group
+// from_group  = tenant/group ID — don't pass on create, the server forces it (see korfix-crud-data)
 // alias       = md5(login) — user identifier in the app system
 // name        = full name (author_comment)
 // role        = account type (account_type, numeric)
