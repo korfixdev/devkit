@@ -1,116 +1,116 @@
-# Работа с данными каталогов
+# Working with Catalog Data
 
-> **См. также:** [js-api.md](js-api.md) · [storage-and-hooks.md](storage-and-hooks.md) · [self-provisioning.md](self-provisioning.md) · [korfix-catalogs.md](korfix-catalogs.md)
+> **See also:** [js-api.md](js-api.md) · [storage-and-hooks.md](storage-and-hooks.md) · [self-provisioning.md](self-provisioning.md) · [korfix-catalogs.md](korfix-catalogs.md)
 > **← [Home](index.md)**
 
-CRUD-операции над каталогами, форматы запросов, фильтрация и пагинация.
+CRUD operations on catalogs, request formats, filtering, and pagination.
 
 ---
 
-## ⚠️ Ключевое правило: какой endpoint откуда использовать
+## ⚠️ Key rule: which endpoint to use from where
 
-У Korfix **два разных endpoint'а** для работы с данными — часто путают. Правило простое:
+Korfix has **two different endpoints** for data access — they're commonly confused. The rule is simple:
 
-| Откуда делается запрос | Какой endpoint | Авторизация | Формат полей |
+| Where the request comes from | Endpoint | Auth | Field format |
 |---|---|---|---|
-| **Внутри iframe миниапа** (`App.fetch`) | `/db/{catalog}.json` | сессия браузера (cookie) | `form[name]=value` |
-| **Снаружи**: curl, тесты, скрипты, серверные интеграции, webhook'и, n8n, Bitrix24 | `/api/db/{catalog}` | `Authorization: Bearer <token>` | `name=value` (плоско) |
+| **Inside the miniapp iframe** (`App.fetch`) | `/db/{catalog}.json` | browser session (cookie) | `form[name]=value` |
+| **Outside**: curl, tests, scripts, server integrations, webhooks, n8n, Bitrix24 | `/api/db/{catalog}` | `Authorization: Bearer <token>` | `name=value` (flat) |
 
-**НЕ перепутай:** `/db/` снаружи iframe вернёт 302-редирект на логин (нет сессии). Типичная ловушка: агент видит `/db/...` в коде приложения, копирует в curl, получает редирект, начинает «чинить авторизацию» — не надо, просто замени `/db/` на `/api/db/` и добавь Bearer.
+**Don't mix them up:** `/db/` from outside the iframe returns a 302 redirect to login (no session). A common trap: an agent sees `/db/...` in app code, copies it to curl, gets a redirect, starts "fixing auth" — don't. Just replace `/db/` with `/api/db/` and add Bearer.
 
-> ℹ **Inside a miniapp, prefer `/db/...` (with `form[]`) and pass no token.** `App.fetch` proxies
-> through the logged-in parent window, so requests authenticate via the user **session** — you
-> never need a token, and you must never hard-code a platform token in a shipped miniapp
-> (marketplace-review failure). The Bearer-token path (`/api/db/...` + `Authorization: Bearer`)
-> is for **external** callers — curl / CI / server / n8n.
+### Verifying catalog access before development
 
-### Проверка доступа к каталогу перед разработкой
-
-Всегда начинай с `curl` в `/api/db/` с токеном — чтобы убедиться что токен имеет доступ:
+Always start with `curl` to `/api/db/` with a token — to confirm access:
 
 ```bash
-# Проверить что токен видит каталог
+# Check that the token sees the catalog
 curl -sI "https://panel.korfix.ru/api/db/{catalog}?limit=1" \
   -H "Authorization: Bearer {TOKEN}"
-# HTTP/2 200 — ок, доступ есть
-# HTTP/2 403 — токен не имеет класса db_{catalog}_get (добавить в /db/api)
-# HTTP/2 404 — каталога не существует (проверь имя, особенно префикс custom_)
+# HTTP/2 200 — ok, access granted
+# HTTP/2 403 — token lacks db_{catalog}_get class (add it in /db/api)
+# HTTP/2 404 — catalog doesn't exist (check name, especially the custom_ prefix)
 
-# Получить список всех доступных токену каталогов
+# Get all catalogs accessible to the token
 curl -s "https://panel.korfix.ru/api/db/getcatalogs" \
   -H "Authorization: Bearer {TOKEN}"
 ```
 
-Никогда не делай `curl https://panel.korfix.ru/db/{catalog}.json` — это только для внутри iframe, curl получит 302 на логин.
+Never do `curl https://panel.korfix.ru/db/{catalog}.json` — that's iframe-only; curl will get a 302 to login.
 
 ---
 
-## Два способа работы с API
+## Two ways to work with the API
 
-### 1. Через сессию (App.fetch — без токена)
+### 1. Via session (App.fetch — no token)
 
-`App.fetch()` проксирует запрос через `postMessage` в родительское окно.
-Родительское окно выполняет `fetch(url)` **с куками авторизованного пользователя**.
-Токен не нужен — авторизация по сессии.
+`App.fetch()` proxies the request via `postMessage` to the parent window.
+The parent window performs `fetch(url)` **with the authenticated user's cookies**.
+No token needed — auth via session.
 
 ```js
-// Загрузка каталога — работает сразу, без токена
+// Load a catalog — works immediately, no token
 const resp = await App.fetch('/db/projects.json');
 
-// Все страницы
+// All pages
 const all = await App.fetchAll('/db/installed_apps.json');
 ```
 
-**Доступно**: все каталоги, к которым у текущего пользователя есть доступ.
-**Ограничение**: работает только внутри iframe маркетплейс-приложения.
+**Available**: all catalogs the current user has access to.
+**Limitation**: works only inside a marketplace app's iframe.
 
-### 2. Через Bearer-токен (REST API)
+### 2. Via Bearer token (REST API)
 
-Для серверных интеграций, webhook'ов и внешних приложений.
-Токен из `/db/api`, определяет доступные каталоги и методы.
+For server integrations, webhooks, and external apps.
+Token from `/db/api` — determines accessible catalogs and methods.
 
 ```js
 // Token auth is for EXTERNAL callers (curl / server / n8n) — see the Bearer/curl examples below.
 // Never hard-code a platform token inside a shipped miniapp (marketplace-review failure).
 
-// /api/user/tariff — тариф и биллинговая инфа текущего пользователя (из апа — по сессии, без токена)
+// /api/user/tariff — current user's billing info (from the app this works via session, no token)
 const billing = await App.fetch('/api/user/tariff');
 // data: { tarif, tarif_name, balance, discount, discount_date, payment_date, price, ... }
 ```
 
-**Настройка**: `/db/api` -> создать токен -> указать разрешённые классы API.
+**Setup**: `/db/api` → create a token → specify allowed API classes.
 
-### Когда какой использовать
+> ℹ️ **Inside a miniapp, prefer `/db/...` (with `form[]`) and pass no token.** `App.fetch` proxies
+> through the logged-in parent window, so requests authenticate via the user **session** — you
+> never need a token, and you must never hard-code a platform token in a shipped miniapp
+> (marketplace-review failure). The Bearer-token path (`/api/db/...` + `Authorization: Bearer`)
+> is for **external** callers — curl / CI / server / n8n.
 
-| Сценарий | Способ |
+### When to use which
+
+| Scenario | Method |
 |----------|--------|
-| Виджет загружает данные для отображения | `App.fetch('/db/catalog.json')` — сессия |
-| Виджет создаёт/редактирует элемент | `App.fetch('/db/catalog/add?edit&ajax=1', {method:'POST'})` — сессия |
-| Тестирование API с конкретным токеном | `/api/db/catalog?token=XXX` — токен |
-| Серверный webhook (afterSave) | `Authorization: Bearer XXX` — токен |
-| Внешний сервис (n8n, Bitrix24) | `Authorization: Bearer XXX` — токен |
+| Widget loads data for display | `App.fetch('/db/catalog.json')` — session |
+| Widget creates/edits an item | `App.fetch('/db/catalog/add?edit&ajax=1', {method:'POST'})` — session |
+| Testing API with a specific token | `/api/db/catalog?token=XXX` — token |
+| Server webhook (afterSave) | `Authorization: Bearer XXX` — token |
+| External service (n8n, Bitrix24) | `Authorization: Bearer XXX` — token |
 
-### Формат полей: form[] vs плоские
+### Field format: form[] vs flat
 
-| Эндпоинт | Формат полей | Обёртка |
+| Endpoint | Field format | Wrapper |
 |----------|-------------|---------|
-| `/db/catalog/...` | `form[name]=value` | нужна `form[]` |
-| `/api/db/catalog` | `name=value` | **без** `form[]` |
+| `/db/catalog/...` | `form[name]=value` | needs `form[]` |
+| `/api/db/catalog` | `name=value` | **no** `form[]` |
 
-Правило простое — по эндпоинту:
-- **`/db/...`** — всегда `form[]`
-- **`/api/db/...`** — всегда плоские поля
+Simple rule — based on the endpoint:
+- **`/db/...`** — always `form[]`
+- **`/api/db/...`** — always flat fields
 
-Это единое правило **для любого способа вызова** — App.fetch(), curl, внешний сервис.
+This rule applies **regardless of how you call it** — App.fetch(), curl, external service.
 
 ```js
-// /db/ — с form[]
+// /db/ — with form[]
 App.fetch('/db/projects/add?edit&ajax=1', {
     method: 'POST',
-    body: { 'form[name]': 'Проект', submit: 1 }
+    body: { 'form[name]': 'Project', submit: 1 }
 });
 
-// /api/db/ — без form[]
+// /api/db/ — without form[]
 App.fetch('/api/db/custom_dbtables', {
     method: 'POST',
     body: { name: 'My Table', dbname: 'mytable', submit: 1 }
@@ -118,28 +118,28 @@ App.fetch('/api/db/custom_dbtables', {
 ```
 
 ```bash
-# curl к /api/ — тоже без form[]
+# curl to /api/ — also without form[]
 curl -X POST "https://panel.korfix.ru/api/db/projects" \
   -H "Authorization: Bearer TOKEN" \
-  -F "name=Проект" -F "submit=1"
+  -F "name=Project" -F "submit=1"
 ```
 
-### ⚠️ Всегда проверяй `status` write-операций
+### ⚠️ Always check `status` on write operations
 
-`App.fetch()` **не бросает исключение** при логической ошибке — он возвращает объект с `{status: 'error'}` или `{status: 'no'}` + HTTP 200. Если ты его не проверяешь, ошибка молча проглатывается, и приложение ведёт себя как будто всё хорошо (пока не упадёт где-то дальше в неочевидном месте).
+`App.fetch()` **does not throw an exception** on logical errors — it returns an object with `{status: 'error'}` or `{status: 'no'}` + HTTP 200. If you don't check it, the error is silently swallowed and the app behaves as if everything is fine (until it fails somewhere unexpected).
 
-**Типовая ошибка:**
+**Typical mistake:**
 
 ```js
-// ❌ Нет проверки — ошибка съедается
+// ❌ No check — error is swallowed
 await App.fetch('/db/custom_dbtables/add?edit&ajax=1', {
     method: 'POST',
     body: { 'form[dbname]': 'my_catalog', submit: 1 }
 });
-// Запись не создалась (например, scheme не передан), но код едет дальше
+// Record wasn't created (e.g. scheme wasn't passed), but code continues
 ```
 
-**Правильно:**
+**Correct:**
 
 ```js
 const resp = await App.fetch('/db/custom_dbtables/add?edit&ajax=1', {
@@ -150,237 +150,238 @@ const resp = await App.fetch('/db/custom_dbtables/add?edit&ajax=1', {
         submit: 1
     }
 });
-// ⚠️ Из iframe resp оборачивается: status в resp.data.status, не resp.status
-const status = resp?.data?.status ?? resp?.status;
-const message = resp?.data?.message ?? resp?.message;
-if (!resp || status === 'error' || status === 'no') {
-    throw new Error(message || JSON.stringify(resp));
+if (!resp || resp.status === 'error' || resp.status === 'no') {
+    throw new Error(resp?.message || JSON.stringify(resp));
 }
 ```
 
-**Что обозначают status-значения:**
+**Status value meanings:**
 
-| Значение | Смысл |
+| Value | Meaning |
 |---|---|
-| `'ok'` / `'success'` | Операция прошла. Есть data. |
-| `'error'` | Явная ошибка (валидация не прошла, поле обязательное и пустое, доступ запрещён). В `message` или `errors` — текст. |
-| `'no'` | Операция не выполнена по содержательной причине (например, запись не найдена при edit). |
-| отсутствует/`null` | Сетевая/серверная ошибка. Относись как к error. |
+| `'ok'` / `'success'` | Operation succeeded. Has data. |
+| `'error'` | Explicit error (validation failed, required field empty, access denied). Message in `message` or `errors`. |
+| `'no'` | Operation not performed for a legitimate reason (e.g., record not found during edit). |
+| absent/`null` | Network/server error. Treat as error. |
 
-**Паттерн-хелпер**, чтобы не копировать проверку везде:
+**Helper pattern** to avoid copy-pasting the check everywhere:
 
 ```js
-// Работает и из iframe (resp.data.status), и напрямую (resp.status)
 async function appFetch(url, options) {
     const resp = await App.fetch(url, options);
-    const status = resp?.data?.status ?? resp?.status;
-    const message = resp?.data?.message ?? resp?.message;
-    if (!resp || status === 'error' || status === 'no') {
-        throw new Error(`${url}: ${message || JSON.stringify(resp)}`);
+    if (!resp || resp.status === 'error' || resp.status === 'no') {
+        throw new Error(`${url}: ${resp?.message || JSON.stringify(resp)}`);
     }
     return resp;
 }
 
-// Использование — в коде больше не надо писать проверки:
+// Usage — no need to write checks in code:
 const resp = await appFetch('/db/custom_dbtables/add?edit&ajax=1', {
     method: 'POST',
     body: { ... }
 });
-// если дошли сюда — всё ок, resp.data.data содержит результат (из iframe)
+// If we got here — all ok, resp.data contains the result
 ```
-
-Для чтения (`GET /db/.json`) проверка тоже полезна, но там в ошибке обычно HTTP-статус ≠ 200 — `App.fetch` может вернуть сам HTTP response.
 
 ---
 
-## Работа с данными каталогов
+### HTTP status codes for `/api/db/` write endpoints
 
-### Чтение списка
+`POST /api/db/{catalog}` and `POST /api/db/{catalog}/{id}` return correct HTTP codes:
+
+| Scenario | HTTP code | `ok` |
+|----------|-----------|------|
+| Record created successfully | **201 Created** | `true` |
+| Record updated successfully | **200 OK** | `true` |
+| Validation error (missing required field, etc.) | **422 Unprocessable** | `false` |
+| Record not found (update by non-existent id) | **404 Not Found** | `false` |
+| Server error | **500** | `false` |
+
+All responses include `ok: boolean` in the body:
+
+```json
+{ "ok": true, "status": "success", "id": "123", "alias": "abc" }
+{ "ok": false, "status": "error", "message": "field_empty: name" }
+```
+
+> **`/db/` session endpoints are unchanged** — they still return HTTP 200 with `status: 'error'` in the body for backward compatibility with the UI layer.
+
+For new miniapp code, use `App.fetchV2()` — it reads the `ok` field and normalizes the response shape for you.
+
+---
+
+## Working with catalog data
+
+### Reading a list
 
 ```js
 const resp = await App.fetch('/db/projects.json');
-// ⚠️ App.fetch из iframe оборачивает ответ через postMessage:
-//   resp.data       = серверный JSON {data: [...], total: N, status: 'ok'}
-//   resp.data.data  = сам массив элементов
-//   resp.data.total = общее количество
-// Используй asArray(resp) — безопасно в обоих контекстах (см. ниже)
+// resp.data — array of items
+// resp.total — total count
 
-// С фильтром
+// With a filter
 const resp = await App.fetch('/db/projects.json?form[status]=active');
 
-// Все страницы сразу
+// All pages at once
 const all = await App.fetchAll('/db/projects.json');
 ```
 
-> **`.json` vs `/api/db/` — фильтры и сессионный кеш.**
+> **`.json` vs `/api/db/` — filters and session cache.**
 >
-> #### Сессионный кеш фильтров (`/db/`)
+> #### Session filter cache (`/db/`)
 >
-> Каталоги с AJAX-режимом запоминают фильтры пользователя в сессии (ключ — URL-путь запроса).
+> Catalogs in AJAX mode remember the user's filters in the session (key — URL path of the request).
 >
-> **Когда кеш применяется к запросу из миниапа:**
-> Только если запрос идёт с параметром `ajax=1` И HTTP Referer-путь совпадает с путём, где пользователь сохранил фильтры. Стандартный `App.fetch('/db/tt_tasks.json')` **без** `ajax=1` использует путь `/db/tt_tasks.json`, который не совпадает с путём UI `/db/tt_tasks` — кеш не применяется.
+> **When cache applies to a miniapp request:**
+> Only when the request has `ajax=1` AND the HTTP Referer path matches the path where the user saved filters. A standard `App.fetch('/db/tt_tasks.json')` **without** `ajax=1` uses path `/db/tt_tasks.json`, which doesn't match UI path `/db/tt_tasks` — cache not applied.
 >
-> Если же запрос явно содержит `ajax=1`, кеш может примениться. Тогда:
-> - Любой переданный `form[]` (даже пустой) делает `$search` непустым → кеш не загружается.
-> - **`not_cache=1`** предотвращает только **запись** в кеш, не чтение.
-> - **`free_cache=1`** — игнорировать закешированные в сессии фильтры и сортировку (не читать из кеша). Используй для программных запросов, чтобы предыдущий UI-поиск пользователя не влиял на результат.
+> If the request explicitly includes `ajax=1`, cache may apply. Then:
+> - Any passed `form[]` (even empty) makes `$search` non-empty → cache not loaded.
+> - **`not_cache=1`** only prevents **writing** to cache, not reading.
+> - **`free_cache=1`** — ignore session-cached filters and sorting (don't read from cache). Use for programmatic requests so the user's previous UI search doesn't affect results.
 >
-> | Параметр | Чтение из кеша | Запись в кеш |
-> |----------|:-:|:-:|
-> | *(без параметров)* | да | да |
-> | `not_cache=1` | да | **нет** |
-> | `free_cache=1` | **нет** | да |
-> | `free_cache=1&not_cache=1` | **нет** | **нет** |
+> | Parameter | Read from cache | Write to cache |
+> |-----------|:-:|:-:|
+> | *(no params)* | yes | yes |
+> | `not_cache=1` | yes | **no** |
+> | `free_cache=1` | **no** | yes |
+> | `free_cache=1&not_cache=1` | **no** | **no** |
 >
 > ```js
-> // Безопасно: без ajax=1, путь /db/tt_tasks.json ≠ /db/tt_tasks (кеш UI не трогает)
+> // Safe: without ajax=1, path /db/tt_tasks.json ≠ /db/tt_tasks (UI cache untouched)
 > App.fetch('/db/tt_tasks.json?limit=20')
 >
-> // Полный байпас кеша — рекомендуется для программных запросов из миниапов:
+> // Full cache bypass — recommended for programmatic miniapp requests:
 > App.fetch('/db/tt_tasks.json?free_cache=1&not_cache=1')
 >
-> // С ajax=1: кеш может примениться если Referer совпадает с путём фильтра
-> // Чтобы обойти — передай явные form[] или free_cache=1:
+> // With ajax=1: cache may apply if Referer matches the filter path
+> // To bypass — pass explicit form[] or free_cache=1:
 > App.fetch('/db/tt_tasks.json?ajax=1&not_cache=1&form[status]=open')
-> // not_cache=1 — не перезаписывает кеш пользователя своим значением
+> // not_cache=1 — doesn't overwrite the user's cache with this value
 > ```
 >
-> #### `/api/db/` — без сессионного кеша
+> #### `/api/db/` — no session cache
 >
-> Эндпоинт `/api/db/catalog` не использует сессию и подходит для полных выборок без фильтров пользователя. `/db/` при этом возвращает больше полей — в частности, `from_group`/`from_auth` возвращаются в `/db/`, но не в `/api/db/` по умолчанию (hidden-поля схемы).
+> The `/api/db/catalog` endpoint doesn't use the session and is suitable for full queries without user filters. `/db/` returns more fields — in particular, `from_group`/`from_auth` are returned in `/db/` but not in `/api/db/` by default (hidden schema fields).
 >
-> Чтобы получить hidden-поля через `/api/db/`, запросить явно через `select=`:
+> To get hidden fields via `/api/db/`, request them explicitly with `select=`:
 >
 > ```js
-> // from_group отсутствует — hidden-поле в схеме, по умолчанию не выбирается
+> // from_group is absent — hidden field in schema, not selected by default
 > App.fetch('/api/db/tt_tasks?limit=100')
 >
-> // Явно включить hidden-поля через select=:
+> // Explicitly include hidden fields via select=:
 > App.fetch('/api/db/tt_tasks?limit=100&select=name,status,from_group,from_auth')
 >
-> // Полный список без сессионных фильтров (но без from_group):
+> // Full list without session filters (but without from_group):
 > const resp = await App.fetch('/api/db/dashboards?limit=999');
 > ```
 
-**Важно: нормализация ответа.** Когда `App.fetch` вызван внутри iframe, ответ
-оборачивается слоем postMessage: массив лежит в `resp.data.data` (не `resp.data`).
-При прямом вызове (вне iframe) — в `resp.data`. **Всегда** приводите к массиву
-через хелпер, который обрабатывает оба случая:
+**Important: response normalization.** `resp.data` is not always an array — it can be
+an object (single record), `null`, or nested `resp.data.data`
+(when proxied through `App.fetch`). **Always** normalize to array:
 
 ```js
-// Безопасное извлечение массива данных (работает и из iframe, и напрямую)
+// Safe array extraction
 function asArray(resp) {
-    if (Array.isArray(resp?.data?.data)) return resp.data.data; // iframe: postMessage-обёртка
-    if (Array.isArray(resp?.data)) return resp.data;            // прямой вызов
+    if (Array.isArray(resp?.data)) return resp.data;
+    if (Array.isArray(resp?.data?.data)) return resp.data.data;
     return [];
 }
 
 const projects = asArray(await App.fetchAll('/db/tt_projects.json'));
 const tasks    = asArray(await App.fetchAll('/db/tt_tasks.json'));
-// Теперь .sort(), .filter(), .map() безопасны
+// Now .sort(), .filter(), .map() are safe
 ```
 
-Аналогично для доступа к полям схемы:
-
-```js
-// Схема каталога через App.fetch из iframe
-const schemaResp = await App.fetch('/db/projects/sheme.json');
-const fields = schemaResp?.data?.data ?? schemaResp?.data ?? {};
-// fields.from_auth.arr, fields.status.arr, ...
-```
-
-### Чтение одного элемента
+### Reading a single item
 
 ```js
 const resp = await App.fetch('/db/projects/ALIAS.json');
-// или через API:
+// or via API:
 const resp = await App.fetch('/api/db/projects/ALIAS');
 ```
 
-### Создание элемента
+### Creating an item
 
 ```js
 await App.fetch('/db/projects/add?edit&ajax=1', {
     method: 'POST',
     body: {
-        'form[name]': 'Новый проект',
+        'form[name]': 'New Project',
         'form[status]': 'active',
         submit: 1
     }
 });
 ```
 
-> **Важно: `alias` — уникальный ключ записи.**
-> В каждой таблице платформы есть два идентификатора: `id` (числовой timestamp) и `alias` (строка, уникальна в таблице).
-> Обращение к элементам через URL и ссылки — **всегда по `alias`**: `/db/projects/ALIAS.json`, `/db/projects/ALIAS?edit`.
-> При создании через API `form[alias]` имеет схемный дефолт `uniqid()`, но он вычисляется **один раз при загрузке схемы**.
-> Если создаёте несколько записей в одном запросе или в цикле, **явно генерируйте уникальный alias** для каждой:
+> **Important: `alias` — unique record key.**
+> Every platform table has two identifiers: `id` (numeric timestamp) and `alias` (string, unique in the table).
+> Accessing items via URL and links — **always by `alias`**: `/db/projects/ALIAS.json`, `/db/projects/ALIAS?edit`.
+> When creating via API, `form[alias]` has a schema default of `uniqid()`, but the default is computed **once when the schema loads**.
+> When creating multiple records in a loop, **explicitly generate a unique alias** for each:
 >
 > ```js
-> // Безопасная генерация alias при массовом создании
+> // Safe alias generation for bulk creation
 > const alias = Date.now().toString(36) + Math.random().toString(36).substr(2, 8);
 > await App.fetch('/db/projects/add?edit&ajax=1', {
 >     method: 'POST',
 >     body: {
 >         'form[alias]': alias,
->         'form[name]': 'Новый проект',
+>         'form[name]': 'New Project',
 >         submit: 1
 >     }
 > });
 > ```
 
-### Системные поля записей
+### System record fields
 
-Каждая запись в каталоге содержит набор системных полей. Эти поля управляют идентификацией, принадлежностью и видимостью записи. При создании через API их нужно учитывать явно.
+Every catalog record contains a set of system fields. These fields manage identification, ownership, and visibility. When creating via API, they must be handled explicitly.
 
-#### `id` и `alias` — два идентификатора
+#### `id` and `alias` — two identifiers
 
-| Поле | Тип | Назначение |
-|------|-----|-----------|
-| `id` | int / bigint | Числовой идентификатор (обычно timestamp создания). Используется для связей между таблицами (FK) |
-| `alias` | varchar, unique | Строковый уникальный ключ. Используется во всех URL: `/db/catalog/ALIAS`, `/db/catalog/ALIAS.json`, `/db/catalog/ALIAS?edit` |
+| Field | Type | Purpose |
+|-------|------|---------|
+| `id` | int / bigint | Numeric identifier (usually creation timestamp). Used for table relationships (FK) |
+| `alias` | varchar, unique | String unique key. Used in all URLs: `/db/catalog/ALIAS`, `/db/catalog/ALIAS.json`, `/db/catalog/ALIAS?edit` |
 
-- URL элемента — **всегда alias**, не id: `/db/projects/6989d171cce41`
-- Связи между таблицами (FK) — обычно **id**: `board_id` в `dashboard_widgets` ссылается на `dashboards.id`
-- При создании: `alias` по умолчанию генерируется через `uniqid()`, но **дефолт вычисляется один раз при загрузке схемы**. При массовом создании (цикл) — генерируйте явно
-- `id` обычно заполняется автоматически (timestamp), передавать не нужно
+- Item URL — **always alias**, not id: `/db/projects/6989d171cce41`
+- Table relationships (FK) — usually **id**: `board_id` in `dashboard_widgets` references `dashboards.id`
+- On create: `alias` defaults to `uniqid()`, but **the default is computed once when the schema loads**. For bulk creation (loops) — generate explicitly
+- `id` is usually filled automatically (timestamp), no need to pass it
 
-#### `from_auth` и `from_group` — принадлежность и видимость
+#### `from_auth` and `from_group` — ownership and visibility
 
-Большинство каталогов содержат поля `from_auth` и `from_group`, которые определяют, кому принадлежит и кому видна запись.
+Most catalogs have `from_auth` and `from_group` fields that determine who owns and who can see a record.
 
-| Поле | Значение | Смысл |
-|------|----------|-------|
-| `from_auth` | `0` | Запись видна **всем пользователям группы** (публичная в рамках группы) |
-| `from_auth` | `USER_ID` | Запись видна **только этому пользователю** (персональная) |
-| `from_group` | `0` | Запись доступна **всем группам** (глобальная, без возможности удалить) |
-| `from_group` | `GROUP_ID` | Запись принадлежит конкретной группе |
+| Field | Value | Meaning |
+|-------|-------|---------|
+| `from_auth` | `0` | Record visible to **all users in the group** (group-public) |
+| `from_auth` | `USER_ID` | Record visible **only to this user** (personal) |
+| `from_group` | `0` | Record accessible to **all groups** (global, undeletable) |
+| `from_group` | `GROUP_ID` | Record belongs to a specific group |
 
-**Правила при создании записей через API:**
+**Rules when creating records via API:**
 
-1. **Для не-админов** схема автоматически выставляет `from_auth = SESSION_USER_ID` (скрытое поле с дефолтом). Явная передача не нужна.
+1. **For non-admins** the schema automatically sets `from_auth = SESSION_USER_ID` (hidden field with default). Explicit passing not needed.
 
-2. **Для администраторов** `from_auth` — это `select` с вариантами `{0: 'Всем', USER_ID: 'Персональный'}`. Если не передать `form[from_auth]`, запись станет публичной (`from_auth = 0`). Чтобы создать персональную запись — передайте явно.
+2. **For admins** `from_auth` is a `select` with options `{0: 'All', USER_ID: 'Personal'}`. If you don't pass `form[from_auth]`, the record becomes public (`from_auth = 0`). To create a personal record — pass explicitly.
 
-3. **Определение текущего user ID** — из схемы каталога:
+3. **Getting the current user ID** — from the catalog schema:
 
 ```js
-// Загружаем схему — from_auth.arr содержит {0: 'Всем', USER_ID: 'Персональный'}
-const schemaResp = await App.fetch('/db/dashboard_widgets/sheme.json');
-// Из iframe ответ двойной: fields в schemaResp.data.data; прямой вызов: schemaResp.data
-const fields = schemaResp?.data?.data ?? schemaResp?.data ?? {};
-const fromAuthArr = fields.from_auth?.arr || {};
+// Load schema — from_auth.arr contains {0: 'All', USER_ID: 'Personal'}
+const schema = await App.fetch('/db/dashboard_widgets/sheme.json');
+const fromAuthArr = schema?.data?.from_auth?.arr || {};
 const currentUserId = Object.keys(fromAuthArr).find(k => k !== '0') || 0;
 ```
 
-4. **Пример: массовое создание с корректной принадлежностью:**
+4. **Example: bulk creation with correct ownership:**
 
 ```js
-// Определяем ID текущего пользователя
-const schemaResp = await App.fetch('/db/my_catalog/sheme.json');
-const fields = schemaResp?.data?.data ?? schemaResp?.data ?? {};
-const arr = fields.from_auth?.arr || {};
+// Determine current user ID
+const schema = await App.fetch('/db/my_catalog/sheme.json');
+const arr = schema?.data?.from_auth?.arr || {};
 const userId = Object.keys(arr).find(k => k !== '0') || 0;
 
 for (const item of items) {
@@ -398,15 +399,15 @@ for (const item of items) {
 }
 ```
 
-> **Итого:** при создании записей всегда передавайте `form[alias]` (уникальный), а если нужна персональная видимость — `form[from_auth]` и `form[from_group]`.
+> **Summary:** when creating records, always pass `form[alias]` (unique), and if personal visibility is needed — `form[from_auth]` and `form[from_group]`.
 
-### Редактирование
+### Editing
 
 ```js
 await App.fetch(`/db/projects/${alias}?edit&ajax=1`, {
     method: 'POST',
     body: {
-        'form[name]': 'Обновлённое название',
+        'form[name]': 'Updated name',
         'form[id]': id,
         'form[alias]': alias,
         submit: 1
@@ -414,203 +415,198 @@ await App.fetch(`/db/projects/${alias}?edit&ajax=1`, {
 });
 ```
 
-### Удаление
+### Deleting
 
-Удаление — это **не HTTP DELETE**. Запись помечается `hidden=1` и попадает в корзину.
-Из корзины пользователь может удалить окончательно.
+Deletion is **not HTTP DELETE**. The record is marked `hidden=1` and moved to trash.
+From trash the user can permanently delete.
 
 ```js
-// Через /db/ — мягкое удаление (в корзину)
+// Via /db/ — soft delete (to trash)
 await App.fetch(`/db/projects/${alias}?udel&ajax=1`, { method: 'POST' });
 
-// Через /api/db/ — тоже мягкое удаление (hidden=1)
+// Via /api/db/ — also soft delete (hidden=1)
 await App.fetch(`/api/db/projects/${id}`, {
     method: 'POST',
     body: { hidden: 1, submit: 1 }
 });
 ```
 
-**Важно**: `hidden` должно быть в схеме каталога. Для кастомных каталогов (`custom_*`)
-поле `hidden` присутствует автоматически.
+**Important**: `hidden` must be in the catalog schema. For custom catalogs (`custom_*`)
+the `hidden` field is present automatically.
 
-### Кастомные каталоги (`custom_*`) — особенности CRUD
+### Custom catalogs (`custom_*`) — CRUD specifics
 
-Для кастомных каталогов (созданных через self-provisioning) рекомендуется использовать
-**`/api/db/`** вместо `/db/` для операций записи:
+For custom catalogs (created via self-provisioning), use
+**`/api/db/`** instead of `/db/` for write operations:
 
 ```js
-// СОЗДАНИЕ — /api/db/ сохраняет alias корректно
+// CREATE — /api/db/ saves alias correctly
 await App.fetch(`/api/db/custom_my_catalog`, {
     method: 'POST',
     body: {
-        alias: uid(),                    // без form[]
-        custom_name: 'Название',
+        alias: uid(),                    // no form[]
+        custom_name: 'Name',
         from_auth: currentUserId,
         from_group: currentUserId,
         submit: 1
     }
 });
 
-// РЕДАКТИРОВАНИЕ — /api/db/ по id
+// EDIT — /api/db/ by id
 await App.fetch(`/api/db/custom_my_catalog/${id}`, {
     method: 'POST',
     body: {
-        custom_name: 'Новое название',
+        custom_name: 'New name',
         submit: 1
     }
 });
 
-// УДАЛЕНИЕ — hidden=1
+// DELETE — hidden=1
 await App.fetch(`/api/db/custom_my_catalog/${id}`, {
     method: 'POST',
     body: { hidden: 1, submit: 1 }
 });
 ```
 
-> **Почему `/api/db/` а не `/db/`?** Эндпоинт `/db/.../add?edit&ajax=1`
-> для кастомных каталогов может **игнорировать `form[alias]`** — запись создаётся без alias.
-> Без alias невозможно редактирование через `/db/{catalog}/{alias}?edit`.
-> Через `/api/db/` alias сохраняется корректно.
+> **Why `/api/db/` and not `/db/`?** The `/db/.../add?edit&ajax=1` endpoint
+> for custom catalogs may **ignore `form[alias]`** — the record is created without an alias.
+> Without an alias, editing via `/db/{catalog}/{alias}?edit` is impossible.
+> Via `/api/db/` the alias is saved correctly.
 >
-> **Адресация в `/api/db/`**: POST-обновление работает по `/{id}` (числовой идентификатор).
-> По alias для кастомных каталогов POST может вернуть `item not found`.
+> **Addressing in `/api/db/`**: POST updates work by `/{id}` (numeric identifier).
+> By alias for custom catalogs, POST may return `item not found`.
 
-### `from_auth` и `from_group` — обязательны
+### `from_auth` and `from_group` — required
 
-При создании записей **всегда** передавайте `from_auth` и `from_group`:
+When creating records **always** pass `from_auth` and `from_group`:
 
 ```js
 body: {
-    from_auth: currentUserId,   // владелец записи
-    from_group: currentUserId,  // группа
+    from_auth: currentUserId,   // record owner
+    from_group: currentUserId,  // group
     submit: 1
 }
 ```
 
-Записи с пустыми `from_auth`/`from_group` принадлежат суперадмину, видны всем аккаунтам
-и **неуправляемы** — их нельзя редактировать или удалять через интерфейс платформы.
+Records with empty `from_auth`/`from_group` belong to the super-admin, are visible to all accounts
+and are **unmanageable** — they can't be edited or deleted through the platform UI.
 
-### Получение схемы каталога
+### Getting the catalog schema
 
 ```js
-const schemaResp = await App.fetch('/db/projects/sheme.json');
-// Из iframe ответ двойной: schema.data = {data: {fields...}, status:'ok'}
-// Используй: const fields = schemaResp?.data?.data ?? schemaResp?.data ?? {}
-const fields = schemaResp?.data?.data ?? schemaResp?.data ?? {};
+const schema = await App.fetch('/db/projects/sheme.json');
+// schema.data — object with field descriptions by key
 ```
 
-Для полей типа `select` — варианты в `arr`:
+For `select` type fields — options in `arr`:
 
 ```js
-const statusField = fields.status;
+const statusField = schema.data.status;
 // statusField.type = 'select'
-// statusField.arr = {0: 'Новый', 10: 'В работе', 40: 'Завершено'}
+// statusField.arr = {0: 'New', 10: 'In progress', 40: 'Done'}
 ```
 
-Для полей типа `select_from_table` — варианты в `arr` (до 200 записей), плюс метаданные:
+For `select_from_table` type fields — options in `arr` (up to 200 records), plus metadata:
 
 ```js
-const personField = fields.person_id;
+const personField = schema.data.person_id;
 // personField.type = 'select_from_table'
-// personField.catalog = 'auth_pers'           — имя связанного каталога
-// personField.total = 18                      — общее количество записей
-// personField.arr = {123: 'Иванов И.И.', 456: 'Петров П.П.'}  — первые 200 вариантов
-// personField.ex_table_field = 'author_comment'  — поле для отображения
-// personField.id_ex_table = 'author_id'          — поле-ключ
+// personField.catalog = 'auth_pers'              — related catalog name
+// personField.total = 18                         — total record count
+// personField.arr = {123: 'Ivanov I.', 456: 'Petrov P.'}  — first 200 options
+// personField.ex_table_field = 'author_comment'  — display field
+// personField.id_ex_table = 'author_id'          — key field
 ```
 
-Для небольших справочников (total <= 200) — `arr` содержит все варианты:
+For small references (total <= 200) — `arr` contains all options:
 
 ```js
-const schemaResp = await App.fetch('/db/tt_tasks/sheme.json');
-const schemaFields = schemaResp?.data?.data ?? schemaResp?.data ?? {};
-const options = schemaFields.person_id.arr;
+const schema = await App.fetch('/db/tt_tasks/sheme.json');
+const options = schema.data.person_id.arr;
 const select = document.getElementById('personSelect');
 for (const [id, name] of Object.entries(options)) {
     select.add(new Option(name, id));
 }
 ```
 
-Для больших справочников (total > 200) — пагинация по конкретному полю:
+For large references (total > 200) — paginate on a specific field:
 
 ```js
-const schemaField = schemaFields.client_id;
-if (schemaField.total > Object.keys(schemaField.arr).length) {
-    // Есть ещё страницы — загружаем вторую
+const field = schema.data.client_id;
+if (field.total > Object.keys(field.arr).length) {
+    // There are more pages — load the second
     const page2 = await App.fetch('/db/tt_tasks/sheme.json?field=client_id&p=2');
-    const moreOptions = (page2?.data?.data ?? page2?.data ?? {}).client_id?.arr;
-    // ... добавить в select или реализовать autocomplete
+    const moreOptions = page2.data.client_id.arr;
+    // ... add to select or implement autocomplete
 }
 ```
 
-Параметры пагинации:
-- `field=person_id` — загрузить arr только для указанного поля (экономит трафик)
-- `p=2` — номер страницы (по 200 записей)
+Pagination parameters:
+- `field=person_id` — load arr only for the specified field (saves bandwidth)
+- `p=2` — page number (200 records per page)
 
-### Пользовательские настройки каталога
+### User catalog settings
 
-Порядок колонок, видимость полей, переименование каталога — пользователь настраивает
-через шестерёнку в хедере. Приложение может читать и сохранять эти настройки.
+Column order, field visibility, catalog renaming — the user configures
+via the gear icon in the header. The app can read and save these settings.
 
-Подробный справочник с примерами и use-case: [catalog-settings.md](catalog-settings.md)
+Detailed reference with examples and use-cases: [catalog-settings.md](catalog-settings.md)
 
-### Формат URL
+### URL format
 
 ```
-/db/{catalog}.json          -- список элементов (GET)
-/db/{catalog}/{alias}       -- конкретный элемент
-/db/{catalog}/{alias}.json  -- элемент в JSON
-/db/{catalog}/add?edit      -- страница создания
-/db/{catalog}/sheme.json    -- схема (поля, типы, варианты)
-/db/{catalog}/catalog/settings.json -- пользовательские настройки колонок
-/empty/db/{catalog}         -- без шаблона (для модалок)
+/db/{catalog}.json          -- item list (GET)
+/db/{catalog}/{alias}       -- specific item
+/db/{catalog}/{alias}.json  -- item as JSON
+/db/{catalog}/add?edit      -- create page
+/db/{catalog}/sheme.json    -- schema (fields, types, options)
+/db/{catalog}/catalog/settings.json -- user column settings
+/empty/db/{catalog}         -- without template (for modals)
 /api/db/{catalog}           -- REST API (JSON)
 ```
 
-### Фильтрация
+### Filtering
 
 ```
 /db/projects.json?form[status]=active&form[client_id]=123
 ```
 
-### Пагинация
+### Pagination
 
 ```
 /db/projects.json?p=2
 ```
 
-### Параметры запроса (/api/db/)
+### Query parameters (/api/db/)
 
-Через `/api/db/{catalog}` доступны дополнительные параметры управления выдачей:
+Via `/api/db/{catalog}` additional output control parameters are available:
 
-| Параметр | Описание | Пример |
-|----------|----------|--------|
-| `filter[field]=value` | Фильтр по полю | `filter[status]=active` |
-| `order_by=field` | Сортировка по полю | `order_by=name` |
-| `order=ASC\|DESC` | Направление сортировки | `order=DESC` |
-| `limit=N` | Количество записей (по умолч. 20) | `limit=50` |
-| `offset=N` | Смещение | `offset=20` |
-| `select=f1,f2` | Выбор конкретных полей | `select=name,status` |
-| `load_values=1` | Подменить ID связанных полей на отображаемые значения | `load_values=1` |
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `filter[field]=value` | Filter by field | `filter[status]=active` |
+| `order_by=field` | Sort by field | `order_by=name` |
+| `order=ASC\|DESC` | Sort direction | `order=DESC` |
+| `limit=N` | Record count (default 20) | `limit=50` |
+| `offset=N` | Offset | `offset=20` |
+| `select=f1,f2` | Select specific fields | `select=name,status` |
+| `load_values=1` | Replace linked field IDs with display values | `load_values=1` |
 
-**`load_values`** — для полей типа `select_from_table` вместо числового ID
-возвращает текстовое значение (имя сотрудника вместо ID). Удобно для отображения
-без дополнительных запросов:
+**`load_values`** — for `select_from_table` fields returns the text value instead of numeric ID (employee name instead of ID). Convenient for display without extra requests:
 
 ```js
-// Без load_values: person_id = "1715761701"
-// С load_values:   person_id = "Алексей Григорьев"
+// Without load_values: person_id = "1715761701"
+// With load_values:   person_id = "Alexey Grigoriev"
 const resp = await App.fetch('/api/db/tt_tasks?load_values=1');
 ```
 
-**`select`** — ограничивает набор полей в ответе. Поля с `_id` суффиксом
-и обязательные поля всегда включаются:
+**`select`** — limits the field set in the response. Fields with `_id` suffix
+and required fields are always included:
 
 ```js
 const resp = await App.fetch('/api/db/tt_tasks?select=name,status&limit=10');
 ```
 
-**`order_by` + `order`** — сортировка работает только по полям, присутствующим в схеме:
+**`order_by` + `order`** — sorting works only on fields present in the schema:
 
 ```js
 const resp = await App.fetch('/api/db/tt_tasks?order_by=name&order=ASC');
@@ -618,13 +614,13 @@ const resp = await App.fetch('/api/db/tt_tasks?order_by=name&order=ASC');
 
 ---
 
-## Доступные каталоги
+## Available catalogs
 
-Полный список с примерами: [korfix-catalogs.md](korfix-catalogs.md)
+Full list with examples: [korfix-catalogs.md](korfix-catalogs.md)
 
-Основные группы: AG (финансы), B2B (торговля), MD (производство),
-TT (задачи), WH (склад), VRN (выездные работы), CRM, системные.
+Main groups: AG (finance), B2B (trade), MD (manufacturing),
+TT (tasks), WH (warehouse), VRN (field work), CRM, system.
 
 ---
 
-**Дальше:** [storage-and-hooks.md](storage-and-hooks.md) · **← [Home](index.md)**
+**Next:** [storage-and-hooks.md](storage-and-hooks.md) · **← [Home](index.md)**

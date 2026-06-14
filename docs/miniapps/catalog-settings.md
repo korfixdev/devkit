@@ -1,76 +1,76 @@
-# Настройки каталогов
+# Catalog Settings
 
-> **См. также:** [self-provisioning.md](self-provisioning.md) · [data-api.md](data-api.md) · [korfix-catalogs.md](korfix-catalogs.md) · [storage-and-hooks.md](storage-and-hooks.md)
+> **See also:** [self-provisioning.md](self-provisioning.md) · [data-api.md](data-api.md) · [korfix-catalogs.md](korfix-catalogs.md) · [storage-and-hooks.md](storage-and-hooks.md)
 > **← [Home](index.md)**
 
-Пользователь может настраивать отображение каталога через модалку (шестерёнка в хедере списка).
-Приложение может читать и сохранять эти настройки, чтобы отображать данные
-в том же виде, что и стандартный интерфейс CRM.
+Users can configure catalog display via a modal (gear icon in the list header).
+An app can read and save these settings to display data
+in the same way as the standard CRM interface.
 
 ---
 
-## Получение настроек
+## Reading Settings
 
 ```js
 const resp = await App.fetch('/db/tt_tasks/catalog/settings.json');
 ```
 
-Ответ содержит три блока:
+The response contains three blocks:
 
-| Поле | Описание |
-|------|----------|
-| `data.table_fields` | Колонки таблицы: порядок, заголовки, видимость |
-| `data.settings` | Пользовательские настройки по типам (interface, table, scheme) |
-| `data.search_form` | Поля формы поиска/фильтрации |
+| Field | Description |
+|-------|-------------|
+| `data.table_fields` | Table columns: order, titles, visibility |
+| `data.settings` | User settings by type (interface, table, scheme) |
+| `data.search_form` | Search/filter form fields |
 
 ---
 
-## Типы настроек
+## Setting Types
 
-### 1. interface — общие настройки каталога
+### 1. interface — general catalog settings
 
-Хранится в: `settings.interface.{catalog}`
+Stored in: `settings.interface.{catalog}`
 
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `settingsInterfaceCatalogname` | string | Пользовательское название каталога (переименование в меню и хедере) |
-| `settingsInterfaceImgUrl` | string | Альтернативный путь для изображений (если поле `doc` есть в схеме) |
-| `settingsInterfaceCatalogKanban` | string | Поле для канбан-представления (select или select_from_table) |
+| Field | Type | Description |
+|-------|------|-------------|
+| `settingsInterfaceCatalogname` | string | Custom catalog name (renamed in menu and header) |
+| `settingsInterfaceImgUrl` | string | Alternative path for images (if `doc` field exists in schema) |
+| `settingsInterfaceCatalogKanban` | string | Field for kanban view (select or select_from_table) |
 
-Пример значения:
+Example value:
 ```json
 {
-    "settingsInterfaceCatalogname": "Мои задачи",
+    "settingsInterfaceCatalogname": "My Tasks",
     "settingsInterfaceImgUrl": "/data/custom-images"
 }
 ```
 
-**Чтение:**
+**Reading:**
 ```js
 const resp = await App.fetch('/db/tt_tasks/catalog/settings.json');
 const iface = resp.data.settings?.interface;
 if (iface) {
     const customName = iface.value.settingsInterfaceCatalogname;
-    // customName = 'Мои задачи' (или undefined если не переименован)
+    // customName = 'My Tasks' (or undefined if not renamed)
 }
 ```
 
 ---
 
-### 2. table — порядок и видимость колонок таблицы
+### 2. table — column order and visibility
 
-Хранится в: `settings.table.{catalog}`
+Stored in: `settings.table.{catalog}`
 
-Значение — объект с единственным ключом `settingsFieldsOrder`: массив объектов `{name, value}`.
+Value — object with single key `settingsFieldsOrder`: array of `{name, value}` objects.
 
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `name` | string | Имя поля (field_name из схемы) |
-| `value` | boolean | `true` = колонка видна, `false` = скрыта |
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Field name (field_name from schema) |
+| `value` | boolean | `true` = column visible, `false` = hidden |
 
-Порядок элементов массива = порядок колонок в таблице.
+Array element order = column order in the table.
 
-Пример значения:
+Example value:
 ```json
 {
     "settingsFieldsOrder": [
@@ -83,41 +83,41 @@ if (iface) {
 }
 ```
 
-**Чтение через table_fields:**
+**Reading via table_fields:**
 
-`data.table_fields` — уже обработанный результат: настройки пользователя применены поверх
-дефолтных колонок каталога. Порядок ключей = порядок отображения:
+`data.table_fields` — already processed result: user settings applied on top of
+default catalog columns. Key order = display order:
 
 ```js
 const resp = await App.fetch('/db/tt_tasks/catalog/settings.json');
 const columns = resp.data.table_fields;
 
 // columns = {
-//   name:      { title: 'Название',    sort_by: 'ASC' },            // видно (нет checked)
-//   status:    { title: 'Статус',      sort_by: 'ASC' },            // видно
-//   person_id: { title: 'Исполнитель', sort_by: 'ASC', checked: false },  // скрыто
+//   name:      { title: 'Name',     sort_by: 'ASC' },            // visible (no checked)
+//   status:    { title: 'Status',   sort_by: 'ASC' },            // visible
+//   person_id: { title: 'Assignee', sort_by: 'ASC', checked: false },  // hidden
 // }
 
-// Видимые колонки в порядке пользователя
+// Visible columns in user's order
 const visible = Object.entries(columns)
     .filter(([_, col]) => col.checked !== false);
 ```
 
 ---
 
-### 3. scheme — порядок полей формы редактирования
+### 3. scheme — edit form field order
 
-Хранится в: `settings.scheme.{catalog}`
+Stored in: `settings.scheme.{catalog}`
 
-Значение — объект с ключом `settingsSchemeOrder`: массив объектов `{name, value}`.
-Определяет порядок полей в форме добавления/редактирования и распределение по вкладкам.
+Value — object with key `settingsSchemeOrder`: array of `{name, value}` objects.
+Defines field order in the add/edit form and tab assignment.
 
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `name` | string | Имя поля (field_name из схемы). Поля типа `delimeter_line` = заголовки вкладок |
-| `value` | string | `"1"` = поле включено |
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Field name (field_name from schema). Fields of type `delimeter_line` = tab headings |
+| `value` | string | `"1"` = field enabled |
 
-Пример значения:
+Example value:
 ```json
 {
     "settingsSchemeOrder": [
@@ -131,38 +131,38 @@ const visible = Object.entries(columns)
 }
 ```
 
-Поля `delimeter_line` разделяют вкладки формы. Порядок элементов = порядок отображения.
+`delimeter_line` fields separate form tabs. Element order = display order.
 
 ---
 
-## Сохранение настроек
+## Saving Settings
 
-Все настройки сохраняются через `apps_storage` с `app_id = -1` (системные, не привязаны к приложению маркетплейса):
+All settings are saved via `apps_storage` with `app_id = -1` (system settings, not tied to a marketplace app):
 
 ```js
 await App.fetch('/empty/db/apps_storage/add?edit=1&ajax=y', {
     method: 'POST',
     body: {
         'form[app_id]': -1,
-        'form[name]': 'settings.table.tt_tasks',   // ключ: settings.{тип}.{каталог}
-        'form[value]': JSON.stringify(data),         // значение: JSON
+        'form[name]': 'settings.table.tt_tasks',   // key: settings.{type}.{catalog}
+        'form[value]': JSON.stringify(data),         // value: JSON
         submit: 'ok'
     }
 });
 ```
 
-### Сохранение для себя vs для всех
+### Saving for yourself vs for everyone
 
-| Параметр | Значение | Результат |
-|----------|----------|-----------|
-| без `from_group` | — | Настройки сохраняются для текущего пользователя |
-| `from_group: 1` | true | Настройки применяются ко всем пользователям группы |
+| Parameter | Value | Result |
+|-----------|-------|--------|
+| without `from_group` | — | Settings saved for the current user |
+| `from_group: 1` | true | Settings applied to all group users |
 
-Личные настройки имеют приоритет над групповыми.
+Personal settings take priority over group settings.
 
-### Сброс настроек
+### Resetting Settings
 
-Для сброса — сохранить с `form[hidden] = 1`:
+To reset — save with `form[hidden] = 1`:
 
 ```js
 await App.fetch('/empty/db/apps_storage/add?edit=1&ajax=y', {
@@ -178,13 +178,13 @@ await App.fetch('/empty/db/apps_storage/add?edit=1&ajax=y', {
 
 ---
 
-## Полный use-case: таблица с настройками пользователя
+## Full Use-Case: Table with User Settings
 
 ```js
 const App = new VMCRMUserApp();
 
 async function renderTable(catalog) {
-    // 1. Получаем настройки + схему + данные параллельно
+    // 1. Fetch settings + schema + data in parallel
     const [settingsResp, schemaResp, dataResp] = await Promise.all([
         App.fetch(`/db/${catalog}/catalog/settings.json`),
         App.fetch(`/db/${catalog}/sheme.json`),
@@ -195,27 +195,27 @@ async function renderTable(catalog) {
     const schema  = schemaResp.data;
     const items   = Array.isArray(dataResp?.data) ? dataResp.data : [];
 
-    // 2. Видимые колонки в порядке пользователя
+    // 2. Visible columns in user's order
     const visibleCols = Object.entries(columns)
         .filter(([_, col]) => col.checked !== false)
         .map(([name, col]) => ({
             name,
             title: col.title,
             type: schema[name]?.type,
-            arr: schema[name]?.arr   // для select — варианты
+            arr: schema[name]?.arr   // for select — options
         }));
 
-    // 3. Рендер заголовков
+    // 3. Render headers
     let html = '<table><thead><tr>';
     visibleCols.forEach(col => { html += `<th>${col.title}</th>`; });
     html += '</tr></thead><tbody>';
 
-    // 4. Рендер строк с подстановкой значений select
+    // 4. Render rows with select value substitution
     items.forEach(item => {
         html += '<tr>';
         visibleCols.forEach(col => {
             let val = item[col.name] ?? '';
-            // Для select — показываем текст вместо ключа
+            // For select — show text instead of key
             if (col.type === 'select' && col.arr && col.arr[val] !== undefined) {
                 val = col.arr[val];
             }
@@ -230,23 +230,23 @@ async function renderTable(catalog) {
 
 ---
 
-## Полный use-case: редактор настроек колонок
+## Full Use-Case: Column Settings Editor
 
-Приложение может предоставить собственный UI для настройки колонок:
+An app can provide its own UI for configuring columns:
 
 ```js
-// 1. Загрузить текущие настройки
+// 1. Load current settings
 const resp = await App.fetch(`/db/${catalog}/catalog/settings.json`);
 const columns = resp.data.table_fields;
 
-// 2. Показать чекбоксы (пользователь включает/выключает и сортирует)
-// ... UI с drag & drop ...
+// 2. Show checkboxes (user enables/disables and sorts)
+// ... UI with drag & drop ...
 
-// 3. Сохранить изменённый порядок
+// 3. Save the changed order
 const newOrder = [
     { name: 'name',      value: true },
     { name: 'status',    value: true },
-    { name: 'person_id', value: false },  // скрыть
+    { name: 'person_id', value: false },  // hide
 ];
 
 await App.fetch('/empty/db/apps_storage/add?edit=1&ajax=y', {
@@ -259,21 +259,21 @@ await App.fetch('/empty/db/apps_storage/add?edit=1&ajax=y', {
     }
 });
 
-// 4. Перезагрузить страницу чтобы применить
+// 4. Reload to apply
 App.reload();
 ```
 
 ---
 
-## Справочник ключей
+## Settings Key Reference
 
-| Ключ в storage | Тип настроек | Влияет на |
-|----------------|-------------|-----------|
-| `settings.interface.{catalog}` | Общие | Название каталога в меню, путь изображений |
-| `settings.table.{catalog}` | Таблица | Порядок и видимость колонок в списке |
-| `settings.scheme.{catalog}` | Форма | Порядок полей и вкладки в форме редактирования |
+| Storage key | Setting type | Affects |
+|-------------|-------------|---------|
+| `settings.interface.{catalog}` | General | Catalog name in menu, image path |
+| `settings.table.{catalog}` | Table | Column order and visibility in list view |
+| `settings.scheme.{catalog}` | Form | Field order and tabs in edit form |
 
-Все ключи имеют формат `settings.{type}.{catalog}`, где `{catalog}` — alias каталога (например `tt_tasks`, `b2b_orders`, `custom_tickets`).
+All keys follow format `settings.{type}.{catalog}`, where `{catalog}` is the catalog alias (e.g. `tt_tasks`, `b2b_orders`, `custom_tickets`).
 
 ---
 

@@ -1,84 +1,84 @@
-# Избранное меню (favorites_menu)
+# Favorites Menu (favorites_menu)
 
-> **См. также:** [data-api.md](data-api.md) · [korfix-catalogs.md](korfix-catalogs.md) · [systempush-settings.md](systempush-settings.md)
+> **See also:** [data-api.md](data-api.md) · [korfix-catalogs.md](korfix-catalogs.md) · [systempush-settings.md](systempush-settings.md)
 > **← [Home](index.md)**
 
-Каталог `favorites_menu` — персональные настройки навигации пользователя:
-избранные пункты бокового меню, стартовая страница, режим отображения.
+The `favorites_menu` catalog — personal navigation settings for a user:
+bookmarked sidebar menu items, the start page, and display mode.
 
 ---
 
-## Структура записи
+## Record Structure
 
-Одна запись на пользователя (alias = ID пользователя).
+One record per user (alias = user ID).
 
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `alias` | hidden | ID пользователя (= `from_auth`) |
-| `name` | hidden | Имя пользователя |
-| `from_auth` | hidden | Владелец записи |
-| `from_group` | hidden | Группа владельца |
-| `first_page` | select_from_table | Стартовая страница (из дерева меню `rutree`) |
-| `menu` | multiselect_from_table | ID пунктов меню, добавленных в избранное |
-| `hide_menu` | checkbox | Свернуть остальные пункты меню (показывать только избранное) |
+| Field | Type | Description |
+|-------|------|-------------|
+| `alias` | hidden | User ID (= `from_auth`) |
+| `name` | hidden | User name |
+| `from_auth` | hidden | Record owner |
+| `from_group` | hidden | Owner's group |
+| `first_page` | select_from_table | Start page (from menu tree `rutree`) |
+| `menu` | multiselect_from_table | IDs of menu items added to favorites |
+| `hide_menu` | checkbox | Collapse other menu items (show favorites only) |
 
-Доступ: `self` — каждый пользователь видит и редактирует только свою запись.
+Access: `self` — each user sees and edits only their own record.
 
 ---
 
-## Чтение избранного
+## Reading Favorites
 
 ```js
-// Получить настройки текущего пользователя
+// Get current user's settings
 const resp = await App.fetch('/db/favorites_menu.json');
-const favorites = resp.data[0]; // одна запись на пользователя
+const favorites = resp.data[0]; // one record per user
 
-console.log(favorites.menu);       // "12,45,78" — ID пунктов меню через запятую
-console.log(favorites.first_page); // ID стартовой страницы
-console.log(favorites.hide_menu);  // "1" или "0"
+console.log(favorites.menu);       // "12,45,78" — menu item IDs, comma-separated
+console.log(favorites.first_page); // ID of the start page
+console.log(favorites.hide_menu);  // "1" or "0"
 ```
 
 ---
 
-## Добавление пункта в избранное
+## Adding an Item to Favorites
 
-Чтобы добавить пункт в избранное пользователя, нужно:
+To add an item to the user's favorites:
 
-1. Прочитать текущий список `menu`
-2. Добавить нужный ID
-3. Сохранить обратно
+1. Read the current `menu` list
+2. Add the desired ID
+3. Save it back
 
 ```js
 async function addToFavorites(menuItemId) {
-    // 1. Читаем текущие настройки
+    // 1. Read current settings
     const resp = await App.fetch('/db/favorites_menu.json');
     const record = resp.data[0];
 
     if (!record) {
-        console.error('Нет записи favorites_menu для пользователя');
+        console.error('No favorites_menu record for user');
         return;
     }
 
-    // 2. Проверяем, не добавлен ли уже
+    // 2. Check if already added
     const currentIds = (record.menu || '').split(',').filter(Boolean);
     if (currentIds.includes(String(menuItemId))) {
-        return; // уже в избранном
+        return; // already in favorites
     }
 
-    // 3. Добавляем и сохраняем
+    // 3. Add and save
     currentIds.push(String(menuItemId));
 
     await App.fetch(`/db/favorites_menu/${record.alias}?edit&ajax=1`, {
         method: 'POST',
         body: {
-            'form[menu]': currentIds,  // массив ID
+            'form[menu]': currentIds,  // array of IDs
             submit: 1
         }
     });
 }
 ```
 
-### Удаление из избранного
+### Removing from Favorites
 
 ```js
 async function removeFromFavorites(menuItemId) {
@@ -101,20 +101,20 @@ async function removeFromFavorites(menuItemId) {
 
 ---
 
-## Получение дерева меню
+## Getting the Menu Tree
 
-Чтобы узнать какие пункты меню доступны для добавления в избранное:
+To find out which menu items are available to add to favorites:
 
 ```js
-// Загрузить схему — в ней arr содержит полное дерево меню
+// Load schema — it contains the full menu tree in `arr`
 const schema = await App.fetch('/db/favorites_menu/sheme.json');
 const menuTree = schema.data.menu.arr;
-// { "12": "Финансы > Операции", "45": "Задачи > Все задачи", ... }
+// { "12": "Finance > Transactions", "45": "Tasks > All Tasks", ... }
 ```
 
 ---
 
-## Установка стартовой страницы
+## Setting the Start Page
 
 ```js
 async function setStartPage(pageId) {
@@ -134,51 +134,51 @@ async function setStartPage(pageId) {
 
 ---
 
-## Сценарии использования в миниапах
+## Use Cases for Miniapps
 
-### Автодобавление в избранное при установке
+### Auto-add to favorites on install
 
-При установке приложения можно автоматически добавить нужные пункты меню
-в избранное, чтобы пользователь сразу видел их в навигации.
+On install, an app can automatically add relevant menu items
+to favorites so the user sees them in navigation immediately.
 
-### Умное избранное на основе активности
+### Smart favorites based on activity
 
-Приложение может анализировать `activity` и автоматически предлагать
-добавить в избранное часто посещаемые разделы:
+An app can analyze `activity` and automatically suggest
+adding frequently visited sections to favorites:
 
 ```js
-// Получить последние визиты пользователя
-const activity = await App.fetchAll('/db/activity.json?form[action]=просмотрел&limit=100');
+// Get user's recent visits
+const activity = await App.fetchAll('/db/activity.json?form[action]=viewed&limit=100');
 
-// Подсчитать частоту посещения каталогов
+// Count catalog visit frequency
 const counts = {};
 activity.data.forEach(item => {
     counts[item.catalog] = (counts[item.catalog] || 0) + 1;
 });
 
-// Топ-5 самых посещаемых
+// Top 5 most visited
 const top5 = Object.entries(counts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
 ```
 
-### Персонализация навигации по роли
+### Navigation personalization by role
 
-Приложение может настраивать избранное в зависимости от роли пользователя,
-отдела или активных модулей компании.
-
----
-
-## Важно
-
-- Запись создаётся автоматически при первом входе пользователя (дефолт зависит от `type_user`)
-- Поле `menu` — строка с ID через запятую (multiselect_from_table)
-- При записи через API можно передать `form[menu]` как массив — платформа сконвертирует
-- Изменения в избранном видны после перезагрузки страницы (боковое меню рендерится серверно)
-- Drag-and-drop пунктов меню в избранное работает в UI — приложение получит уже обновлённые данные при чтении
+An app can configure favorites based on the user's role,
+department, or active company modules.
 
 ---
 
-*Каталог: `/db/favorites_menu` | Схема: `favorites_menu.sheme.inc.php`*
+## Important Notes
+
+- The record is created automatically on first user login (defaults depend on `type_user`)
+- The `menu` field is a comma-separated string of IDs (multiselect_from_table)
+- When writing via API you can pass `form[menu]` as an array — the platform converts it
+- Changes to favorites are visible after a page reload (sidebar menu is rendered server-side)
+- Drag-and-drop of menu items to favorites works in the UI — your app gets the already-updated data on read
+
+---
+
+*Catalog: `/db/favorites_menu` | Schema: `favorites_menu.sheme.inc.php`*
 
 **← [Home](index.md)**

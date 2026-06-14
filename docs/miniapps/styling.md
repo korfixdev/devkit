@@ -1,31 +1,31 @@
-# Стилизация миниапов под платформу
+# Styling Miniapps for the Platform
 
-> **См. также:** [js-api.md](js-api.md) · [dashboards.md](dashboards.md) · [getting-started.md](getting-started.md) · [checklist.md](checklist.md)
+> **See also:** [js-api.md](js-api.md) · [dashboards.md](dashboards.md) · [getting-started.md](getting-started.md) · [checklist.md](checklist.md)
 > **← [Home](index.md)**
 
-Оформление, CSS-переменные, структура HTML, подключение JS и Chart.js.
+Styling, CSS variables, HTML structure, JS and Chart.js integration.
 
 ---
 
-## Принципы
+## Principles
 
-1. Приложение рендерится в **iframe** — стили платформы не наследуются
-2. Чтобы выглядеть нативно, используй **CSS-переменные платформы** (см. ниже)
-3. **Не дублируй** jQuery, Bootstrap и другие библиотеки — бери с портала или CDN
-4. Шрифт — `"Open Sans"`, с системным fallback
-5. Структурные обёртки (`body.widget`, `main.content`, `article.content__main`) — по желанию, для полноэкранных приложений
+1. The app renders in an **iframe** — platform styles are not inherited
+2. To look native, use **platform CSS variables** (see below)
+3. **Don't duplicate** jQuery, Bootstrap, and other libraries — load from the portal or CDN
+4. Font — `"Open Sans"`, with system fallback
+5. Structural wrappers (`body.widget`, `main.content`, `article.content__main`) — optional, for full-screen apps
 
 ---
 
-## CSS-переменные платформы (дизайн-токены)
+## Platform CSS variables (design tokens)
 
-Полный набор переменных из дизайн-системы korfix. Копируй в `:root` своего приложения — используй нужные.
+Full set of variables from the Korfix design system. Copy into `:root` of your app — use what you need.
 
-### Базовые цвета
+### Base colors
 
 ```css
 :root {
-    /* Основные */
+    /* Main */
     --primary: #323C8F;
     --secondary: #343859;
     --success: #33BE2B;
@@ -35,7 +35,7 @@
     --light: #fff;
     --dark: #1D1E32;
 
-    /* Акцентные */
+    /* Accent */
     --blue: #475CFF;
     --purple: #323C8F;
     --orange: #FF4D50;
@@ -43,46 +43,46 @@
 }
 ```
 
-### Оттенки серого
+### Grays
 
 ```css
 :root {
     --white: #fff;
     --gray1: #4e4f56;
-    --gray2: #78797f;        /* текст заголовков таблиц */
+    --gray2: #78797f;        /* table header text */
     --gray3: #a3a3a7;
     --gray4: #b8b8bb;
     --gray5: #dddde1;
-    --gray6: #eaeaee;        /* границы, разделители */
+    --gray6: #eaeaee;        /* borders, dividers */
     --gray7: #f6f6f6;
-    --gray8: #f7f7f8;        /* чередование строк таблиц */
+    --gray8: #f7f7f8;        /* alternating table rows */
     --gray9: #f9f9f9;
 }
 ```
 
-### Оттенки синего/серо-голубого
+### Blue/blue-gray shades
 
 ```css
 :root {
     --bluegray3: #57596e;
     --bluegray4-6d6f89: #6d6f89;
-    --bluegray5: #8a8ca1;    /* вторичный текст */
+    --bluegray5: #8a8ca1;    /* secondary text */
     --bluegray6: #b9bdcd;
     --bluegray7: #c5cadc;
-    --bluegray8: #dce0ef;    /* границы элементов */
+    --bluegray8: #dce0ef;    /* element borders */
     --bluegray9: #eceffa;
-    --bluegray10: #f4f5fa;   /* фон карточек */
+    --bluegray10: #f4f5fa;   /* card backgrounds */
     --bluegray11: #f8f8fd;
     --bluegray12: #F5F5F8;
     --bluegray13: #FAFAFC;
 
-    --blue3-323c8f: #323c8f;  /* ссылки */
+    --blue3-323c8f: #323c8f;  /* links */
     --blue4: #5a63b4;
-    --blue9: #eff1fc;         /* фон бейджей */
+    --blue9: #eff1fc;         /* badge backgrounds */
 }
 ```
 
-### Статусные цвета
+### Status colors
 
 ```css
 :root {
@@ -95,7 +95,7 @@
 }
 ```
 
-### Типографика
+### Typography
 
 ```css
 :root {
@@ -107,7 +107,7 @@
 }
 ```
 
-### Брейкпоинты
+### Breakpoints
 
 ```css
 :root {
@@ -120,9 +120,9 @@
 
 ---
 
-## Шрифт
+## Font
 
-Платформа использует **Open Sans**. Подключай через CDN, если не уверен, что шрифт загружен в родителе:
+The platform uses **Open Sans**. Load via CDN if unsure whether the font is loaded in the parent:
 
 ```html
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -138,19 +138,19 @@ body {
 
 ---
 
-## Структура HTML-страницы
+## HTML page structure
 
-### Минимальный шаблон (виджет/попап)
+### Minimal template (widget/popup)
 
 ```html
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Моё приложение</title>
+    <title>My App</title>
     <style>
-        :root { /* нужные переменные */ }
+        :root { /* needed variables */ }
         *, ::after, ::before { box-sizing: border-box; }
         body {
             font: 400 14px/1.5 "Open Sans", sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -171,23 +171,23 @@ body {
 </html>
 ```
 
-### Полноэкранный шаблон (пункт меню)
+### Full-screen template (menu item)
 
-Для полноэкранных приложений используй обёртки платформы:
+For full-screen apps use the platform wrappers:
 
 ```html
 <body class="widget">
 <main class="content m-0">
     <article class="content__main">
         <div class="content__common pt-4">
-            <!-- ваш контент -->
+            <!-- your content -->
         </div>
     </article>
 </main>
 </body>
 ```
 
-Вспомогательные CSS для структурных классов:
+Helper CSS for structural classes:
 
 ```css
 body.widget {
@@ -202,9 +202,9 @@ article.content__main {
 
 ---
 
-## Компоненты UI
+## UI components
 
-### Кнопки
+### Buttons
 
 ```css
 .btn {
@@ -213,13 +213,13 @@ article.content__main {
     gap: 6px;
     padding: 8px 16px;
     border: none;
-    border-radius: 3px;       /* как на платформе */
+    border-radius: 3px;       /* matches platform */
     cursor: pointer;
     font: 500 13px/1.4 "Open Sans", sans-serif;
     transition: .15s;
 }
 
-/* Основная (синяя) */
+/* Primary (blue) */
 .btn-primary {
     background: var(--primary);
     color: #fff;
@@ -227,21 +227,21 @@ article.content__main {
 }
 .btn-primary:hover { opacity: 0.9; }
 
-/* Успешная (зелёная) */
+/* Success (green) */
 .btn-success {
     background: var(--success);
     color: #fff;
     border-bottom: 3px solid #2B9C5B;
 }
 
-/* Опасная (красная) */
+/* Danger (red) */
 .btn-danger {
     background: var(--danger);
     color: #fff;
     border-bottom: 3px solid #B7433F;
 }
 
-/* Вторичная (контурная) */
+/* Secondary (outline) */
 .btn-outline {
     background: var(--white);
     color: var(--primary);
@@ -252,7 +252,7 @@ article.content__main {
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 ```
 
-### Карточки
+### Cards
 
 ```css
 .card {
@@ -268,7 +268,7 @@ article.content__main {
 }
 ```
 
-### Таблицы
+### Tables
 
 ```css
 table {
@@ -293,7 +293,7 @@ tbody td {
 }
 ```
 
-### Формы (select, input, textarea)
+### Forms (select, input, textarea)
 
 ```css
 select, input[type="text"], textarea {
@@ -318,7 +318,7 @@ label {
 }
 ```
 
-### Статусы/уведомления
+### Status / notifications
 
 ```css
 .status {
@@ -341,7 +341,7 @@ label {
 }
 ```
 
-### Бейджи
+### Badges
 
 ```css
 .badge {
@@ -355,10 +355,10 @@ label {
 }
 ```
 
-### Табы
+### Tabs
 
-> **Важно:** используйте `<a href="javascript:void(0)">` вместо `<div>` для табов.
-> На мобильных (особенно iOS Safari) `click` на `<div>` может не срабатывать.
+> **Important:** use `<a href="javascript:void(0)">` instead of `<div>` for tabs.
+> On mobile (especially iOS Safari) `click` on a `<div>` may not fire.
 
 ```css
 .tabs {
@@ -382,7 +382,7 @@ label {
 }
 ```
 
-### Ссылки
+### Links
 
 ```css
 a {
@@ -397,39 +397,39 @@ a:hover { text-decoration-style: solid; }
 
 ---
 
-## JS: что брать с портала, что с CDN
+## JS: what to load from the portal vs CDN
 
-### С портала (через абсолютный путь в iframe)
+### From the portal (absolute path in iframe)
 
 ```js
-// VMCRMUserApp — обязательный, основной API
+// VMCRMUserApp — required, main API
 import VMCRMUserApp from '/templates/def/db/marketplace/vmcrm-user-app.js';
 ```
 
-Это единственный JS-модуль, который нужно импортировать с портала. Он даёт:
+This is the only JS module to import from the portal. It provides:
 `fetch`, `fetchAll`, `modal`, `alert`, `navigate`, `setFrameSize`, `storage`, `on`.
 
-### С CDN (когда нужно)
+### From CDN (when needed)
 
 ```html
-<!-- Chart.js (графики) -->
+<!-- Chart.js (charts) -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 
-<!-- Mermaid (диаграммы) -->
+<!-- Mermaid (diagrams) -->
 <script type="module">
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
 </script>
 ```
 
-### Чего НЕ нужно подключать
+### What NOT to include
 
-- **jQuery** — не используется в миниапах, пиши на Vanilla JS (ES6+)
-- **Bootstrap CSS/JS** — не подключай целиком; если нужны утилити-классы — опиши их локально
-- **Шрифт Open Sans** — подключай через Google Fonts CDN, если нужен
+- **jQuery** — not used in miniapps, write in Vanilla JS (ES6+)
+- **Bootstrap CSS/JS** — don't include in full; if you need utility classes — define them locally
+- **Open Sans font** — load via Google Fonts CDN if needed
 
 ---
 
-## Chart.js — палитра платформы
+## Chart.js — platform palette
 
 ```js
 const colors = [
@@ -444,11 +444,11 @@ const backgrounds = [
 
 ---
 
-## Адаптивность и мобильные
+## Responsiveness and mobile
 
-### Обязательные правила
+### Required rules
 
-1. **Таблицы → карточки на мобильных.** Широкие таблицы не помещаются на экран телефона. Используйте media query для переключения на плиточную раскладку:
+1. **Tables → cards on mobile.** Wide tables don't fit on phone screens. Use media queries to switch to a tile layout:
 
 ```css
 @media (max-width: 768px) {
@@ -476,36 +476,36 @@ const backgrounds = [
 }
 ```
 
-HTML-разметка для `data-label`:
+HTML markup for `data-label`:
 ```html
-<td data-label="Статус"><span class="badge-type">active</span></td>
-<td data-label="Сумма">15 000 ₽</td>
+<td data-label="Status"><span class="badge-type">active</span></td>
+<td data-label="Amount">$150.00</td>
 ```
 
-2. **Размер шрифта в полях ввода — не менее 16px.** iOS Safari автоматически зумит страницу при фокусе на input с `font-size < 16px`:
+2. **Input font size — at least 16px.** iOS Safari automatically zooms the page when focusing on an input with `font-size < 16px`:
 
 ```css
-/* ПРАВИЛЬНО — без зума на iOS */
+/* CORRECT — no zoom on iOS */
 input, select, textarea {
-    font-size: 16px;  /* минимум! */
+    font-size: 16px;  /* minimum! */
 }
 
-/* НЕПРАВИЛЬНО — вызовет зум */
+/* WRONG — will trigger zoom */
 input { font-size: 13px; }
 ```
 
-3. **Кликабельные элементы — `<a>` или `<button>`, не `<div>`.** iOS Safari может не обрабатывать `click` на `<div>`:
+3. **Clickable elements — `<a>` or `<button>`, not `<div>`.** iOS Safari may not fire `click` on `<div>`:
 
 ```html
-<!-- ПРАВИЛЬНО -->
-<a class="tab" href="javascript:void(0)" data-tab="export">Экспорт</a>
-<button class="btn btn-primary" id="btnExport">Экспорт</button>
+<!-- CORRECT -->
+<a class="tab" href="javascript:void(0)" data-tab="export">Export</a>
+<button class="btn btn-primary" id="btnExport">Export</button>
 
-<!-- НЕПРАВИЛЬНО — может не работать на iOS -->
-<div class="tab" data-tab="export">Экспорт</div>
+<!-- WRONG — may not work on iOS -->
+<div class="tab" data-tab="export">Export</div>
 ```
 
-### Прочее
+### Other
 
 ```css
 @media (max-width: 768px) {
@@ -516,139 +516,139 @@ input { font-size: 13px; }
 ```
 
 ```js
-// В JS — для выбора типа контрола
+// In JS — for control type selection
 const isMobile = window.innerWidth < 768;
 ```
 
 ---
 
-## Иконка настроек (шестерёнка)
+## Settings icon (gear)
 
-В интерфейсе каждого приложения должна быть иконка ⚙ для доступа к:
-- Настройкам приложения (если есть)
-- Экрану установки / self-provisioning (с логом и прогрессом)
-- Информации о версии
+Every app's interface should have a ⚙ icon for access to:
+- App settings (if any)
+- Install screen / self-provisioning (with log and progress)
+- Version info
 
 ```html
 <div class="header">
-    <h2>Моё приложение</h2>
+    <h2>My App</h2>
     <a href="javascript:void(0)" id="btnSettings" style="margin-left:auto;color:var(--bluegray5);">
         <i class="fa fa-cog"></i>
     </a>
 </div>
 ```
 
-Результат установки (флаг `installed: true`) сохраняется в `App.storage`, чтобы экран установки не показывался повторно.
+The install result (flag `installed: true`) is saved in `App.storage` so the install screen doesn't reappear.
 
 ---
 
-## Авторесайз фрейма (ОБЯЗАТЕЛЬНО)
+## Frame auto-resize (REQUIRED)
 
-> **Это самая частая ошибка в миниапах.** Аудит показал, что 70% приложений
-> не вызывают `setFrameSize` — контент обрезается, пользователь не видит часть UI.
-> **Каждое** изменение DOM требует вызова `setFrameSize`.
+> **This is the most common mistake in miniapps.** Audits show 70% of apps
+> don't call `setFrameSize` — content gets cut off, users can't see part of the UI.
+> **Every** DOM change requires calling `setFrameSize`.
 
-Iframe не подстраивается автоматически — нужно вызывать `setFrameSize` после **каждого** изменения контента: рендер списка, переключение табов, раскрытие аккордеона, показ/скрытие блоков, загрузка данных.
+The iframe doesn't auto-adjust — you must call `setFrameSize` after **every** content change: rendering a list, switching tabs, expanding an accordion, showing/hiding blocks, loading data.
 
-### Обязательная настройка
+### Required setup
 
 ```css
-/* ОБЯЗАТЕЛЬНО на body — убирает скроллбар внутри iframe */
+/* REQUIRED on body — removes scrollbar inside iframe */
 body { overflow: hidden; }
 ```
 
 ```js
-// Хелпер — ОБЯЗАТЕЛЬНО создать и вызывать после ЛЮБОГО изменения DOM
+// Helper — REQUIRED: create and call after ANY DOM change
 function resizeFrame() {
     requestAnimationFrame(() => App.setFrameSize(null, document.body.scrollHeight));
 }
 ```
 
-### Где вызывать
+### Where to call it
 
 ```js
-// После рендера списка
+// After rendering a list
 list.innerHTML = items.map(renderItem).join('');
 resizeFrame();
 
-// После загрузки данных
+// After loading data
 App.fetch('/db/catalog.json').then(resp => {
     renderTable(resp.data);
     resizeFrame();
 });
 
-// После переключения табов
+// After switching tabs
 tab.addEventListener('click', () => {
     showPanel(tab.dataset.panel);
     resizeFrame();
 });
 
-// После раскрытия/сворачивания блока
+// After expanding/collapsing a block
 toggle.addEventListener('click', () => {
     body.classList.toggle('open');
     resizeFrame();
 });
 
-// При инициализации
+// On initialization
 App.getRequestParams().then(({data}) => {
     renderWidget(data);
     resizeFrame();
 });
 ```
 
-### Антипаттерны
+### Anti-patterns
 
 ```js
-// НЕПРАВИЛЬНО — +20 маскирует проблему, даёт неточную высоту
+// WRONG — +20 masks the problem, gives inaccurate height
 App.setFrameSize(null, document.body.scrollHeight + 20);
 
-// НЕПРАВИЛЬНО — вызов без requestAnimationFrame, DOM не успел обновиться
+// WRONG — calling without requestAnimationFrame, DOM hasn't updated yet
 container.innerHTML = html;
-App.setFrameSize(null, document.body.scrollHeight); // замерит старую высоту
+App.setFrameSize(null, document.body.scrollHeight); // measures old height
 
-// НЕПРАВИЛЬНО — не вызывать setFrameSize совсем
-container.innerHTML = renderBigTable(data); // контент обрежется
+// WRONG — not calling setFrameSize at all
+container.innerHTML = renderBigTable(data); // content will be cut off
 
-// ПРАВИЛЬНО
+// CORRECT
 container.innerHTML = html;
 requestAnimationFrame(() => App.setFrameSize(null, document.body.scrollHeight));
 ```
 
 ---
 
-## Обязательные правила (частые ошибки)
+## Required rules (common mistakes)
 
-Аудит 37 приложений выявил типовые ошибки. Следуйте этим правилам:
+An audit of 37 apps revealed typical mistakes. Follow these rules:
 
-### 1. Всегда используйте `App.fetch()`, не нативный `fetch()`
+### 1. Always use `App.fetch()`, not native `fetch()`
 
-Миниап работает в iframe — нативный `fetch()` к endpoints платформы заблокирован CORS.
-`App.fetch()` проксирует запрос через `postMessage` в родительское окно.
+The miniapp runs in an iframe — native `fetch()` to platform endpoints is blocked by CORS.
+`App.fetch()` proxies the request via `postMessage` to the parent window.
 
 ```js
-// НЕПРАВИЛЬНО — CORS ошибка
+// WRONG — CORS error
 const resp = await fetch('/db/projects.json');
 
-// ПРАВИЛЬНО
+// CORRECT
 const resp = await App.fetch('/db/projects.json');
 ```
 
-### 2. Используйте `App.storage`, не `localStorage`
+### 2. Use `App.storage`, not `localStorage`
 
-`localStorage` в iframe изолирован — данные потеряются при смене домена приложения.
+`localStorage` in an iframe is isolated — data will be lost when the app domain changes.
 
 ```js
-// НЕПРАВИЛЬНО
+// WRONG
 localStorage.setItem('settings', JSON.stringify(data));
 
-// ПРАВИЛЬНО
+// CORRECT
 await App.storage.set('settings', JSON.stringify(data));
 ```
 
-### 3. Объявляйте `permissions` в config.json
+### 3. Declare `permissions` in config.json
 
-Каждый каталог и операция, используемые в коде, должны быть перечислены в `permissions`.
-Без этого приложение может быть заблокировано песочницей.
+Every catalog and operation used in code must be listed in `permissions`.
+Without this the app may be blocked by the sandbox.
 
 ```json
 {
@@ -664,21 +664,21 @@ await App.storage.set('settings', JSON.stringify(data));
 }
 ```
 
-### 4. Все файлы из config.json `urls` должны существовать
+### 4. All files referenced in config.json `urls` must exist
 
-Если `config.json` ссылается на `client-tab.html` — файл должен быть в zip.
-Иначе iframe не загрузится и пользователь увидит ошибку.
+If `config.json` references `client-tab.html` — the file must be in the zip.
+Otherwise the iframe won't load and the user sees an error.
 
-### 5. Обязательные поля config.json
+### 5. Required config.json fields
 
 ```json
 {
-    "name": "Название приложения",
+    "name": "App Name",
     "version": "1.0.0",
-    "package": "имя-папки",
-    "description": "Краткое описание (1-2 предложения)",
-    "about": "## Что делает\n...\n## Возможности\n...",
-    "tags": "тег1, тег2, тег3",
+    "package": "folder-name",
+    "description": "Short description (1-2 sentences)",
+    "about": "## What it does\n...\n## Features\n...",
+    "tags": "tag1, tag2, tag3",
     "logo": "icon.svg",
     "permissions": { ... },
     "urls": { ... }
@@ -687,9 +687,9 @@ await App.storage.set('settings', JSON.stringify(data));
 
 ---
 
-## Паттерны
+## Patterns
 
-### Footer-виджет (самый частый)
+### Footer widget (most common)
 
 ```js
 const App = new VMCRMUserApp();
@@ -700,7 +700,7 @@ App.getRequestParams().then(async ({data}) => {
 });
 ```
 
-### Загрузка нескольких каталогов
+### Loading multiple catalogs
 
 ```js
 const [orders, clients] = await Promise.all([
@@ -709,7 +709,7 @@ const [orders, clients] = await Promise.all([
 ]);
 ```
 
-### Наследование VMCRMUserApp
+### Extending VMCRMUserApp
 
 ```js
 // app.js
@@ -728,22 +728,22 @@ import MyApp from './app.js';
 new MyApp().run();
 ```
 
-### Динамические колонки из схемы
+### Dynamic columns from schema
 
 ```js
 const schema = await App.fetch('/db/todo/sheme.json');
 const statusMap = schema.data.fields.status.arr;
-// statusMap = {1: 'Новая', 2: 'В работе', 3: 'Выполнена'}
+// statusMap = {1: 'New', 2: 'In progress', 3: 'Done'}
 ```
 
-### Хранилище как база настроек
+### Storage as settings store
 
 ```js
 await App.storage.set('ifttt.token', tokenValue);
 const token = await App.storage.get('ifttt.token');
 ```
 
-### Демо-данные (fallback)
+### Demo data (fallback)
 
 ```js
 let items = [];
@@ -752,78 +752,20 @@ try {
     items = resp.data || [];
 } catch(e) {
     items = [
-        { alias: 'demo1', name: 'Демо проект 1', status: 'active' },
-        { alias: 'demo2', name: 'Демо проект 2', status: 'done' }
+        { alias: 'demo1', name: 'Demo Project 1', status: 'active' },
+        { alias: 'demo2', name: 'Demo Project 2', status: 'done' }
     ];
 }
 ```
 
-### Выбор стека по сложности
+### Stack selection by complexity
 
-| Задача | Стек |
+| Task | Stack |
 |---|---|
-| Виджет, диаграмма, простое действие | Vanilla JS |
-| Интерактивная доска, календарь, сложный UI | Vue.js + Vuex |
-| Страница настроек без данных | Vanilla JS + storage |
+| Widget, chart, simple action | Vanilla JS |
+| Interactive board, calendar, complex UI | Vue.js + Vuex |
+| Settings page without data | Vanilla JS + storage |
 
 ---
 
-## UX-ограничения iframe-контекста
-
-Миниап живёт в iframe. Некоторые привычные UX-паттерны работают иначе или ломаются:
-
-### Формы: inline вместо popup
-
-**Popup/modal внутри iframe** затемняет только сам фрейм — не всю страницу. Визуально выглядит плохо: тёмный оверлей обрывается по границам фрейма, диалог может не поместиться.
-
-```
-✅ Предпочтительно: inline-форма (раскрывается внутри фрейма)
-❌ Избегать: popup/modal-диалоги внутри iframe
-✅ Если нужен modal уровня платформы: App.modal('/db/my_catalog/add')
-```
-
-На этапе проектирования задайся вопросом: *«Как выглядит форма добавления/редактирования?»* — если планировался popup, переработай в inline-форму.
-
-### Скачивание файлов из iframe
-
-`<a href={blobUrl} download>.click()` внутри iframe **заменяет содержимое фрейма** вместо скачивания файла — браузер navegates iframe к blob-URL.
-
-Альтернативы:
-
-```js
-// Вариант 1: показать содержимое в textarea + кнопка копировать
-const textarea = document.createElement('textarea');
-textarea.value = textContent;
-document.body.appendChild(textarea);
-document.getElementById('btnCopy').onclick = () => {
-    navigator.clipboard.writeText(textContent);
-};
-
-// Вариант 2: target="_blank" — браузер откроет в новой вкладке, не в iframe
-const a = document.createElement('a');
-a.href = blobUrl;
-a.target = '_blank';
-a.download = 'file.txt';
-a.click();
-// ⚠️ target="_blank" может блокироваться popupblock если не в обработчике клика
-```
-
-### Мультиязычность
-
-Если приложение планируется на несколько языков — закладывай архитектуру заранее:
-
-```js
-// Все тексты в одном объекте
-const I18N = {
-    ru: { title: 'Мои задачи', add: 'Добавить', empty: 'Список пуст' },
-    en: { title: 'My tasks',   add: 'Add',      empty: 'List is empty' }
-};
-const lang = (await App.getUser())?.data?.lang ?? 'ru';
-const t = I18N[lang] ?? I18N.ru;
-```
-
-Добавить i18n постфактум — дорого. Задай себе вопрос при проектировании: *«Нужна ли поддержка другого языка?»*
-
----
-
-**Дальше:** [dashboards.md](dashboards.md) · **← [Home](index.md)**
+**Next:** [self-provisioning.md](self-provisioning.md) · **← [Home](index.md)**

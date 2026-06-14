@@ -15,6 +15,27 @@ Before starting miniapp development — **verify what the token can actually do*
 
 ## Process
 
+### Step 0. Environment presence (single source — both `korfix-miniapp-dev` and `korfix-gamedev` rely on this)
+
+Before any API call or deploy, confirm the working environment. **No hardcoded instance or token.**
+
+1. **Check env vars:**
+   - `KORFIX_API_URL` — instance address (e.g. `https://vibe.korfix.app`, `https://acme.korfix.info`, a self-hosted domain)
+   - `KORFIX_TOKEN` — access token from `/db/api` on that instance
+   - `KORFIX_MCP_URL` — MCP server URL (optional; if present, work via MCP, otherwise via curl)
+
+2. **If anything is missing — ask the user DIRECTLY** (don't assume):
+   - "Which Korfix instance are we working with? (e.g. `vibe.korfix.app`, `acme.korfix.info`, or a custom domain)"
+   - "Please provide the token from `/db/api` (or set `KORFIX_TOKEN`). Which API classes does it have?"
+   - "What is the marketplace app ID for the update? (or should we create a new one?)"
+
+3. **Hard guardrails (never violate):**
+   - **Never** default to `vibe.korfix.app` (or any instance) without user confirmation.
+   - **Never** expose the token in miniapp code, logs, or commits — environment only.
+   - **Never** store the token in memory, project files, or plugin settings — session env only.
+
+Only after env presence is confirmed, proceed to the capability audit below.
+
 ### Step 1. Get the list of catalogs available to the token
 
 ```bash

@@ -83,6 +83,9 @@ You maintain the technical README.md inside Korfix miniapp project directories. 
 
 ## Deploy / update (for developers)
 
+> Endpoint reference: the canonical decision table lives in `docs/miniapps/deploy.md`.
+> Default update = `POST /api/db/marketplace/{ID}` (shown below).
+
 ```bash
 cd {app-dir}
 zip -r /tmp/{app-name}.zip config.json *.html *.js *.css *.svg README.md
@@ -113,6 +116,7 @@ curl -X POST "${KORFIX_API_URL}/api/db/marketplace/{ID}" \
 ### What NOT to do
 
 1. **Don't change miniapp code** — your scope is `README.md`, `CHANGELOG.md`, `TODO.md`, nothing else
+1a. **Don't touch `SPEC.md`** — that file belongs to `korfix-analyst` (the up-front requirements/design). Read it for context if present, but never edit or overwrite it. `README.md` and `SPEC.md` coexist.
 2. **Don't add README.md to `.gitignore`** and don't recommend excluding it from zip — on the contrary, README must be included in the zip and go along with the application (for portability and git)
 3. **Don't fully duplicate `about`** in README — `about` is for the marketplace (short promotional description), README is for the developer (technical + history). Brief excerpts from about — fine, duplicating the entire about — no.
 4. **Don't invent fancy sections** (badges, screenshots, external links) if they don't exist in reality

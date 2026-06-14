@@ -1,22 +1,22 @@
-# Представления (custom_dbview)
+# Views (custom_dbview)
 
-> **См. также:** [data-api.md](data-api.md) · [korfix-catalogs.md](korfix-catalogs.md) · [self-provisioning.md](self-provisioning.md)
+> **See also:** [data-api.md](data-api.md) · [korfix-catalogs.md](korfix-catalogs.md) · [self-provisioning.md](self-provisioning.md)
 > **← [Home](index.md)**
 
-Объединение двух каталогов в одно представление через MySQL VIEW + LEFT JOIN.
-Результат работает как обычный каталог — с фильтрацией, API, виджетами.
+Combine two catalogs into a single view via MySQL VIEW + LEFT JOIN.
+The result works as a regular catalog — with filtering, API, and widgets.
 
 ---
 
-## Когда использовать
+## When to Use
 
-### Отчёты по связанным данным
+### Reports on related data
 
-Нужен отчёт «заказы + клиенты» или «задачи + проекты + сотрудники»? Вместо того
-чтобы загружать два каталога и мёржить в JS — создай view и работай как с одним.
+Need an "orders + clients" or "tasks + projects + employees" report? Instead of
+loading two catalogs and merging in JS — create a view and work with it as one.
 
 ```js
-// Без view: два запроса + merge в JS
+// Without view: two requests + merge in JS
 const orders = asArray(await App.fetchAll('/db/b2b_orders.json'));
 const clients = asArray(await App.fetchAll('/db/b2b_clients.json'));
 const merged = orders.map(o => ({
@@ -24,52 +24,52 @@ const merged = orders.map(o => ({
     clientName: clients.find(c => c.id === o.client_id)?.name
 }));
 
-// С view: один запрос, данные уже объединены
+// With view: one request, data already joined
 const data = asArray(await App.fetchAll('/db/custom_orders_clients_view.json'));
-// data[0].t1_summ, data[0].t2_name — поля из обоих каталогов
+// data[0].t1_summ, data[0].t2_name — fields from both catalogs
 ```
 
-### Сводные таблицы для дашборда
+### Summary tables for the dashboard
 
-Виджет `last-created` и `aggr-table` на дашборде работают с одним каталогом.
-View позволяет показать данные из двух каталогов в одном виджете без написания
-кастомного приложения.
+The `last-created` and `aggr-table` dashboard widgets work with a single catalog.
+A view lets you show data from two catalogs in one widget without writing a
+custom app.
 
-### Фильтрация по полям другого каталога
+### Filter by fields from another catalog
 
-Обычный каталог фильтруется только по своим полям. View позволяет фильтровать
-заказы по имени клиента, задачи по названию проекта и т.д.
+A regular catalog can only be filtered by its own fields. A view lets you filter
+orders by client name, tasks by project title, etc.
 
-### Экспорт объединённых данных
+### Export of joined data
 
-Стандартный экспорт каталога (CSV/API) выгрузит данные из view со всеми
-объединёнными полями — без дополнительного кода.
+The standard catalog export (CSV/API) will export view data with all
+joined fields — without extra code.
 
 ---
 
-## Как создать представление
+## How to Create a View
 
-### Через интерфейс
+### Via the interface
 
-1. Перейти в `/db/custom_dbview`
-2. Добавить запись:
-   - **Название** — например, «Заказы с клиентами»
-   - **Имя таблицы (dbname)** — `orders_clients` (будет `custom_orders_clients_view`)
-   - **Каталог 1** — `b2b_orders`
-   - **Поле каталога 1** — `client_id`
-   - **Каталог 2** — `b2b_clients`
-   - **Поле каталога 2** — `id`
-3. Сохранить → MySQL VIEW создаётся автоматически
+1. Go to `/db/custom_dbview`
+2. Add a record:
+   - **Name** — e.g., "Orders with Clients"
+   - **Table name (dbname)** — `orders_clients` (becomes `custom_orders_clients_view`)
+   - **Catalog 1** — `b2b_orders`
+   - **Catalog 1 field** — `client_id`
+   - **Catalog 2** — `b2b_clients`
+   - **Catalog 2 field** — `id`
+3. Save → MySQL VIEW is created automatically
 
-### Через API (из миниапа)
+### Via API (from a miniapp)
 
 ```js
-// Создание view программно
+// Create a view programmatically
 await App.fetch('/db/custom_dbview/add?edit&ajax=1', {
     method: 'POST',
     body: {
         'form[alias]': Date.now().toString(36) + Math.random().toString(36).substr(2, 8),
-        'form[name]': 'Заказы с клиентами',
+        'form[name]': 'Orders with Clients',
         'form[dbname]': 'orders_clients',
         'form[catalog1]': 'b2b_orders',
         'form[catalog1_field]': 'client_id',
@@ -84,21 +84,21 @@ await App.fetch('/db/custom_dbview/add?edit&ajax=1', {
 
 ---
 
-## Структура данных view
+## View Data Structure
 
-### Именование полей
+### Field naming
 
-Поля из обоих каталогов получают префиксы для избежания конфликтов:
+Fields from both catalogs get prefixes to avoid conflicts:
 
-| Источник | Префикс | Пример |
-|----------|---------|--------|
-| Каталог 1 | `t1_` | `t1_summ`, `t1_status`, `t1_client_id` |
-| Каталог 2 | `t2_` | `t2_name`, `t2_email`, `t2_phone` |
+| Source | Prefix | Example |
+|--------|--------|---------|
+| Catalog 1 | `t1_` | `t1_summ`, `t1_status`, `t1_client_id` |
+| Catalog 2 | `t2_` | `t2_name`, `t2_email`, `t2_phone` |
 
-**Исключения:** системные поля `id`, `from_auth`, `from_group`, `hidden` берутся
-из каталога 1 без префикса.
+**Exceptions:** system fields `id`, `from_auth`, `from_group`, `hidden` are taken
+from catalog 1 without prefix.
 
-### SQL который генерируется
+### Generated SQL
 
 ```sql
 CREATE OR REPLACE VIEW custom_orders_clients_view AS
@@ -114,67 +114,67 @@ FROM b2b_orders AS c1
 LEFT JOIN b2b_clients AS c2 ON c1.client_id = c2.id
 ```
 
-LEFT JOIN — все записи каталога 1 сохраняются, даже если нет совпадения
-в каталоге 2 (поля `t2_*` будут `NULL`).
+LEFT JOIN — all catalog 1 records are kept even if there is no match
+in catalog 2 (`t2_*` fields will be `NULL`).
 
 ---
 
-## Работа с view из миниапа
+## Working with Views from a Miniapp
 
-### Чтение данных
+### Reading data
 
 ```js
-// Как обычный каталог — .json или /api/db/
+// Like a regular catalog — .json or /api/db/
 const data = asArray(await App.fetchAll('/db/custom_orders_clients_view.json'));
 
-// Или через REST API
+// Or via REST API
 const data = asArray(await App.fetch('/api/db/custom_orders_clients_view?limit=999'));
 ```
 
-### Фильтрация
+### Filtering
 
 ```js
-// Фильтр по полю каталога 1 (заказы со статусом "оплачен")
+// Filter by catalog 1 field (orders with status "paid")
 const paid = asArray(await App.fetchAll(
     '/db/custom_orders_clients_view.json?form[t1_status]=paid'
 ));
 
-// Фильтр по полю каталога 2 (заказы клиента "Иванов")
-const ivanov = asArray(await App.fetchAll(
-    '/db/custom_orders_clients_view.json?form[t2_name]=Иванов'
+// Filter by catalog 2 field (orders by client "Smith")
+const smith = asArray(await App.fetchAll(
+    '/db/custom_orders_clients_view.json?form[t2_name]=Smith'
 ));
 ```
 
-### Получение схемы
+### Getting the schema
 
 ```js
 const schema = await App.fetch('/db/custom_orders_clients_view/sheme.json');
-// schema.data содержит объединённые поля обоих каталогов с префиксами t1_/t2_
+// schema.data contains joined fields from both catalogs with t1_/t2_ prefixes
 ```
 
-### Проверка существования view
+### Checking if a view exists
 
 ```js
-// Перед использованием — проверить что view существует
+// Before using — check the view exists
 try {
     const resp = await App.fetch('/api/db/custom_orders_clients_view?limit=1');
-    // View существует, работаем
+    // View exists, proceed
 } catch(e) {
-    // View не создан — показать инструкцию пользователю
+    // View not created — show instruction to user
 }
 ```
 
 ---
 
-## Кейсы для миниапов
+## Use Cases for Miniapps
 
-### Аналитическое приложение
+### Analytical application
 
-Приложение P&L или BI-аналитика может при установке (self-provisioning) создать
-нужные view и строить отчёты на объединённых данных — без множественных fetch:
+A P&L or BI analytics app can create the needed views at install time (self-provisioning)
+and build reports on joined data — without multiple fetches:
 
 ```js
-// При первом запуске: создать view если его нет
+// On first run: create view if it doesn't exist
 const views = asArray(await App.fetch('/api/db/custom_dbview?limit=999'));
 const exists = views.some(v => v.dbname === 'cashflows_clients');
 
@@ -183,7 +183,7 @@ if (!exists) {
         method: 'POST',
         body: {
             'form[alias]': uid(),
-            'form[name]': 'Операции с контрагентами',
+            'form[name]': 'Transactions with Counterparties',
             'form[dbname]': 'cashflows_clients',
             'form[catalog1]': 'ag_cashflows',
             'form[catalog1_field]': 'client_id',
@@ -196,13 +196,13 @@ if (!exists) {
     });
 }
 
-// Далее работаем как с обычным каталогом
+// Then work with it as a regular catalog
 const data = asArray(await App.fetchAll('/db/custom_cashflows_clients_view.json'));
 ```
 
-### Виджет дашборда
+### Dashboard widget
 
-Виджет `last-created` для view покажет объединённые данные:
+A `last-created` widget for a view shows joined data:
 
 ```json
 {
@@ -212,29 +212,29 @@ const data = asArray(await App.fetchAll('/db/custom_cashflows_clients_view.json'
 }
 ```
 
-### Экспорт связанных данных
+### Export of related data
 
-Приложение import-export может работать с view как с обычным каталогом —
-экспорт CSV с полями из обоих источников.
-
----
-
-## Ограничения
-
-| Ограничение | Описание |
-|-------------|----------|
-| **Read-only** | View по умолчанию только для чтения (`ue=0, ud=0`). Для редактирования — работайте с исходными каталогами |
-| **Статическая схема** | Добавление полей в исходный каталог НЕ обновляет view. Нужно пересоздать |
-| **Нет CASCADE** | Удаление исходного каталога ломает view без предупреждения |
-| **Два каталога** | Только JOIN двух каталогов. Для трёх — создайте view из view + третий каталог |
-| **Производительность** | На больших таблицах (100k+ записей) view может работать медленно — MySQL не оптимизирует индексы для VIEW |
-| **NULL при отсутствии** | LEFT JOIN: если в каталоге 2 нет совпадения, поля `t2_*` будут `NULL` |
+An import-export app can work with a view as a regular catalog —
+CSV export with fields from both sources.
 
 ---
 
-## Permissions для приложений
+## Limitations
 
-Если миниап создаёт или читает view, добавь в `config.json`:
+| Limitation | Description |
+|------------|-------------|
+| **Read-only** | Views are read-only by default (`ue=0, ud=0`). To edit — work with the source catalogs |
+| **Static schema** | Adding fields to a source catalog does NOT update the view. Recreate it |
+| **No CASCADE** | Deleting a source catalog breaks the view without warning |
+| **Two catalogs** | Only JOIN of two catalogs. For three — create a view from a view + third catalog |
+| **Performance** | On large tables (100k+ records) views can be slow — MySQL does not optimize indexes for VIEWs |
+| **NULL on missing** | LEFT JOIN: if no match in catalog 2, `t2_*` fields will be `NULL` |
+
+---
+
+## Permissions for Apps
+
+If a miniapp creates or reads views, add to `config.json`:
 
 ```json
 "permissions": {
@@ -245,7 +245,7 @@ const data = asArray(await App.fetchAll('/db/custom_cashflows_clients_view.json'
 }
 ```
 
-`custom_dbview` — для создания view. `custom_*_view` — для чтения данных из конкретного view.
+`custom_dbview` — for creating views. `custom_*_view` — for reading data from a specific view.
 
 ---
 

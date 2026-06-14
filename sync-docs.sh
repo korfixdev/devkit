@@ -1,17 +1,29 @@
 #!/bin/bash
-# Sync docs/miniapps/ from korfix-docs repo.
-# Run after editing korfix-docs/src/miniapps/, then commit both repos.
+# Sync bundled docs/ from the korfix-docs repo (ENGLISH source).
+# The plugin ships in English, so we mirror src/en/* (not src/ru/*).
+# Run after editing korfix-docs/src/en/{miniapps,gamedev}/, then commit both repos.
+#
+# Note: korfix-docs reorganised src/ into src/en + src/ru. The old single
+# src/miniapps path no longer exists — always sync from src/en here.
 
-DOCS_SRC="$(dirname "$0")/../korfix-docs/src/miniapps"
-DOCS_DST="$(dirname "$0")/docs/miniapps"
+ROOT="$(dirname "$0")"
+SRC_BASE="$ROOT/../korfix-docs/src/en"
 
-if [ ! -d "$DOCS_SRC" ]; then
-    echo "ERROR: korfix-docs not found at $DOCS_SRC"
-    echo "Expected sibling directory: korfix-docs/"
-    exit 1
-fi
+sync_one() {
+    local name="$1"
+    local src="$SRC_BASE/$name"
+    local dst="$ROOT/docs/$name"
+    if [ ! -d "$src" ]; then
+        echo "ERROR: source not found at $src"
+        echo "Expected sibling directory: korfix-docs/ (with src/en/$name)"
+        exit 1
+    fi
+    mkdir -p "$dst"
+    rsync -av --delete "$src/" "$dst/"
+}
 
-rsync -av --delete "$DOCS_SRC/" "$DOCS_DST/"
+sync_one miniapps
+sync_one gamedev
 echo ""
-echo "Done. Review changes with: git diff docs/miniapps/"
-echo "Then commit: git add docs/miniapps/ && git commit -m 'docs: sync from korfix-docs'"
+echo "Done. Review changes with: git diff docs/"
+echo "Then commit: git add docs/ && git commit -m 'docs: sync from korfix-docs (en)'"

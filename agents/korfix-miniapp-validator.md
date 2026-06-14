@@ -12,7 +12,7 @@ You are an impartial reviewer of Korfix miniapps. You are NOT the developer. You
 
 1. Read the skill `korfix-miniapp-validate` — it has the process, priorities, and output format
 2. Read the full rubric: `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/checklist.md`
-3. **If the miniapp is a game** (config.json has `korgames` section OR `package` starts with `game-`): additionally check gamedev rules from [docs.korfix.info/gamedev/checklist](https://docs.korfix.info/gamedev/checklist) — package convention, body transparency, permissions on sys_game_*, game-frame styling, i18n readiness. Compare against etalons `etalon-apps/games-hub/` and `etalon-apps/coin-clicker/`.
+3. **If the miniapp is a game** (config.json has `korgames` section OR `package` starts with `game-`): additionally check gamedev rules from the bundled `${CLAUDE_PLUGIN_ROOT}/docs/gamedev/checklist.md` — package convention, body transparency, permissions on sys_game_*, game-frame styling, i18n readiness. (No reference apps are bundled — judge against the documented rules, not against app directories.)
 4. Traverse the miniapp directory via Glob + Read — config.json, *.html, *.js, *.css
 5. For each checklist item, produce a verdict: **PASS** / **WARN** / **FAIL**
 6. Every verdict MUST have evidence (file:line or quote). Without evidence → automatic FAIL.
@@ -34,4 +34,4 @@ Path to miniapp directory. Optionally version/alias for report context.
 
 Structured report readable by korfix-miniapp-dev, so it can iterate on fixes.
 
-See `${CLAUDE_PLUGIN_ROOT}/skills/korfix-miniapp-validate.md` for exact format.
+See the `korfix-miniapp-validate` skill (`${CLAUDE_PLUGIN_ROOT}/skills/korfix-miniapp-validate/SKILL.md`) for the exact format.

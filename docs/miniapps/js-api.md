@@ -24,11 +24,12 @@ const App = new VMCRMUserApp();
 
 | Метод | Возвращает | Описание |
 |-------|-----------|----------|
-| `App.getRequestParams()` | Promise -> `{data: {app_id, token, domain, catalog, itemId, items, user}}` | Параметры текущего фрейма. Результат кешируется — повторные вызовы мгновенные |
+| `App.getRequestParams()` | Promise -> `{data: {app_id, domain, catalog, itemId, items, user}}` | Параметры текущего фрейма. Результат кешируется — повторные вызовы мгновенные |
 | `App.getUser()` | Promise -> `{data: {name, from_auth, from_group, alias, role, avatar, tarif, tarif_name}}` | Информация о текущем пользователе, включая тариф. Результат кешируется |
 | `App.getLocation()` | Promise -> `{data: '/db/projects'}` | URL родительского окна |
 | `App.fetch(url, options?)` | Promise -> response | HTTP-запрос от имени пользователя. Дедупликация параллельных запросов с одинаковым URL |
 | `App.fetchAll(url, options?)` | Promise -> response | fetch + автосклейка всех страниц пагинации |
+| `App.fetchV2(url, options?)` | Promise -> `{ok, status, data, error?, total?}` | Like `fetch()` but always returns the same shape regardless of context (iframe or root window). Recommended for new code. |
 | `App.prefetch(url)` | void | Запустить фетч в фоне заранее. Когда `App.fetch(url)` вызовется позже — вернёт готовые данные мгновенно |
 | `App.done()` | Promise | Сигнал "установка завершена" из install-фрейма. Setup-экран платформы немедленно переходит к следующему приложению |
 | `App.navigate(url)` | void | SPA-переход родительского окна (без перезагрузки) |
@@ -39,9 +40,11 @@ const App = new VMCRMUserApp();
 | `App.setFrameSize(width, height)` | void | Размер фрейма. `null` пропускает параметр |
 | `App.startLoadingAnimation()` | void | Показать индикатор загрузки платформы |
 | `App.stopLoadingAnimation()` | void | Скрыть индикатор загрузки |
-| `App.storage.get(key, default?)` | Promise | Чтение из KV-хранилища |
-| `App.storage.set(key, value)` | Promise | Запись в KV-хранилище |
-| `App.storage.unset(key)` | Promise | Удаление из KV-хранилища |
+| `App.storage.getValue(key, default?)` | Promise | Bare value + default (recommended) |
+| `App.storage.get(key)` | Promise | Full record `{name, value, alias, ...}` — read `.value` |
+| `App.storage.getRow(key)` | Promise | Explicit alias of `get()` |
+| `App.storage.set(key, value)` | Promise | Write to the KV store |
+| `App.storage.unset(key)` | Promise | Delete from the KV store |
 | `App.on(event, callback)` | this | Подписка на событие платформы. Chainable |
 | `App.off(event, callback?)` | this | Отписка. Без callback — удалить все |
 
@@ -67,6 +70,55 @@ App.on('*', ({event, data}) => {
 | `modal.opened` | Открытие модалки редактирования | `{url}` |
 | `modal.closed` | Закрытие модалки | `{url}` |
 | `catalog.selected` | Выбор чекбоксов в списке каталога | `{catalog, ids}` |
+
+#### Pattern: reload list after record edit
+
+`modal.closed` fires when the user closes a modal opened via `App.modal()`. `data.url`
+contains the same URL that was passed to `App.modal()`. Filter by it so you don't react
+to unrelated modals. A 50 ms debounce prevents double-firing.
+
+```js
+// Open the edit modal
+App.modal('/db/tt_projects/' + alias + '?edit', { title: 'Edit' });
+
+// React to close — data.url matches the URL from App.modal()
+let _reloadTimer = 0;
+App.on('modal.closed', (data) => {
+    if (data?.url?.includes('/tt_projects/')) {
+        clearTimeout(_reloadTimer);
+        _reloadTimer = setTimeout(() => loadRecords(), 50);
+    }
+});
+```
+
+#### Pattern: background polling (detect external changes)
+
+Track a snapshot: total count + top-5 record IDs sorted by `ts_desc`. Any edit moves
+a record to the top — the signature changes and the list reloads.
+
+```js
+let _pollSnap = { total: -1, topIds: '' };
+
+// After first load: seed the baseline
+_pollSnap = { total: records.length, topIds: records.slice(0,5).map(r=>r.id).join(',') };
+
+// Polling
+setInterval(async () => {
+    try {
+        const r = await App.fetch('/db/MY_CATALOG.json?limit=5&order=ts_desc&not_cache=1');
+        const rows = Array.isArray(r?.data) ? r.data : (r?.data?.data ?? []);
+        const total = Number(r?.total ?? rows.length);
+        const topIds = rows.map(r => r.id).join(',');
+        if (_pollSnap.total >= 0 && (total !== _pollSnap.total || topIds !== _pollSnap.topIds)) {
+            loadRecords();
+        }
+        _pollSnap = { total, topIds };
+    } catch (_) {}
+}, 60000);
+```
+
+Both patterns complement each other: `modal.closed` reacts instantly to the user's own
+actions; polling catches changes made by another user or outside the miniapp.
 
 ### Auto-resize
 
@@ -115,26 +167,28 @@ const resp = await App.fetch('/api/db/projects');
 const resp = await App.fetch('/db/currency_rate.json');
 ```
 
+> **Ловушка: не передавай `undefined`/`null` вторым аргументом.** Обёртка вида
+> `App.fetch(url, opts)`, где `opts === undefined` (типично для GET), ломается:
+> `undefined` сериализуется в `null` через postMessage, на хосте срабатывает
+> `typeof null === 'object'` → чтение `null.body` → исключение, и запрос **висит до
+> 60-сек таймаута** (молча: данные/профиль не грузятся, явной ошибки нет). В обёртке
+> ветви по наличию опций:
+> ```js
+> async function apiFetch(url, opts) {
+>     const r = opts ? await App.fetch(url, opts) : await App.fetch(url);
+>     return r?.data ?? r;
+> }
+> ```
+
 ### Подробности по методам
 
 #### getRequestParams()
 
 ```js
 App.getRequestParams().then(resp => {
-  const { app_id, token, domain, catalog, itemId, items, user } = resp.data;
-  // app_id  — alias записи в marketplace (хеш, не числовой id). Идентификатор приложения как продукта.
-  // token   — alias записи в installed_apps (уникален на каждую инсталляцию). Используется в App.storage.
-  // domain  — домен CRM-инстанса (напр. "vibe.korfix.app")
-  // catalog — имя каталога контекста, в котором открыт фрейм (напр. "installed_apps", "accounts", "tt_tasks")
-  // itemId  — alias текущей записи в catalog. Когда виджет открыт с дашборда: catalog="installed_apps", itemId=alias установки
-  // items   — алиасы выбранных элементов списка (через запятую, если несколько)
-  // user    — данные текущего пользователя (то же, что getUser())
+  const { app_id, domain, catalog, itemId, items, user } = resp.data;
+  // items -- алиасы выбранных элементов (через запятую, если список)
 });
-
-// Пример: виджет открыт с дашборда
-// catalog  = "installed_apps"
-// itemId   = alias записи в installed_apps (≠ числовой id)
-// app_id   = alias записи в marketplace (не используй как числовой id для запросов!)
 ```
 
 #### getUser()
@@ -264,6 +318,28 @@ App.fetchAll('/db/projects.json').then(resp => {
   // resp.data -- все элементы, без пагинации
 });
 ```
+
+#### fetchV2(url, options?)
+
+Returns `Promise<{ok, status, data, error?, total?}>` with a consistent shape regardless of whether the miniapp is in an iframe or the root window.
+
+```js
+// Works identically in iframe and root window
+const result = await App.fetchV2('/api/db/projects?limit=20');
+if (!result.ok) {
+    console.error(result.error.message);
+    return;
+}
+const items = result.data; // always the payload — no double unwrapping
+console.log(`Loaded ${result.total} items`);
+```
+
+**vs old `fetch()`:**
+- `App.fetch()` in an iframe resolves to `{data: serverPayload, requestId}` — you need `result.data.data` for the array
+- `App.fetch()` in root window resolves to `serverPayload` — you need `result.data` for the array
+- `App.fetchV2()` always resolves to `{ok, status, data}` — always use `result.data`
+
+Use `fetchV2()` for all new miniapp code. Use `fetch()` only if you need low-level access to the raw server response.
 
 #### modal(content, options?)
 

@@ -68,11 +68,15 @@ When MCP is connected, agents automatically use `catalog_schema` / `db_read` / `
 
 | Component | Role |
 |-----------|------|
-| Agent `korfix-miniapp-dev` | Writes miniapps: architecture, code, styling, packaging |
+| Agent `korfix-analyst` | Clarifies requirements, designs the solution, writes `SPEC.md`, hands off to the dev agent |
+| Agent `korfix-architect` | Technical feasibility: which catalogs, entry points, custom catalogs (consulted by the analyst) |
+| Agent `korfix-miniapp-dev` | Writes miniapps: architecture, code, styling, packaging, deploy |
+| Agent `korfix-gamedev` | Specialized variant for game/gamification miniapps (korgames module) |
 | Agent `korfix-miniapp-validator` | Impartial review before deploy (fresh context, checklist-driven) |
-| Agent `korfix-tech-writer` (haiku) | Maintains `README.md` in miniapp directory — auto-called after edits and before deploy |
-| 8 skills | `korfix-miniapp-validate`, `-checklist`, `-config`, `korfix-js-api`, `korfix-self-provisioning`, `korfix-catalog-schema`, `korfix-crud-data`, `korfix-token-audit` |
-| Bundled docs | `docs/miniapps/` — synced from [korfixdev/docs](https://github.com/korfixdev/docs) |
+| Agent `korfix-tech-writer` (haiku) | Maintains `README.md` in the miniapp directory — auto-called after edits and before deploy |
+| 11 skills | `korfix-miniapp-validate`, `-checklist`, `-config`, `korfix-pre-deploy`, `korfix-test-guide`, `korfix-js-api`, `korfix-self-provisioning`, `korfix-catalog-schema`, `korfix-crud-data`, `korfix-token-audit`, `korfix-gamedev` |
+| Local gate | `scripts/validate-bundle.js` + `schemas/config.schema.json` + a PreToolUse hook — structural pre-flight before zipping (no API) |
+| Bundled docs | `docs/miniapps/` + `docs/gamedev/` — synced from [korfixdev/docs](https://github.com/korfixdev/docs) (English) via `sync-docs.sh` |
 
 ## Usage
 
@@ -80,15 +84,15 @@ When MCP is connected, agents automatically use `catalog_schema` / `db_read` / `
 Create a miniapp that shows record count under each catalog's table
 ```
 
-The agent will:
-1. Ask for instance and token if env isn't set
-2. Read bundled platform docs
-3. Write code, package as zip
-4. Spawn `korfix-miniapp-validator` for impartial review
-5. On `READY` — deploy via API
-6. On `NOT READY` — fix issues and re-validate
+Routing (for a brand-new app):
+1. `korfix-analyst` clarifies requirements, consults `korfix-architect`, and writes a `SPEC.md`, then hands off to development
+2. `korfix-miniapp-dev` (or `korfix-gamedev` for games) confirms instance + token, reads the bundled docs, writes code
+3. Local structural gate (`scripts/validate-bundle.js`) runs before packaging
+4. `korfix-miniapp-validator` does an impartial checklist review in a fresh context
+5. On `READY` — deploy via API (`POST /api/db/marketplace/{ID}`); on `NOT READY` — fix and re-validate
 
-The agent never deploys without your confirmed instance and token.
+For a small change to an existing app you can address `korfix-miniapp-dev` directly. The agent never
+deploys without your confirmed instance and token. (Full routing rules: `CLAUDE.md`.)
 
 ## Security
 

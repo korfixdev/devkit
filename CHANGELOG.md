@@ -1,8 +1,52 @@
 # Changelog
 
-Все значимые изменения плагина будут здесь.
+All notable changes to the plugin are recorded here.
 
-Формат — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), версионирование — [SemVer](https://semver.org/).
+Format — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning — [SemVer](https://semver.org/).
+
+## [0.23.1] — 2026-06-14
+
+Consistency pass across agents/skills/docs (reported gaps). No new platform features.
+
+### Added
+- **`scripts/validate-bundle.js`** — dependency-free local structural gate for a miniapp bundle
+  (config.json JSON validity; every `urls.*` + `logo` file present; `config.json` at root;
+  `dashboard_widgets` permission when `urls.widget` is declared). Optional `ajv` pass against the new
+  **`schemas/config.schema.json`** when available. No API calls.
+- **`hooks/` (PreToolUse → Bash)** — advisory pre-zip gate: runs `validate-bundle.js` when a `zip`
+  command packages a `config.json`, surfacing FAILs as context. Never blocks, never errors out.
+- **`docs/gamedev/`** — gamedev docs are now bundled locally (synced from korfixdev/docs, English).
+  `korfix-gamedev` agent/skill and the validator reference local paths instead of `docs.korfix.info`
+  WebFetch URLs.
+
+### Changed
+- **Bundled docs are now English.** `sync-docs.sh` was pointing at the removed `src/miniapps` path;
+  fixed to mirror `src/en/{miniapps,gamedev}` (the plugin ships in English). Re-synced all of
+  `docs/miniapps/` from English source.
+- **Single source of truth — deploy.** `docs/miniapps/deploy.md` gains a canonical endpoint decision
+  table (verified empirically on the test server: both `/api/db/marketplace/{ID}` and
+  `/api/marketplace/deploy/{ID}` update + run manifest validation; default = `/api/db/marketplace/{ID}`,
+  `deploy/` = update + cache refresh). `korfix-miniapp-dev`, `korfix-pre-deploy`, `korfix-gamedev`,
+  `korfix-tech-writer` now point there instead of each stating a different URL.
+- **Single source of truth — checklist.** `docs/miniapps/checklist.md` is THE checklist; added the
+  manifest-validation note and a `category` item. `korfix-miniapp-checklist` / `-config` / `-pre-deploy`
+  no longer duplicate the list — they reference it. `category`/`package`/`alias` status unified.
+- **Single source — environment check.** Folded the env-presence procedure into `korfix-token-audit`
+  (new Step 0); `korfix-miniapp-dev` and `korfix-gamedev` delegate to it instead of each restating it.
+- **`korfix-analyst`** now writes `SPEC.md` (not `README.md`) and **spawns `korfix-miniapp-dev`**
+  (or `korfix-gamedev`) via the `Agent` tool instead of asking the user to type a command.
+  `korfix-tech-writer` told never to overwrite `SPEC.md`.
+- **`korfix-gamedev` skill** rewritten in English (was Russian) with local `docs/gamedev/` references.
+- **README** — agent list now shows all 6 agents; "8 skills" → 11; documents the local gate and the
+  English doc sync. Usage routing aligned with `CLAUDE.md` (analyst-first).
+
+### Fixed
+- `korfix-miniapp-dev`: `INDEX.md` → `index.md` (Linux is case-sensitive; the Read failed).
+- Removed dead references to non-existent `etalon-apps/` and `../vmcrm-apps/` directories across
+  `korfix-architect`, `korfix-analyst`, `korfix-miniapp-dev`, `korfix-miniapp-validator` — replaced with
+  "no reference apps bundled; reconstruct from docs; local sources only if the user points to them".
+- `korfix-miniapp-dev` deploy block: fixed broken step numbering (was 1,2,3,2,3,4,5,6).
+- `korfix-miniapp-validator`: corrected the skill path (`skills/korfix-miniapp-validate/SKILL.md`).
 
 ## [0.23.0] — 2026-06-05
 

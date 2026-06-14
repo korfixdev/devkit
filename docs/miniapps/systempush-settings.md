@@ -1,58 +1,58 @@
-# Настройки push-уведомлений (systempush_settings)
+# Push Notification Settings (systempush_settings)
 
-> **См. также:** [data-api.md](data-api.md) · [korfix-catalogs.md](korfix-catalogs.md) · [account-help.md](account-help.md)
+> **See also:** [data-api.md](data-api.md) · [korfix-catalogs.md](korfix-catalogs.md) · [account-help.md](account-help.md)
 > **← [Home](index.md)**
 
-Каталог `systempush_settings` — персональные подписки пользователя
-на push-уведомления из каталогов платформы.
+The `systempush_settings` catalog — personal subscriptions for a user
+to receive push notifications from platform catalogs.
 
 ---
 
-## Как работает
+## How It Works
 
-Платформа отправляет push-уведомления при действиях в каталогах (добавление,
-редактирование, удаление записей). По умолчанию уведомления **не приходят** —
-пользователь сам выбирает, из каких разделов и о каких событиях получать push.
+The platform sends push notifications on catalog actions (add, edit, delete records).
+By default, notifications **are not sent** — the user explicitly selects which
+sections and events to receive pushes for.
 
-Каждая запись в `systempush_settings` — это подписка на один каталог
-с опциональными фильтрами.
-
----
-
-## Структура записи
-
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `alias` | hidden | md5(menu + userId) — автоматически |
-| `menu` | select | Каталог (раздел), из которого получать уведомления |
-| `restrict_entries` | multiselect | Ограничение по записям: `self` — только свои, `members` — где наблюдатель |
-| `actions` | multiselect | Фильтр по действиям: `add`, `edit`, `delete` |
-| `from_auth` | hidden | ID пользователя |
-
-Доступ: `self` — каждый управляет только своими подписками.
-Множественные записи: по одной на каждый каталог, на который подписан пользователь.
+Each record in `systempush_settings` is a subscription to one catalog
+with optional filters.
 
 ---
 
-## Чтение подписок
+## Record Structure
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `alias` | hidden | md5(menu + userId) — set automatically |
+| `menu` | select | Catalog (section) to receive notifications from |
+| `restrict_entries` | multiselect | Entry filter: `self` — own records only, `members` — where user is a watcher |
+| `actions` | multiselect | Action filter: `add`, `edit`, `delete` |
+| `from_auth` | hidden | User ID |
+
+Access: `self` — each user manages only their own subscriptions.
+Multiple records: one per subscribed catalog.
+
+---
+
+## Reading Subscriptions
 
 ```js
-// Все подписки текущего пользователя
+// All subscriptions for the current user
 const resp = await App.fetch('/db/systempush_settings.json');
 resp.data.forEach(sub => {
     console.log(sub.menu);              // "tt_tasks"
-    console.log(sub.restrict_entries);  // "self,members" или ""
-    console.log(sub.actions);           // "add,edit" или ""
+    console.log(sub.restrict_entries);  // "self,members" or ""
+    console.log(sub.actions);           // "add,edit" or ""
 });
 ```
 
 ---
 
-## Подписка на каталог
+## Subscribing to a Catalog
 
 ```js
-// Подписать пользователя на уведомления из каталога задач
-// (только свои записи, только добавление и редактирование)
+// Subscribe user to task notifications
+// (own records only, add and edit events only)
 await App.fetch('/db/systempush_settings/add?edit&ajax=1', {
     method: 'POST',
     body: {
@@ -64,10 +64,10 @@ await App.fetch('/db/systempush_settings/add?edit&ajax=1', {
 });
 ```
 
-> Alias генерируется автоматически серверной стороной: `md5(menu + userId)`.
-> Повторная подписка на тот же каталог обновит существующую запись.
+> Alias is generated automatically server-side: `md5(menu + userId)`.
+> Re-subscribing to the same catalog updates the existing record.
 
-### Подписка без ограничений (все записи, все действия)
+### Subscribe with no restrictions (all records, all actions)
 
 ```js
 await App.fetch('/db/systempush_settings/add?edit&ajax=1', {
@@ -81,10 +81,10 @@ await App.fetch('/db/systempush_settings/add?edit&ajax=1', {
 
 ---
 
-## Отписка
+## Unsubscribing
 
 ```js
-// Найти подписку и удалить
+// Find the subscription and delete it
 const resp = await App.fetch('/db/systempush_settings.json?form[menu]=tt_tasks');
 if (resp.data.length) {
     await App.fetch(`/db/systempush_settings/${resp.data[0].alias}?udel`);
@@ -93,55 +93,55 @@ if (resp.data.length) {
 
 ---
 
-## Получение доступных каталогов для подписки
+## Getting Available Catalogs for Subscription
 
 ```js
-// Схема содержит список каталогов с activity-поддержкой
+// Schema contains list of catalogs with activity support
 const schema = await App.fetch('/db/systempush_settings/sheme.json');
 const catalogs = schema.data.menu.arr;
-// { "tt_tasks": "Задачи", "b2b_orders": "Заказы", ... }
+// { "tt_tasks": "Tasks", "b2b_orders": "Orders", ... }
 ```
 
 ---
 
-## Значения фильтров
+## Filter Values
 
 ### restrict_entries
 
-| Значение | Описание |
-|----------|----------|
-| *(пусто)* | Все записи каталога, к которым есть доступ |
-| `self` | Только записи, где `from_auth` = текущий пользователь |
-| `members` | Только записи, где пользователь в `members_id` (наблюдатель) |
+| Value | Description |
+|-------|-------------|
+| *(empty)* | All catalog records the user has access to |
+| `self` | Only records where `from_auth` = current user |
+| `members` | Only records where user is in `members_id` (watcher) |
 
-Можно комбинировать: `self,members` — свои + где наблюдатель.
+Can be combined: `self,members` — own records + where user is a watcher.
 
 ### actions
 
-| Значение | Описание |
-|----------|----------|
-| *(пусто)* | Все действия |
-| `add` | Только добавление |
-| `edit` | Только редактирование |
-| `delete` | Только удаление |
+| Value | Description |
+|-------|-------------|
+| *(empty)* | All actions |
+| `add` | Add only |
+| `edit` | Edit only |
+| `delete` | Delete only |
 
-Можно комбинировать: `add,edit` — добавление и редактирование, без удаления.
+Can be combined: `add,edit` — add and edit, but not delete.
 
 ---
 
-## Сценарии использования в миниапах
+## Use Cases for Miniapps
 
-### Автоподписка при установке приложения
+### Auto-subscribe on app install
 
-Приложение, работающее с определённым каталогом, может при установке
-автоматически подписать пользователя на уведомления:
+An app working with a specific catalog can automatically
+subscribe the user to notifications on install:
 
 ```js
 async function setupNotifications() {
-    // Проверяем, есть ли уже подписка
+    // Check if already subscribed
     const resp = await App.fetch('/db/systempush_settings.json?form[menu]=b2b_orders');
     if (resp.data.length === 0) {
-        // Подписываем на новые заказы
+        // Subscribe to new orders
         await App.fetch('/db/systempush_settings/add?edit&ajax=1', {
             method: 'POST',
             body: {
@@ -154,15 +154,15 @@ async function setupNotifications() {
 }
 ```
 
-### Панель управления подписками
+### Subscription management panel
 
-Приложение может показать пользователю UI для управления подписками,
-сгруппированный по модулям или бизнес-логике приложения.
+An app can show the user a UI for managing subscriptions,
+grouped by modules or app business logic.
 
-### Проверка подписки перед действием
+### Check subscription before action
 
 ```js
-// Узнать, подписан ли пользователь на каталог
+// Check if user is subscribed to a catalog
 async function isSubscribed(catalog) {
     const resp = await App.fetch(`/db/systempush_settings.json?form[menu]=${catalog}`);
     return resp.data.length > 0;
@@ -171,15 +171,15 @@ async function isSubscribed(catalog) {
 
 ---
 
-## Важно
+## Important Notes
 
-- Подписки работают в связке с системой activity — уведомления приходят только для каталогов с включённым механизмом activity
-- Push-уведомления доставляются в реальном времени через WebSocket (модуль `systempush`)
-- Уведомления отображаются в колокольчике в шапке платформы и как браузерные push
-- По умолчанию уведомления не приходят — нужна явная подписка
+- Subscriptions work in conjunction with the activity system — notifications are only sent for catalogs with activity enabled
+- Push notifications are delivered in real time via WebSocket (the `systempush` module)
+- Notifications appear in the bell icon in the platform header and as browser push notifications
+- By default no notifications are sent — explicit subscription is required
 
 ---
 
-*Каталог: `/db/systempush_settings` | Схема: `systempush_settings.sheme.inc.php`*
+*Catalog: `/db/systempush_settings` | Schema: `systempush_settings.sheme.inc.php`*
 
 **← [Home](index.md)**

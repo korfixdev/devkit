@@ -33,14 +33,15 @@ If the task resembles one of the patterns — look at the reference apps:
 ${CLAUDE_PLUGIN_ROOT}/docs/miniapps/  — general index
 ```
 
-**Game miniapps (gamedev):** if the task involves a game, gamification, Korn economy, quests, leaderboards, or player profiles — additionally read:
+**Game miniapps (gamedev):** if the task involves a game, gamification, Korn economy, quests, leaderboards, or player profiles — additionally read the bundled gamedev docs:
 
 ```
-https://docs.korfix.info/gamedev/concepts         — Korn/quests/games model
-https://docs.korfix.info/gamedev/api-reference    — /api/korgames/* specification
-https://docs.korfix.info/gamedev/config-korgames  — korgames section in config.json
-etalon-apps/GAMEDEV.md                            — reference app index (games-hub, coin-clicker)
+${CLAUDE_PLUGIN_ROOT}/docs/gamedev/concepts.md         — Korn/quests/games model
+${CLAUDE_PLUGIN_ROOT}/docs/gamedev/api-reference.md    — /api/korgames/* specification
+${CLAUDE_PLUGIN_ROOT}/docs/gamedev/config-korgames.md  — korgames section in config.json
 ```
+
+> No reference apps are bundled in the plugin — reconstruct architecture from `docs/gamedev/` (coin-clicker-walkthrough + recipes). Local app sources only if the user points to them.
 
 Gamedev-specific points to watch when designing architecture:
 - Korn emission — **whitelisted sources only**. A new reward mechanic = new `condition_type` in `sys_quests` + server-side trigger `Games::checkQuest` — this requires a core module change.
@@ -102,9 +103,11 @@ Phrase as a concrete trade-off: "with access X → solution A (simpler). Without
 - [What cannot be done or is difficult on the platform]
 - [API nuances that will affect implementation]
 
-### Similar reference applications
+### Similar patterns
 
-If you know a similar pattern in `${CLAUDE_PLUGIN_ROOT}/../vmcrm-apps/` — indicate the name and the similarity.
+If a bundled doc describes a similar pattern (e.g. a recipe in `docs/gamedev/recipes.md`, or an
+embed pattern in `docs/miniapps/frames.md`), point to it. No reference apps are bundled in the
+plugin — don't cite app directories that don't exist; reconstruct from the docs instead.
 
 ---
 

@@ -1,48 +1,48 @@
-# Правила каталогов (catalog_rules)
+# Catalog Rules (catalog_rules)
 
-> **См. также:** [storage-and-hooks.md](storage-and-hooks.md) · [self-provisioning.md](self-provisioning.md) · [data-api.md](data-api.md) · [korfix-catalogs.md](korfix-catalogs.md)
+> **See also:** [storage-and-hooks.md](storage-and-hooks.md) · [self-provisioning.md](self-provisioning.md) · [data-api.md](data-api.md) · [korfix-catalogs.md](korfix-catalogs.md)
 > **← [Home](index.md)**
 
-Декларативные правила afterSave/beforeSave — автоматизация без PHP-кода.
+Declarative afterSave/beforeSave rules — automation without PHP code.
 
-> Бэкенд-архитектура: `lib/local/CatalogRules.php`
-
----
-
-## Принцип
-
-Запись в каталоге `catalog_rules` = одно правило. При сохранении записи в любом каталоге
-ядро проверяет правила и выполняет их автоматически: копирование полей, пересчёт, агрегация, валидация.
-
-Правила выполняются **после** PHP-хуков (afteradd/beforesave) по порядку `priority`.
-
-Доступ: только root (создатель группы).
+> Backend architecture: `lib/local/CatalogRules.php`
 
 ---
 
-## Поля записи
+## Concept
 
-| Поле | Описание |
-|------|----------|
-| `name` | Название правила (для себя) |
-| `catalog` | Каталог, к которому привязано правило |
-| `trigger_event` | `afterSave` или `beforeSave` |
+A record in the `catalog_rules` catalog = one rule. When a record is saved in any catalog,
+the core checks rules and executes them automatically: copying fields, recalculation, aggregation, validation.
+
+Rules execute **after** PHP hooks (afteradd/beforesave) in `priority` order.
+
+Access: root only (group creator).
+
+---
+
+## Record Fields
+
+| Field | Description |
+|-------|-------------|
+| `name` | Rule name (for your reference) |
+| `catalog` | Catalog the rule is attached to |
+| `trigger_event` | `afterSave` or `beforeSave` |
 | `rule_type` | `inherit`, `calc`, `aggregate`, `validate` |
-| `config` | JSON-конфигурация правила (см. ниже) |
-| `priority` | Порядок выполнения (меньше = раньше, по умолчанию 100) |
-| `enabled` | Включено/выключено |
+| `config` | JSON configuration (see below) |
+| `priority` | Execution order (lower = earlier, default 100) |
+| `enabled` | Enabled/disabled |
 
 ---
 
-## Типы правил и JSON-синтаксис
+## Rule Types and JSON Syntax
 
-### 1. inherit — наследование поля из связанной записи
+### 1. inherit — copy a field from a linked record
 
-Копирует значение поля из записи, на которую ссылается FK.
+Copies a field value from the record referenced by an FK.
 
-**Когда использовать:** поле должно автоматически заполняться из связанного каталога.
+**When to use:** a field should be auto-populated from a related catalog.
 
-**Минимальный JSON:**
+**Minimal JSON:**
 
 ```json
 {
@@ -53,17 +53,17 @@
 }
 ```
 
-| Параметр | Обязательный | Описание |
-|----------|-------------|----------|
-| `source_field` | да | FK-поле текущей записи (ссылка на другой каталог) |
-| `source_catalog` | да | Таблица, откуда брать значение (без префикса `crm__`) |
-| `source_lookup` | да | Поле в source_catalog для копирования |
-| `target_field` | да | Поле текущей записи для записи результата |
-| `source_join` | нет | Дополнительный JOIN для сложных связей |
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `source_field` | yes | FK field of the current record (reference to another catalog) |
+| `source_catalog` | yes | Table to read from (without `crm__` prefix) |
+| `source_lookup` | yes | Field in source_catalog to copy |
+| `target_field` | yes | Field of current record to write result into |
+| `source_join` | no | Additional JOIN for complex relationships |
 
-**Примеры:**
+**Examples:**
 
-Скопировать `from_auth` из клиента в заказ:
+Copy `from_auth` from client to order:
 ```json
 {
     "source_field": "client_id",
@@ -73,7 +73,7 @@
 }
 ```
 
-Скопировать процент скидки через JOIN (клиент → скидка → процент):
+Copy discount percentage via JOIN (client → discount → percent):
 ```json
 {
     "source_field": "client_id",
@@ -88,13 +88,13 @@
 
 ---
 
-### 2. calc — вычисление поля по формуле
+### 2. calc — compute a field from a formula
 
-Вычисляет значение поля из других полей той же записи.
+Computes a field value from other fields in the same record.
 
-**Когда использовать:** автоматический расчёт суммы, итога, процента.
+**When to use:** automatic calculation of totals, sums, percentages.
 
-**Минимальный JSON:**
+**Minimal JSON:**
 
 ```json
 {
@@ -103,26 +103,26 @@
 }
 ```
 
-| Параметр | Обязательный | Описание |
-|----------|-------------|----------|
-| `formula` | да | Выражение. Переменные = имена полей текущей записи |
-| `target_field` | да | Поле для записи результата |
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `formula` | yes | Expression. Variables = field names of the current record |
+| `target_field` | yes | Field to write the result into |
 
-**Поддерживаемые операции:**
+**Supported operations:**
 
-| Операция | Пример |
-|----------|--------|
+| Operation | Example |
+|-----------|---------|
 | `+` `-` `*` `/` | `price * quantity` |
 | `( )` | `(price - discount) * quantity` |
 | `round()` | `round(price * 1.2)` |
 | `ceil()` | `ceil(weight / 1000)` |
 | `floor()` | `floor(total / 12)` |
 
-Если поле не найдено — подставляется `0`. Деление на 0 возвращает `0`.
+If a field is not found — substituted with `0`. Division by 0 returns `0`.
 
-**Примеры:**
+**Examples:**
 
-Сумма позиции:
+Line item total:
 ```json
 {
     "formula": "price * quantity",
@@ -130,7 +130,7 @@
 }
 ```
 
-Сумма с НДС:
+Total with VAT:
 ```json
 {
     "formula": "round(price * quantity * 1.2)",
@@ -138,7 +138,7 @@
 }
 ```
 
-Маржа:
+Margin:
 ```json
 {
     "formula": "revenue - cost",
@@ -150,13 +150,13 @@
 
 ---
 
-### 3. aggregate — обновление родительской записи
+### 3. aggregate — update a parent record
 
-Выполняет агрегатную функцию по дочерним записям и записывает результат в родителя.
+Runs an aggregate function over child records and writes the result to the parent.
 
-**Когда использовать:** пересчёт суммы заказа при изменении корзины, подсчёт количества элементов.
+**When to use:** recalculate order total when a cart item changes, count elements.
 
-**Минимальный JSON:**
+**Minimal JSON:**
 
 ```json
 {
@@ -168,18 +168,18 @@
 }
 ```
 
-| Параметр | Обязательный | Описание |
-|----------|-------------|----------|
-| `parent_field` | да | FK-поле текущей записи (ссылка на родителя) |
-| `parent_catalog` | да | Таблица родителя (без префикса) |
-| `function` | да | `SUM`, `COUNT`, `AVG`, `MAX`, `MIN` |
-| `source_field` | да | Поле текущего каталога для агрегации |
-| `target_field` | да | Поле родителя для записи результата |
-| `where` | нет | Дополнительный фильтр (по умолчанию `hidden < 1 OR hidden IS NULL`) |
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `parent_field` | yes | FK field of the current record (reference to parent) |
+| `parent_catalog` | yes | Parent table (without prefix) |
+| `function` | yes | `SUM`, `COUNT`, `AVG`, `MAX`, `MIN` |
+| `source_field` | yes | Field of current catalog to aggregate |
+| `target_field` | yes | Parent field to write result into |
+| `where` | no | Additional filter (default: `hidden < 1 OR hidden IS NULL`) |
 
-**Примеры:**
+**Examples:**
 
-Сумма корзины → заказ:
+Cart total → order:
 ```json
 {
     "parent_field": "order_id",
@@ -190,7 +190,7 @@
 }
 ```
 
-Количество задач → проект:
+Task count → project:
 ```json
 {
     "parent_field": "project_id",
@@ -201,7 +201,7 @@
 }
 ```
 
-Максимальная дата → проект:
+Latest date → project:
 ```json
 {
     "parent_field": "project_id",
@@ -217,59 +217,59 @@
 
 ---
 
-### 4. validate — проверка условия перед сохранением
+### 4. validate — check a condition before saving
 
-Проверяет условие и блокирует сохранение если оно не выполнено.
+Checks a condition and blocks saving if it fails.
 
-**Когда использовать:** минимальная сумма заказа, обязательность поля при определённом статусе.
+**When to use:** minimum order amount, required field for a specific status.
 
-**Минимальный JSON:**
+**Minimal JSON:**
 
 ```json
 {
     "check": "summ >= 1000",
-    "error_message": "Сумма заказа должна быть не менее 1000"
+    "error_message": "Order total must be at least 1000"
 }
 ```
 
-| Параметр | Обязательный | Описание |
-|----------|-------------|----------|
-| `condition` | нет | Условие активации правила. Если не выполнено — правило пропускается |
-| `check` | да | Проверяемое выражение. Если false — ошибка |
-| `error_message` | да | Текст ошибки. Поддерживает `{field}` подстановку |
-| `revert_field` | нет | Поле для отката значения при ошибке |
-| `revert_value` | нет | Значение для отката |
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `condition` | no | Activation condition. If not met — rule is skipped |
+| `check` | yes | Expression to verify. If false — error |
+| `error_message` | yes | Error message. Supports `{field}` substitution |
+| `revert_field` | no | Field to revert on error |
+| `revert_value` | no | Value to revert to |
 
-**Поддерживаемые операторы:** `==`, `!=`, `>`, `<`, `>=`, `<=`
+**Supported operators:** `==`, `!=`, `>`, `<`, `>=`, `<=`
 
-**Примеры:**
+**Examples:**
 
-Минимальная сумма заказа:
+Minimum order total:
 ```json
 {
     "condition": "status == 10",
     "check": "summ >= 1000",
-    "error_message": "Сумма заказа ({summ}) меньше минимальной (1000)",
+    "error_message": "Order total ({summ}) is below the minimum (1000)",
     "revert_field": "status",
     "revert_value": "0"
 }
 ```
 
-Обязательное поле при статусе "завершён":
+Required field when status is "completed":
 ```json
 {
     "check": "result != ",
     "condition": "status == 40",
-    "error_message": "Укажите результат перед завершением задачи"
+    "error_message": "Provide a result before completing the task"
 }
 ```
 
-Запрет удаления оплаченных записей:
+Prevent deletion of paid records:
 ```json
 {
     "condition": "status == 30",
     "check": "hidden == 0",
-    "error_message": "Нельзя удалить оплаченную запись"
+    "error_message": "Cannot delete a paid record"
 }
 ```
 
@@ -277,9 +277,9 @@
 
 ---
 
-## Работа с правилами через API (из миниапа)
+## Working with Rules via API (from a miniapp)
 
-### Чтение
+### Read
 
 ```js
 const resp = await App.fetch('/db/catalog_rules.json');
@@ -287,17 +287,17 @@ resp.data.forEach(rule => {
     console.log(rule.catalog, rule.rule_type, JSON.parse(rule.config));
 });
 
-// Правила конкретного каталога
+// Rules for a specific catalog
 const resp = await App.fetch('/db/catalog_rules.json?form[catalog]=b2b_orders');
 ```
 
-### Создание
+### Create
 
 ```js
 await App.fetch('/db/catalog_rules/add?edit&ajax=1', {
     method: 'POST',
     body: {
-        'form[name]': 'Пересчёт суммы заказа',
+        'form[name]': 'Recalculate order total',
         'form[catalog]': 'b2b_basket',
         'form[trigger_event]': 'afterSave',
         'form[rule_type]': 'aggregate',
@@ -315,7 +315,7 @@ await App.fetch('/db/catalog_rules/add?edit&ajax=1', {
 });
 ```
 
-### Включение/выключение
+### Enable/Disable
 
 ```js
 await App.fetch(`/db/catalog_rules/${alias}?edit&ajax=1`, {
@@ -326,40 +326,40 @@ await App.fetch(`/db/catalog_rules/${alias}?edit&ajax=1`, {
 
 ---
 
-## Порядок выполнения
+## Execution Order
 
-1. PHP beforesave.inc.php (если есть)
-2. **catalog_rules** с `trigger_event = beforeSave` (validate) — по priority
-3. `KAT::save()` — запись в БД
-4. PHP afteradd.inc.php (если есть)
-5. **catalog_rules** с `trigger_event = afterSave` (inherit, calc, aggregate) — по priority
+1. PHP beforesave.inc.php (if present)
+2. **catalog_rules** with `trigger_event = beforeSave` (validate) — by priority
+3. `KAT::save()` — writes to DB
+4. PHP afteradd.inc.php (if present)
+5. **catalog_rules** with `trigger_event = afterSave` (inherit, calc, aggregate) — by priority
 
-Правила одного каталога выполняются по возрастанию `priority` (100 по умолчанию).
-Правила разных типов можно комбинировать — например сначала inherit (priority=10),
-потом calc (priority=20), потом aggregate (priority=30).
-
----
-
-## Обработка ошибок
-
-| Тип | При ошибке |
-|-----|-----------|
-| inherit | Логирует в `Main::log_message()`, запись сохраняется |
-| calc | Логирует, запись сохраняется |
-| aggregate | Логирует, запись сохраняется |
-| validate | Показывает ошибку пользователю, откатывает поле если указан `revert_field` |
-
-Ошибки пишутся в лог с типом `catalog_rules`.
+Rules for the same catalog execute in ascending `priority` order (default 100).
+Rules of different types can be combined — e.g., inherit (priority=10),
+then calc (priority=20), then aggregate (priority=30).
 
 ---
 
-### 5. create — создание записи в другом каталоге
+## Error Handling
 
-Создаёт новую запись в указанном каталоге, маппируя поля из текущей записи.
+| Type | On error |
+|------|----------|
+| inherit | Logs to `Main::log_message()`, record saves |
+| calc | Logs, record saves |
+| aggregate | Logs, record saves |
+| validate | Shows error to user, reverts field if `revert_field` is set |
 
-**Когда использовать:** автоматическое создание задачи при добавлении заказа, создание лога при смене статуса.
+Errors are written to the log with type `catalog_rules`.
 
-**Минимальный JSON:**
+---
+
+### 5. create — create a record in another catalog
+
+Creates a new record in the specified catalog, mapping fields from the current record.
+
+**When to use:** auto-create a task when an order is added, create a log entry on status change.
+
+**Minimal JSON:**
 
 ```json
 {
@@ -371,28 +371,28 @@ await App.fetch(`/db/catalog_rules/${alias}?edit&ajax=1`, {
 }
 ```
 
-| Параметр | Обязательный | Описание |
-|----------|-------------|----------|
-| `dest_catalog` | да | Каталог для создания записи (без префикса) |
-| `condition` | нет | Условие активации (например `status == 10`) |
-| `on_action` | нет | Только при `INS` или `UPD`. Пусто = оба |
-| `fields` | да | Массив маппинга полей (см. ниже) |
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `dest_catalog` | yes | Catalog to create the record in (without prefix) |
+| `condition` | no | Activation condition (e.g. `status == 10`) |
+| `on_action` | no | Only on `INS` or `UPD`. Empty = both |
+| `fields` | yes | Field mapping array (see below) |
 
-**Формат полей:**
+**Field format:**
 
 ```json
 {"dest_field": "name", "type": "select", "src_field": "title"}
 ```
-`type=select` — скопировать значение из поля `src_field` текущей записи.
+`type=select` — copy value from field `src_field` of the current record.
 
 ```json
 {"dest_field": "status", "type": "value", "value": "0"}
 ```
-`type=value` — записать константу.
+`type=value` — write a constant.
 
-**Примеры:**
+**Examples:**
 
-Создать задачу при новом заказе:
+Create a task on new order:
 ```json
 {
     "dest_catalog": "tt_tasks",
@@ -405,13 +405,13 @@ await App.fetch(`/db/catalog_rules/${alias}?edit&ajax=1`, {
 }
 ```
 
-Создать замечание при смене статуса на "завершён":
+Create a remark on status change to "completed":
 ```json
 {
     "dest_catalog": "remarks",
     "condition": "status == 40",
     "fields": [
-        {"dest_field": "name", "type": "value", "value": "Автозакрытие"},
+        {"dest_field": "name", "type": "value", "value": "Auto-close"},
         {"dest_field": "entity_type", "type": "value", "value": "tt_tasks"},
         {"dest_field": "entity_id", "type": "select", "src_field": "id"}
     ]
@@ -422,16 +422,16 @@ await App.fetch(`/db/catalog_rules/${alias}?edit&ajax=1`, {
 
 ---
 
-## Ограничения
+## Limitations
 
-- Формулы calc: только арифметика с полями текущей записи, без обращения к другим каталогам
-- Условия validate: только одно сравнение (`field op value`), без AND/OR
-- Inherit не создаёт записи — только копирует значения из существующих
-- Aggregate работает только с числовыми полями
-- Правила не каскадируются: если inherit изменил поле, calc в том же цикле его не увидит (нужен следующий save)
+- calc formulas: arithmetic on the current record's fields only, no cross-catalog lookups
+- validate conditions: single comparison (`field op value`), no AND/OR
+- inherit does not create records — only copies values from existing ones
+- aggregate only works with numeric fields
+- Rules do not cascade: if inherit changed a field, calc in the same cycle won't see it (requires another save)
 
 ---
 
-*Каталог: `/db/catalog_rules` | Класс: `lib/local/CatalogRules.php`*
+*Catalog: `/db/catalog_rules` | Class: `lib/local/CatalogRules.php`*
 
 **← [Home](index.md)**

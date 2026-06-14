@@ -1,62 +1,62 @@
-# Дашборды и виджеты
+# Dashboards and Widgets
 
-> **См. также:** [config-json.md](config-json.md) · [styling.md](styling.md) · [data-api.md](data-api.md) · [self-provisioning.md](self-provisioning.md)
+> **See also:** [config-json.md](config-json.md) · [styling.md](styling.md) · [data-api.md](data-api.md) · [self-provisioning.md](self-provisioning.md)
 > **← [Home](index.md)**
 
-Дашборды — настраиваемые рабочие столы с виджетами. Приложение маркетплейса может
-встраивать свои фреймы как виджеты дашборда, а также создавать стандартные виджеты
-(графики, таблицы) через API.
+Dashboards are configurable workspaces with widgets. A marketplace app can
+embed its frames as dashboard widgets, and can also create standard widgets
+(charts, tables) via the API.
 
 ---
 
-## Структура данных
+## Data structure
 
-### Каталог dashboards
+### The `dashboards` catalog
 
-Рабочие столы. Каждый пользователь/группа может иметь несколько дашбордов.
+Workspaces. Each user/group can have multiple dashboards.
 
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `id` | bigint | ID (используется как `board_id` в виджетах) |
-| `alias` | varchar | Уникальный alias |
-| `name` | varchar | Название дашборда |
-| `prior` | int | Порядок сортировки |
-| `from_auth` | int | Автор (0 = системный) |
-| `from_group` | bigint | Группа |
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | bigint | ID (used as `board_id` in widgets) |
+| `alias` | varchar | Unique alias |
+| `name` | varchar | Dashboard name |
+| `prior` | int | Sort order |
+| `from_auth` | int | Author (0 = system) |
+| `from_group` | bigint | Group |
 
-### Каталог dashboard_widgets
+### The `dashboard_widgets` catalog
 
-Виджеты внутри дашборда. Привязка к дашборду через `board_id`.
+Widgets inside a dashboard. Linked to the dashboard via `board_id`.
 
-| Поле | Тип | Описание |
-|------|-----|----------|
+| Field | Type | Description |
+|-------|------|-------------|
 | `id` | bigint | ID |
-| `alias` | varchar | Уникальный alias |
-| `name` | varchar | Заголовок виджета |
-| `type` | varchar | Тип виджета (см. справочник ниже) |
-| `width` | int | Ширина в колонках Bootstrap (1-12). 4 = треть, 6 = половина, 12 = полная |
-| `aside` | int | Боковой виджет (0/1) |
-| `options` | text | JSON с параметрами виджета (зависит от типа) |
-| `board_id` | varchar | ID дашборда (связь с `dashboards.id`) |
-| `prior` | int | Порядок сортировки (меньше = выше) |
-| `from_auth` | int | Автор |
-| `from_group` | bigint | Группа |
+| `alias` | varchar | Unique alias |
+| `name` | varchar | Widget title |
+| `type` | varchar | Widget type (see reference below) |
+| `width` | int | Width in Bootstrap columns (1-12). 4 = third, 6 = half, 12 = full |
+| `aside` | int | Sidebar widget (0/1) |
+| `options` | text | JSON with widget parameters (depends on type) |
+| `board_id` | varchar | Dashboard ID (links to `dashboards.id`) |
+| `prior` | int | Sort order (lower = higher) |
+| `from_auth` | int | Author |
+| `from_group` | bigint | Group |
 
 ---
 
-## Типы виджетов
+## Widget types
 
-### Графические (данные из каталогов)
+### Chart widgets (data from catalogs)
 
-| Тип | Описание | Визуализация |
-|-----|----------|-------------|
-| `bar-chart` | Столбчатая диаграмма | Chart.js Bar |
-| `pie-chart` | Круговая диаграмма | Chart.js Pie |
-| `doughnut-chart` | Кольцевая диаграмма | Chart.js Doughnut |
-| `line-chart` | Линейная диаграмма | Chart.js Line |
-| `aggr-table` | Сводная таблица | HTML table |
+| Type | Description | Visualization |
+|------|-------------|---------------|
+| `bar-chart` | Bar chart | Chart.js Bar |
+| `pie-chart` | Pie chart | Chart.js Pie |
+| `doughnut-chart` | Doughnut chart | Chart.js Doughnut |
+| `line-chart` | Line chart | Chart.js Line |
+| `aggr-table` | Pivot table | HTML table |
 
-**Параметры options (JSON):**
+**options parameters (JSON):**
 
 ```json
 {
@@ -69,20 +69,20 @@
 }
 ```
 
-| Параметр | Описание |
-|----------|----------|
-| `catalog` | Каталог-источник данных |
-| `pre-filter` | ID сохранённого фильтра (из `/db/saved_filters`) |
-| `fieldX` | Поле для оси X / группировки |
-| `fieldY` | Поле для оси Y / значений |
-| `groupType` | `"count"` — количество, `"sum"` — сумма |
-| `colors` | Массив цветов (hex). Палитра Korfix по умолчанию |
+| Parameter | Description |
+|-----------|-------------|
+| `catalog` | Data source catalog |
+| `pre-filter` | Saved filter ID (from `/db/saved_filters`) |
+| `fieldX` | Field for X axis / grouping |
+| `fieldY` | Field for Y axis / values |
+| `groupType` | `"count"` — count, `"sum"` — sum |
+| `colors` | Color array (hex). Korfix default palette |
 
-### Табличные
+### Table widgets
 
-| Тип | Описание | Параметры options |
-|-----|----------|-------------------|
-| `last-created` | Последние записи каталога | `catalog`, `fields[]`, `limit` |
+| Type | Description | options parameters |
+|------|-------------|-------------------|
+| `last-created` | Latest catalog records | `catalog`, `fields[]`, `limit` |
 
 ```json
 {
@@ -92,23 +92,23 @@
 }
 ```
 
-| Параметр | Описание |
-|----------|----------|
-| `catalog` | Каталог-источник |
-| `fields` | Массив имён полей для отображения в колонках |
-| `limit` | Количество строк (по умолчанию 5) |
+| Parameter | Description |
+|-----------|-------------|
+| `catalog` | Data source catalog |
+| `fields` | Array of field names to display as columns |
+| `limit` | Row count (default 5) |
 
-### Встроенные
+### Built-in widgets
 
-| Тип | Описание |
-|-----|----------|
-| `user-info` | Карточка текущего пользователя |
+| Type | Description |
+|------|-------------|
+| `user-info` | Current user card |
 
-### Маркетплейс-приложение
+### Marketplace app widget
 
-| Тип | Описание |
-|-----|----------|
-| `app-frame` | Iframe с фреймом установленного приложения |
+| Type | Description |
+|------|-------------|
+| `app-frame` | Iframe with an installed app's frame |
 
 ```json
 {
@@ -116,39 +116,39 @@
 }
 ```
 
-| Параметр | Описание |
-|----------|----------|
-| `app_frame` | Формат: `{installed_apps.alias}:{имя_фрейма_из_urls}` |
+| Parameter | Description |
+|-----------|-------------|
+| `app_frame` | Format: `{installed_apps.alias}:{frame_name_from_urls}` |
 
-Фрейм получает стандартные параметры через VMCRMUserApp с `catalog = "dashboard_widgets"`.
+The frame receives standard parameters via VMCRMUserApp with `catalog = "dashboard_widgets"`.
 
 ---
 
-## Работа с API
+## Working with the API
 
-### Получить список дашбордов
+### Get dashboard list
 
 ```js
-// Рекомендуется /api/db/ — возвращает полный список без серверных фильтров каталога
+// Recommended /api/db/ — returns full list without server catalog filters
 const boards = asArray(await App.fetch('/api/db/dashboards?limit=999'));
 // [{id, alias, name, prior, from_auth, from_group}, ...]
 ```
 
-### Получить виджеты дашборда
+### Get dashboard widgets
 
 ```js
 const widgets = asArray(await App.fetchAll('/db/dashboard_widgets.json?form[board_id]=' + boardId));
 // [{id, alias, name, type, width, options, board_id, prior}, ...]
 ```
 
-### Создать виджет
+### Create a chart widget
 
 ```js
-// Столбчатая диаграмма по заказам
+// Bar chart of orders by client
 await App.fetch('/db/dashboard_widgets/add?edit&ajax=1', {
     method: 'POST',
     body: {
-        'form[name]': 'Заказы по клиентам',
+        'form[name]': 'Orders by client',
         'form[type]': 'bar-chart',
         'form[width]': 6,
         'form[board_id]': boardId,
@@ -164,14 +164,14 @@ await App.fetch('/db/dashboard_widgets/add?edit&ajax=1', {
 });
 ```
 
-### Создать виджет-таблицу
+### Create a table widget
 
 ```js
-// Последние задачи
+// Latest tasks
 await App.fetch('/db/dashboard_widgets/add?edit&ajax=1', {
     method: 'POST',
     body: {
-        'form[name]': 'Последние задачи',
+        'form[name]': 'Latest tasks',
         'form[type]': 'last-created',
         'form[width]': 12,
         'form[board_id]': boardId,
@@ -185,19 +185,19 @@ await App.fetch('/db/dashboard_widgets/add?edit&ajax=1', {
 });
 ```
 
-### Создать виджет из приложения (app-frame)
+### Create an app-frame widget
 
-Приложение может программно добавить свой фрейм как виджет дашборда:
+An app can programmatically add its frame as a dashboard widget:
 
 ```js
-// Нужен token инсталляции и имя фрейма из config.json urls
+// Need the install token and frame name from config.json urls
 const params = await App.getRequestParams();
 const appFrame = params.data.token + ':widget';  // token:frameName
 
 await App.fetch('/db/dashboard_widgets/add?edit&ajax=1', {
     method: 'POST',
     body: {
-        'form[name]': 'Мой виджет',
+        'form[name]': 'My Widget',
         'form[type]': 'app-frame',
         'form[width]': 6,
         'form[board_id]': boardId,
@@ -207,19 +207,19 @@ await App.fetch('/db/dashboard_widgets/add?edit&ajax=1', {
 });
 ```
 
-### Создать виджет по данным кастомного каталога
+### Create a widget for custom catalog data
 
-Приложение с self-provisioning может создавать виджеты для своих данных:
+An app with self-provisioning can create widgets for its own data:
 
 ```js
-// Приложение создало каталог custom_tickets (сервис-деск)
-// Теперь добавляет виджет на дашборд
+// App created catalog custom_tickets (service desk)
+// Now adding widgets to the dashboard
 
-// Круговая диаграмма тикетов по статусу
+// Doughnut chart of tickets by status
 await App.fetch('/db/dashboard_widgets/add?edit&ajax=1', {
     method: 'POST',
     body: {
-        'form[name]': 'Тикеты по статусу',
+        'form[name]': 'Tickets by status',
         'form[type]': 'doughnut-chart',
         'form[width]': 4,
         'form[board_id]': boardId,
@@ -234,11 +234,11 @@ await App.fetch('/db/dashboard_widgets/add?edit&ajax=1', {
     }
 });
 
-// Таблица последних тикетов
+// Table of latest tickets
 await App.fetch('/db/dashboard_widgets/add?edit&ajax=1', {
     method: 'POST',
     body: {
-        'form[name]': 'Последние тикеты',
+        'form[name]': 'Latest tickets',
         'form[type]': 'last-created',
         'form[width]': 8,
         'form[board_id]': boardId,
@@ -254,30 +254,30 @@ await App.fetch('/db/dashboard_widgets/add?edit&ajax=1', {
 
 ---
 
-## Use-case: создание дашборда при установке
+## Use-case: creating a dashboard on install
 
-Приложение может при первом запуске создать дашборд с преднастроенными виджетами:
+An app can create a dashboard with pre-configured widgets on first run:
 
 ```js
 async function createDashboardWithWidgets() {
-    // 1. Создать дашборд
+    // 1. Create dashboard
     const resp = await App.fetch('/db/dashboards/add?edit&ajax=1', {
         method: 'POST',
-        body: { 'form[name]': 'Сервис-деск', submit: 1 }
+        body: { 'form[name]': 'Service Desk', submit: 1 }
     });
 
-    // 2. Получить ID созданного дашборда
+    // 2. Get the created dashboard ID
     const boards = asArray(await App.fetchAll('/db/dashboards.json'));
-    const board = boards.find(b => b.name === 'Сервис-деск');
+    const board = boards.find(b => b.name === 'Service Desk');
     if (!board) return;
 
-    // 3. Добавить виджеты
+    // 3. Add widgets
     const widgets = [
-        { name: 'Тикеты по статусу', type: 'doughnut-chart', width: 4,
+        { name: 'Tickets by status', type: 'doughnut-chart', width: 4,
           options: { catalog: 'custom_tickets', fieldX: 'custom_status', fieldY: 'id', groupType: 'count' }},
-        { name: 'По приоритету', type: 'bar-chart', width: 4,
+        { name: 'By priority', type: 'bar-chart', width: 4,
           options: { catalog: 'custom_tickets', fieldX: 'custom_priority', fieldY: 'id', groupType: 'count' }},
-        { name: 'Последние тикеты', type: 'last-created', width: 12,
+        { name: 'Latest tickets', type: 'last-created', width: 12,
           options: { catalog: 'custom_tickets', fields: ['name', 'custom_status', 'custom_priority'], limit: '8' }},
     ];
 
@@ -296,15 +296,15 @@ async function createDashboardWithWidgets() {
         });
     }
 
-    App.alert('Дашборд "Сервис-деск" создан с 3 виджетами');
+    App.alert('Dashboard "Service Desk" created with 3 widgets');
 }
 ```
 
 ---
 
-## Справочник цветов
+## Color reference
 
-Палитра Korfix для графиков:
+Korfix color palette for charts:
 
 ```js
 const colors = [
@@ -315,17 +315,17 @@ const colors = [
 
 ---
 
-## Пример приложения
+## Sample app
 
-Полный рабочий пример работы с дашбордами и виджетами — приложение **dashboard-share** из коллекции эталонных миниапов Korfix.
+A complete working example of dashboards and widgets — the **dashboard-share** app from the Korfix reference miniapps collection.
 
-Реализует экспорт/импорт виджетов между дашбордами и демонстрирует:
-- Загрузку списка дашбордов через `/api/db/dashboards`
-- Чтение виджетов по `board_id`
-- Массовое создание виджетов с уникальными `alias`
-- Явную передачу `from_auth` / `from_group` для корректной принадлежности
-- Точку интеграции `itemsActions` (контекстное меню элемента каталога)
+It implements widget export/import between dashboards and demonstrates:
+- Loading dashboard list via `/api/db/dashboards`
+- Reading widgets by `board_id`
+- Bulk widget creation with unique `alias`
+- Explicit `from_auth` / `from_group` for correct ownership
+- The `itemsActions` integration point (catalog item context menu)
 
 ---
 
-**Дальше:** [deploy.md](deploy.md) · **← [Home](index.md)**
+**Next:** [deploy.md](deploy.md) · **← [Home](index.md)**

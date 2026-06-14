@@ -10,33 +10,28 @@ You develop games and gamification miniapps for the Korfix ERP marketplace using
 
 ## MANDATORY — read these first
 
-Documentation (public, https://docs.korfix.info/gamedev/):
+Documentation is bundled locally in `${CLAUDE_PLUGIN_ROOT}/docs/gamedev/` (synced from korfixdev/docs, English):
 
-1. **[gamedev/concepts.md](https://docs.korfix.info/gamedev/concepts)** — Korn, quests, profile, and games model. **Start here** to understand the contracts.
-2. **[gamedev/api-reference.md](https://docs.korfix.info/gamedev/api-reference)** — full reference for `/api/korgames/*` with request/response structures. Don't guess field names.
-3. **[gamedev/recipes.md](https://docs.korfix.info/gamedev/recipes)** — recipes for all typical tasks. Copy, substitute, don't reinvent.
-4. **[gamedev/styling.md](https://docs.korfix.info/gamedev/styling)** — styling rules (transparent body, game-frame, CSS tokens, buttons).
-5. **[gamedev/project-structure.md](https://docs.korfix.info/gamedev/project-structure)** — modular structure frames/core/modules/locales/styles, i18n pattern.
+1. **`docs/gamedev/concepts.md`** — Korn, quests, profile, and games model. **Start here** to understand the contracts.
+2. **`docs/gamedev/api-reference.md`** — full reference for `/api/korgames/*` with request/response structures. Don't guess field names.
+3. **`docs/gamedev/recipes.md`** — recipes for all typical tasks. Copy, substitute, don't reinvent.
+4. **`docs/gamedev/styling.md`** — styling rules (transparent body, game-frame, CSS tokens, buttons).
+5. **`docs/gamedev/project-structure.md`** — modular structure frames/core/modules/locales/styles, i18n pattern.
+6. **`docs/gamedev/coin-clicker-walkthrough.md`** — line-by-line walkthrough of the reference app.
 
-Reference applications — external source (not bundled with the plugin). Primary workflow:
+**No reference apps are bundled in the plugin.** The walkthrough + recipes are enough to build a
+miniapp from scratch. If the user wants to work on top of actual source files — ask where they are
+(local path) or a public repo; don't assume an `etalon-apps/` directory exists.
 
-- Documentation [docs.korfix.info/gamedev/coin-clicker-walkthrough](https://docs.korfix.info/gamedev/coin-clicker-walkthrough) — line-by-line walkthrough of the reference app
-- [docs.korfix.info/gamedev/recipes](https://docs.korfix.info/gamedev/recipes) — ready-to-use snippets for all mechanics
-- [docs.korfix.info/gamedev/project-structure](https://docs.korfix.info/gamedev/project-structure) — modular project structure
+## Environment & token — before any API call
 
-This is sufficient to build a miniapp from scratch using the template. If the user wants the actual source files — ask where they are (the developer panel may have them locally) or where to find them on GitHub/public location.
-
-## Env-check — before any API call
-
-Same as `korfix-miniapp-dev`:
-
-1. Check `KORFIX_API_URL`, `KORFIX_TOKEN`, `KORFIX_MCP_URL`.
-2. If anything is missing — **ask**, don't guess the instance.
-3. **Never** commit tokens into code.
+**Run skill `korfix-token-audit`** — it is the single source (shared with `korfix-miniapp-dev`) for
+the environment presence check (Step 0) and the token capability audit. Guardrails: never default an
+instance without confirmation; never commit tokens into code.
 
 ## Package convention — MANDATORY
 
-- `package: "game-<alias>"` (`game-` prefix for all game miniapps) — see [config-korgames.md § package](https://docs.korfix.info/gamedev/config-korgames).
+- `package: "game-<alias>"` (`game-` prefix for all game miniapps) — see `docs/gamedev/config-korgames.md` § package.
 - `package: "games-*"` — only for system apps (Games Hub itself). Don't use for games.
 - No prefix → regular business miniapp.
 
@@ -47,7 +42,7 @@ Cross-app discovery works by searching by package — otherwise your game will n
 ### New game
 
 1. **Ask** the user about the mechanics (gameplay, win conditions, what's sold in the shop). This is not standard CRUD — design discovery is needed.
-2. **Build the structure** per the documentation [docs.korfix.info/gamedev/project-structure](https://docs.korfix.info/gamedev/project-structure):
+2. **Build the structure** per `docs/gamedev/project-structure.md`:
    ```
    my-game/
    ├── config.json            (with korgames section, package: "game-*")
@@ -58,7 +53,7 @@ Cross-app discovery works by searching by package — otherwise your game will n
    ├── locales/{en,ru}.json
    └── styles/style.css
    ```
-   Section snippets in [docs.korfix.info/gamedev/coin-clicker-walkthrough](https://docs.korfix.info/gamedev/coin-clicker-walkthrough).
+   Section snippets in `docs/gamedev/coin-clicker-walkthrough.md`.
 3. **Substitute**:
    - `config.json`: name, alias, `package: "game-<alias>"`, version, about, tags, `korgames.game_id`, `korgames.items[]`.
    - `modules/game.js` — custom gameplay.
@@ -66,18 +61,19 @@ Cross-app discovery works by searching by package — otherwise your game will n
    - `locales/{en,ru}.json` — texts.
 4. **Add permissions** to config.json (minimum `sys_game_scores`, `sys_game_profiles` if rendering leaderboard/profile).
 5. **Deploy**:
+   - Endpoints → canonical decision table in `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/deploy.md`.
    - First time: `POST /api/db/marketplace` with zip — you'll get an `id`.
-   - Updates: `POST /api/marketplace/deploy/{id}` (update + refresh appconfig).
+   - Updates (default): `POST /api/db/marketplace/{id}`. Use `POST /api/marketplace/deploy/{id}` only when you need to force an `appconfig` refresh in one call.
 6. **Test** by installing under all-demo@korfix.info — verify score is written to sys_game_scores, shop works, profile works.
 
 ### Extending Games Hub or other system gamedev miniapps
 
-1. Patterns described in [docs.korfix.info/gamedev/project-structure](https://docs.korfix.info/gamedev/project-structure) and the walkthrough.
+1. Patterns described in `docs/gamedev/project-structure.md` and the walkthrough.
 2. Follow the modular structure (new tab — new file in `modules/`).
-3. SWR cache for tabs is mandatory — helper template in [recipes.md](https://docs.korfix.info/gamedev/recipes).
+3. SWR cache for tabs is mandatory — helper template in `docs/gamedev/recipes.md`.
 4. Check what's in `access_db` — without write permission `/db/sys_*.json` returns an empty array.
 
-## Key rules (all in [api-reference.md](https://docs.korfix.info/gamedev/api-reference) and [recipes.md](https://docs.korfix.info/gamedev/recipes))
+## Key rules (all in `docs/gamedev/api-reference.md` and `docs/gamedev/recipes.md`)
 
 1. **The game doesn't mint Korn.** Emission via Games::earnCorn, source from whitelist. Only through quests/mechanics defined in sys_quests.
 2. **Body in `App.fetch`** — object, not `JSON.stringify`. Don't pass `undefined` as the second argument.

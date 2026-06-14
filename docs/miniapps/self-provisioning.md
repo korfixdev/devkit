@@ -1,127 +1,87 @@
-# Self-provisioning: создание структур данных
+# Self-provisioning: Creating Data Structures
 
-> **См. также:** [data-api.md](data-api.md) · [catalog-rules.md](catalog-rules.md) · [catalog-settings.md](catalog-settings.md) · [korfix-catalogs.md](korfix-catalogs.md)
+> **See also:** [data-api.md](data-api.md) · [catalog-rules.md](catalog-rules.md) · [catalog-settings.md](catalog-settings.md) · [korfix-catalogs.md](korfix-catalogs.md)
 > **← [Home](index.md)**
 
-Приложение может создавать себе каталоги (таблицы) и кастомные поля при установке или первом запуске.
+An app can create its own catalogs (tables) and custom fields on install or first run.
 
 ---
 
-## Требования к токену / правам
+## Token / permission requirements
 
-Для self-provisioning из миниапа (`App.fetch` через сессию) — ничего дополнительного не нужно, сессия пользователя покрывает.
+For self-provisioning from the miniapp (`App.fetch` via session) — no extras needed, the user session covers it.
 
-Для работы через Bearer-токен (скрипты, CI, внешние агенты) у токена должны быть классы:
+For Bearer token access (scripts, CI, external agents) the token needs these classes:
 
-| Класс | Зачем |
+| Class | Purpose |
 |---|---|
-| `db_custom_dbtables_get` | Проверка существования каталога в реестре |
-| `db_custom_dbtables_post` | Создание кастомного каталога |
-| `db_custom_dbfields_post` | Создание полей каталога |
-| `db_access_db_get` | Чтение auto-created записи прав (для последующего обновления) |
-| `db_access_db_post` | Обновление прав для ролей (`configureAccess` helper) |
+| `db_custom_dbtables_get` | Check catalog existence in the registry |
+| `db_custom_dbtables_post` | Create a custom catalog |
+| `db_custom_dbfields_post` | Create catalog fields |
+| `db_access_db_get` | Read the auto-created permissions record (for subsequent update) |
+| `db_access_db_post` | Update permissions for roles (`configureAccess` helper) |
 
-Если какого-то класса нет — self-provisioning упадёт с 403 на первом же запросе. Агент-разработчик должен запустить [`korfix-token-audit`](../../devkit-skills/korfix-token-audit/) перед началом работы, чтобы не споткнуться об это посреди процесса.
+If any class is missing — self-provisioning will fail with 403 on the first request. Developer agents should run [`korfix-token-audit`](../../devkit-skills/korfix-token-audit/) before starting to avoid hitting this mid-process.
 
 ---
 
-### Встроенный инсталлер (рекомендуемый)
+### Built-in installer (recommended)
 
-Приложение при первом запуске проверяет наличие каталога и предлагает кнопку установки.
-Не требует токенов или доступа к терминалу — работает через сессионную авторизацию (`App.fetch()`).
+The app checks for the catalog on first run and prompts an install button.
+No tokens or terminal access needed — works via session auth (`App.fetch()`).
 
-#### Проверка существования каталога
+#### Checking catalog existence
 
-**Важно**: нельзя проверять существование кастомного каталога через `/db/{catalog}.json` —
-при несуществующем каталоге CRM не возвращает ошибку, а fallback'ит на дефолтный каталог
-(возвращает данные другого каталога со `status: "ok"`). Приложение ошибочно решит что каталог
-существует и не покажет экран установки.
+**Important**: don't check custom catalog existence via `/db/{catalog}.json` —
+when the catalog doesn't exist, CRM doesn't return an error; instead it falls back to a default catalog
+(returns data from another catalog with `status: "ok"`). The app would incorrectly decide the catalog exists and skip the install screen.
 
-**Правильный способ** — проверять через реестр `custom_dbtables`:
+**Correct way** — check via the `custom_dbtables` registry:
 
 ```js
 const CATALOG = 'custom_quicknotes';
 
 async function checkCatalogExists() {
     try {
-        // dbname = имя таблицы без префикса custom_ (quicknotes, не custom_quicknotes)
+        // dbname = table name without custom_ prefix (quicknotes, not custom_quicknotes)
         const resp = await App.fetch('/db/custom_dbtables.json?form[dbname]=quicknotes');
-        // Из iframe ответ двойной: массив в resp.data.data; прямой вызов: resp.data
-        const items = resp?.data?.data ?? (Array.isArray(resp?.data) ? resp.data : []);
-        return items.length > 0;
+        return !!(resp && resp.data && Array.isArray(resp.data) && resp.data.length > 0);
     } catch (e) {}
     return false;
 }
 ```
 
-Для приложений с несколькими каталогами — универсальная функция:
+For apps with multiple catalogs — a universal function:
 
 ```js
 async function checkCatalogExists(catalogName) {
     try {
         const tablename = catalogName.replace('custom_', '');
         const resp = await App.fetch('/db/custom_dbtables.json?form[dbname]=' + tablename);
-        const items = resp?.data?.data ?? (Array.isArray(resp?.data) ? resp.data : []);
-        return items.length > 0;
+        return !!(resp && resp.data && Array.isArray(resp.data) && resp.data.length > 0);
     } catch (e) {}
     return false;
 }
 ```
 
-#### Идемпотентность установщика: "уже используется" и "duplicate" — норма
+#### Creating a catalog and fields
 
-Физическая таблица в БД **шарится между всеми аккаунтами** в одном облаке (разные `from_group`, одна физическая таблица `crm__custom_{dbname}`). Это значит:
-
-- Пользователь А установил приложение → таблица и поля созданы физически
-- Пользователь Б устанавливает то же приложение → `createTable` вернёт `"уже используется"`, `createField` вернёт `"duplicate"`
-- Это **штатное поведение**, не ошибка: таблица уже существует, установщик должен просто добавить права (`configureAccess`) и двигаться дальше
-
-Пока аккаунты в одном облаке без изолированных баз, код установщика обязан обрабатывать эти ответы как успех:
-
-```js
-async function createTable() {
-    const resp = await App.fetch('/db/custom_dbtables/add?edit&ajax=1', {
-        method: 'POST',
-        body: { /* ... */ }
-    });
-    const status  = resp?.data?.status ?? resp?.status;
-    const message = resp?.data?.message ?? resp?.message ?? '';
-    // "уже используется" = таблица есть от другого аккаунта, всё в порядке
-    if (status === 'error' && message.includes('уже использу')) return;
-    if (status !== 'ok') throw new Error(`createTable: ${message || JSON.stringify(resp)}`);
-}
-
-async function createField(field) {
-    const resp = await App.fetch('/db/custom_dbfields/add?edit&ajax=1', {
-        method: 'POST',
-        body: { /* ... */ }
-    });
-    const status  = resp?.data?.status ?? resp?.status;
-    const message = resp?.data?.message ?? resp?.message ?? '';
-    // "duplicate" = поле уже существует физически от другого аккаунта
-    if (status === 'error' && /duplicate|уже использу/i.test(message)) return;
-    if (status !== 'ok') throw new Error(`createField(${field.dbname}): ${message || JSON.stringify(resp)}`);
-}
-```
-
-#### Создание каталога и полей
-
-> **Обязательное поле `scheme`** при создании `custom_dbtables`.
-> Это template-схема — набор базовых полей (`id`, `alias`, `name`, `ts`, `hidden`, `from_auth`, `from_group`), на основе которой создаётся физическая таблица в БД. Без этого поля платформа не знает из чего строить таблицу и отклоняет запрос.
+> **Required field `scheme`** when creating `custom_dbtables`.
+> This is a template schema — a set of base fields (`id`, `alias`, `name`, `ts`, `hidden`, `from_auth`, `from_group`) on which the physical database table is built. Without this field the platform doesn't know how to build the table and rejects the request.
 >
-> Сейчас доступно **одно значение**: `coredb_def_catalog` — дефолтная схема каталога. Платформа может расширить варианты в будущем, актуальный список — через `App.fetch('/db/custom_dbtables/sheme.json')` → поле `scheme.arr`.
+> Currently one value is available: `coredb_def_catalog` — the default catalog schema. The platform may add more options in future; current list — via `App.fetch('/db/custom_dbtables/sheme.json')` → `scheme.arr` field.
 >
-> **Не путать** с полем `scheme` в `custom_dbfields` — там это ссылка на целевой каталог (`custom_X`), для которого создаётся поле.
+> **Don't confuse** with the `scheme` field in `custom_dbfields` — there it's a reference to the target catalog (`custom_X`) for which the field is being created.
 
 ```js
 const FIELDS = [
-    { name: 'Текст заметки',  dbname: 'content',   type: 'textarea', f_maxlen: 65535 },
-    { name: 'Приоритет',      dbname: 'priority',   type: 'select',   f_arr: 'обычный\nважный\nсрочный', f_default: 'обычный' },
-    { name: 'Статус',         dbname: 'status',     type: 'select',   f_arr: 'активная\nвыполнена\nархив', f_default: 'активная' },
-    { name: 'Дедлайн',        dbname: 'due_date',   type: 'datetime' },
+    { name: 'Note text',  dbname: 'content',   type: 'textarea', f_maxlen: 65535 },
+    { name: 'Priority',   dbname: 'priority',   type: 'select',   f_arr: 'normal\nimportant\nurgent', f_default: 'normal' },
+    { name: 'Status',     dbname: 'status',     type: 'select',   f_arr: 'active\ndone\narchive', f_default: 'active' },
+    { name: 'Deadline',   dbname: 'due_date',   type: 'datetime' },
 ];
 
-// Получить ID текущего пользователя (для from_auth/from_group)
+// Get current user ID (for from_auth/from_group)
 let currentUserId = 0;
 async function loadUserId() {
     const schema = await App.fetch('/db/custom_dbtables/sheme.json');
@@ -140,7 +100,7 @@ async function createTable() {
             'form[alias]': uid(),
             'form[name]': 'Quick Notes',
             'form[dbname]': 'quicknotes',
-            'form[scheme]': 'coredb_def_catalog',  // ОБЯЗАТЕЛЬНО: template-схема каталога
+            'form[scheme]': 'coredb_def_catalog',  // REQUIRED: catalog template schema
             'form[from_auth]': currentUserId,
             'form[from_group]': currentUserId,
             submit: 1
@@ -172,47 +132,47 @@ async function runInstall() {
         await createField(field);
     }
 
-    // ОБЯЗАТЕЛЬНО: настроить права в access_db, иначе каталог невидим обычным ролям.
-    // Default = 2 (self — каждый видит только свои записи) — типовой best-default.
-    // Для коллаборативных каталогов (общие задачи, клиенты) — передать 1.
-    // Функция configureAccess определена в разделе "Права доступа (access_db)" ниже.
+    // REQUIRED: configure permissions in access_db, otherwise the catalog is invisible to regular roles.
+    // Default = 2 (self — each user sees only their own records) — typical best-default.
+    // For collaborative catalogs (shared tasks, clients) — pass 1.
+    // configureAccess function is defined in "Access permissions (access_db)" section below.
     await configureAccess(CATALOG);  // CATALOG = 'custom_quicknotes'
 }
 ```
 
-> Без `configureAccess` после `createTable` каталог будет виден только админам — обычные роли получат пустой `data: []` (см. раздел «Права доступа (access_db)» ниже).
+> Without `configureAccess` after `createTable`, the catalog is visible only to admins — regular roles get empty `data: []` (see the "Access permissions (access_db)" section below).
 
-#### Полный паттерн: HTML с экраном установки (ready-made UX)
+#### Full pattern: HTML install screen (ready-made UX)
 
-Правильный экран установки должен:
+A correct install screen should:
 
-- Сохранять **лог установки** в `App.storage` — чтобы при повторном открытии пользователь видел что было сделано
-- При повторном открытии (каталог уже создан) давать возможность **«Переустановить»** или **«Закрыть»** — а не просто показывать пустоту
-- Обрабатывать ошибки и показывать кнопку «Повторить»
+- Save an **install log** to `App.storage` — so on re-open the user can see what was done
+- On re-open (catalog already exists) — offer **"Reinstall"** or **"Close"** — not just show a blank screen
+- Handle errors and show a "Retry" button
 
 ```html
-<!-- Экран установки (скрыт по умолчанию) -->
+<!-- Install screen (hidden by default) -->
 <div id="installScreen" style="display:none;">
-    <h2 id="installTitle">Установка приложения</h2>
-    <p id="installIntro">Для работы нужен каталог данных. Нажмите кнопку установки.</p>
+    <h2 id="installTitle">App Installation</h2>
+    <p id="installIntro">A data catalog is needed. Click the install button.</p>
     <div class="install-actions">
-        <button id="btnInstall" class="btn btn-primary">Установить структуру данных</button>
-        <button id="btnReinstall" class="btn btn-secondary" style="display:none;">Переустановить</button>
-        <button id="btnClose" class="btn btn-stroke" style="display:none;">Закрыть</button>
+        <button id="btnInstall" class="btn btn-primary">Install data structure</button>
+        <button id="btnReinstall" class="btn btn-secondary" style="display:none;">Reinstall</button>
+        <button id="btnClose" class="btn btn-stroke" style="display:none;">Close</button>
     </div>
     <pre id="installLog" style="background:#f5f5f5;padding:12px;margin-top:16px;max-height:300px;overflow:auto;font-size:12px;white-space:pre-wrap;"></pre>
 </div>
 
-<!-- Рабочий UI (скрыт по умолчанию) -->
+<!-- Main UI (hidden by default) -->
 <div id="mainUI" style="display:none;">
-    <!-- ... основной интерфейс приложения ... -->
+    <!-- ... main app interface ... -->
 </div>
 
 <script type="module">
 import VMCRMUserApp from '/templates/def/db/marketplace/vmcrm-user-app.js';
 const App = new VMCRMUserApp();
 
-const LOG_KEY = 'install.log';  // ключ в App.storage для сохранения лога
+const LOG_KEY = 'install.log';  // App.storage key for saving the log
 
 // ---- helpers ----
 
@@ -230,7 +190,7 @@ async function saveLog() {
 
 async function loadSavedLog() {
     const rec = await App.storage.get(LOG_KEY);
-    return rec?.value ?? '';  // ← правильное чтение через .value
+    return rec?.value ?? '';  // ← correct read via .value
 }
 
 // ---- init ----
@@ -239,30 +199,30 @@ async function init() {
     const exists = await checkCatalogExists();
 
     if (!exists) {
-        // Первый запуск — чистый экран установки, только кнопка Установить
+        // First run — clean install screen, only Install button
         document.getElementById('installScreen').style.display = '';
         return;
     }
 
-    // Каталог уже есть → показать mainUI, но дать доступ к «переустановить»
+    // Catalog exists → show mainUI, but give access to "reinstall"
     document.getElementById('mainUI').style.display = '';
     loadData();
 
-    // Кнопка «⚙ Переустановить» где-то в настройках → открывает installScreen с логом
-    // Здесь можно добавить обработчик на иконку шестерёнки
+    // "⚙ Reinstall" button somewhere in settings → opens installScreen with log
+    // Add handler for the gear icon here
 }
 
 async function openInstallScreen(isReinstall = false) {
     document.getElementById('mainUI').style.display = 'none';
     document.getElementById('installScreen').style.display = '';
 
-    // Показать сохранённый лог из предыдущей установки
+    // Show saved log from previous install
     const savedLog = await loadSavedLog();
     document.getElementById('installLog').textContent = savedLog;
 
     if (isReinstall) {
-        document.getElementById('installTitle').textContent = 'Переустановка приложения';
-        document.getElementById('installIntro').textContent = 'Структура уже создана. Можно переустановить (пересоздаст поля) или закрыть.';
+        document.getElementById('installTitle').textContent = 'App Reinstallation';
+        document.getElementById('installIntro').textContent = 'Structure already created. You can reinstall (recreates fields) or close.';
         document.getElementById('btnInstall').style.display = 'none';
         document.getElementById('btnReinstall').style.display = '';
         document.getElementById('btnClose').style.display = '';
@@ -274,45 +234,45 @@ async function openInstallScreen(isReinstall = false) {
 document.getElementById('btnInstall').addEventListener('click', async () => {
     const btn = document.getElementById('btnInstall');
     btn.disabled = true;
-    btn.textContent = 'Установка...';
-    logLine('Начинаем установку...');
+    btn.textContent = 'Installing...';
+    logLine('Starting installation...');
 
     try {
-        await runInstall((msg) => logLine(msg));  // runInstall вызывает logLine для каждого шага
-        logLine('✓ Установка завершена');
+        await runInstall((msg) => logLine(msg));  // runInstall calls logLine for each step
+        logLine('✓ Installation complete');
         await saveLog();
 
-        // Переход к основному UI
+        // Go to main UI
         document.getElementById('installScreen').style.display = 'none';
         document.getElementById('mainUI').style.display = '';
         loadData();
     } catch (e) {
-        logLine(`✗ Ошибка: ${e.message}`);
+        logLine(`✗ Error: ${e.message}`);
         await saveLog();
         btn.disabled = false;
-        btn.textContent = 'Повторить установку';
+        btn.textContent = 'Retry installation';
     }
 });
 
 document.getElementById('btnReinstall').addEventListener('click', async () => {
-    if (!confirm('Переустановить? Это пересоздаст недостающие поля. Данные в существующих записях сохранятся.')) return;
+    if (!confirm('Reinstall? This will recreate missing fields. Data in existing records will be preserved.')) return;
     const btn = document.getElementById('btnReinstall');
     btn.disabled = true;
-    btn.textContent = 'Переустановка...';
-    logLine('--- Переустановка ---');
+    btn.textContent = 'Reinstalling...';
+    logLine('--- Reinstallation ---');
 
     try {
         await runInstall((msg) => logLine(msg));
-        logLine('✓ Переустановка завершена');
+        logLine('✓ Reinstallation complete');
         await saveLog();
-        alert('Готово');
+        alert('Done');
         document.getElementById('installScreen').style.display = 'none';
         document.getElementById('mainUI').style.display = '';
     } catch (e) {
-        logLine(`✗ Ошибка: ${e.message}`);
+        logLine(`✗ Error: ${e.message}`);
         await saveLog();
         btn.disabled = false;
-        btn.textContent = 'Повторить переустановку';
+        btn.textContent = 'Retry reinstallation';
     }
 });
 
@@ -325,222 +285,127 @@ init();
 </script>
 ```
 
-**Ключевые моменты:**
+**Key points:**
 
-1. `LOG_KEY = 'install.log'` — лог сохраняется в `App.storage` (изолированное хранилище миниапа), переживает рестарт браузера
-2. При повторном открытии installScreen — подтягивается сохранённый лог через `loadSavedLog()` (чтение через `.value`, не напрямую)
-3. Две кнопки: **«Установить»** для первого запуска и **«Переустановить»** для повторного запуска с существующим каталогом
-4. Кнопка **«Закрыть»** — чтобы просто выйти из installScreen без действий
-5. `runInstall(cb)` принимает callback для логирования каждого шага (`logLine('Создаю поле X...')` изнутри)
-6. Лог сохраняется даже при ошибке — можно потом посмотреть что было
+1. `LOG_KEY = 'install.log'` — log saved in `App.storage` (isolated app storage), survives browser restart
+2. On re-open of installScreen — saved log is loaded via `loadSavedLog()` (read via `.value`, not directly)
+3. Two buttons: **"Install"** for first run and **"Reinstall"** for re-run with existing catalog
+4. **"Close"** button — to exit installScreen without action
+5. `runInstall(cb)` takes a callback for logging each step (`logLine('Creating field X...')` from inside)
+6. Log is saved even on error — can be reviewed later
 
-### Внешний скрипт (curl / CI/CD)
+### External script (curl / CI/CD)
 
-Создание структуры через терминал с bearer-токеном:
+Creating structure via terminal with Bearer token:
 
 ```bash
-# Создать каталог
+# Create catalog
 curl -s -X POST "$API_URL/api/db/custom_dbtables" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"form": {"name": "Quick Notes", "dbname": "quicknotes"}}'
 
-# Добавить поле
+# Add field
 curl -s -X POST "$API_URL/api/db/custom_dbfields" \
   -H "Authorization: Bearer $TOKEN" \
-  -d 'form[name]=Текст&form[dbname]=content&form[type]=textarea&form[scheme]=custom_quicknotes&submit=1'
+  -d 'form[name]=Note text&form[dbname]=content&form[type]=textarea&form[scheme]=custom_quicknotes&submit=1'
 ```
 
-### Типы полей
+### Field types
 
-| `type` | Описание |
-|--------|----------|
-| `textbox` | Однострочный текст |
-| `textarea` | Многострочный текст |
-| `select` | Выпадающий список |
-| `checkbox` | Чекбокс |
-| `datetime` | Дата и время |
-| `photo` | Загрузка файла |
-| `select_from_table` | Выбор из другого каталога |
+| `type` | Description |
+|--------|-------------|
+| `textbox` | Single-line text |
+| `textarea` | Multi-line text |
+| `select` | Dropdown list |
+| `checkbox` | Checkbox |
+| `datetime` | Date and time |
+| `photo` | File upload |
+| `select_from_table` | Select from another catalog |
 
-Значения для `select`: передавать в `f_arr` через `\n` (перенос строки).
+Values for `select`: pass in `f_arr` separated by `\n` (newline).
 
-**Важно**: в JS-коде поля кастомного каталога доступны с префиксом `custom_` — например `note.custom_content`, `note.custom_priority`.
+**Important**: in JS code, custom catalog fields are accessed with the `custom_` prefix — e.g. `note.custom_content`, `note.custom_priority`.
 
 ---
 
-## Права доступа (access_db) — ОБЯЗАТЕЛЬНО
+## Access permissions (access_db) — REQUIRED
 
-### Что такое access_db и чем оно НЕ является
+### What access_db is and what it is NOT
 
-**`access_db` — это не аутентификация.** Пользователь залогинен в Korfix, у него есть сессия или Bearer-токен, `App.fetch('/db/...')` работает — это **аутентификация**.
+**`access_db` is not authentication.** The user is logged into Korfix, they have a session or Bearer token, `App.fetch('/db/...')` works — this is **authentication**.
 
-**`access_db` — это row-level видимость каталога для каждой роли.** Даже если пользователь залогинен и физически может сделать запрос — платформа отфильтрует записи (или вообще вернёт пустоту) в зависимости от его `account_type` и настроек `access_db` для этого каталога.
+**`access_db` is row-level visibility of the catalog per role.** Even if the user is logged in and can physically make a request — the platform will filter records (or return empty data) based on their `account_type` and the `access_db` settings for that catalog.
 
-| Механизм | Что контролирует | Где настраивается |
+| Mechanism | Controls | Configured in |
 |---|---|---|
-| **Сессия / Bearer** | Может ли запрос вообще быть выполнен (401 если нет) | Логин пользователя или `/db/api` токен |
-| **`permissions` в config.json** | Что миниап может делать через `App.fetch` (sandbox) | `config.json` → `permissions.catalogs` |
-| **`access_db`** | **Какие записи пользователь с данной ролью может видеть** в каталоге (0/1/2 — нет/все/свои) | Каталог `/db/access_db`, одна запись на (каталог × тенант) |
+| **Session / Bearer** | Whether the request can be executed at all (401 if not) | User login or `/db/api` token |
+| **`permissions` in config.json** | What the miniapp can do via `App.fetch` (sandbox) | `config.json` → `permissions.catalogs` |
+| **`access_db`** | **Which records a user with a given role can see** in the catalog (0/1/2 — none/all/own) | Catalog `/db/access_db`, one record per (catalog × tenant) |
 
-Без корректной записи в `access_db` миниап **получит пустой список** (или HTTP 200 с `data: []`), даже если API-запрос формально прошёл и у пользователя есть сессия. Это частая причина «у меня всё по документации, но список пустой».
+Without a correct `access_db` record, the miniapp **will get an empty list** (or HTTP 200 with `data: []`), even if the API request formally succeeded and the user has a session. This is a common cause of "I followed the docs but the list is empty".
 
-### Результат авто-создания
+### Auto-creation result
 
-Когда создаётся запись в `custom_dbtables` (через UI, API/Bearer или `App.fetch` из миниапа) — срабатывает afteradd-хук, который **автоматически создаёт запись в `access_db`** с правами **только для администраторов**: `acctype_root=1, acctype_adm=1`, остальные роли = `0` (нет доступа).
+When a record is created in `custom_dbtables` (via UI, API/Bearer, or `App.fetch` from the miniapp) — an afteradd hook fires that **automatically creates a record in `access_db`** with permissions **for administrators only**: `acctype_root=1, acctype_adm=1`, all other roles = `0` (no access).
 
-Это означает:
+This means:
 
-- Каталог **сразу виден** пользователю с ролью root/adm (обычно создателю приложения — администратору)
-- **Не виден** другим ролям (менеджер, оператор, клиент и т.д.) — они получат пустой список `data: []` при `App.fetch('/db/custom_X.json')`
-- Если миниап предназначен для других ролей — приложение **должно обновить** `access_db` с нужными `acctype_*` значениями (см. паттерн `configureAccess` ниже)
+- The catalog is **immediately visible** to users with root/adm role (usually the app creator — an admin)
+- **Not visible** to other roles (manager, operator, client, etc.) — they get empty `data: []` from `App.fetch('/db/custom_X.json')`
+- If the miniapp is intended for other roles — the app **must update** `access_db` with the appropriate `acctype_*` values (see `configureAccess` pattern below)
 
-Одна физическая таблица `crm__custom_{dbname}` шарится между аккаунтами (разными `from_group`), но `access_db` создаётся per-аккаунт — поэтому каждый аккаунт независимо настраивает права для своих ролей.
+One physical table `crm__custom_{dbname}` is shared between accounts (different `from_group`), but `access_db` is created per-account — so each account independently configures permissions for its roles.
 
-На `access_db` действует уникальный ключ `UNIQUE (dbmodule, from_auth, from_group)`. Операционно для одного каталога у одного аккаунта — **одна запись** (с `from_auth = ID владельца каталога`, `from_group = ID аккаунта`). Права внутри записи заданы колонками `acctype_*` — не нужно (и не следует) создавать дополнительные записи чтобы "расширить доступ".
+`access_db` has a unique constraint `UNIQUE (dbmodule, from_auth, from_group)`. For one catalog in one account — **one record** (with `from_auth = catalog owner ID`, `from_group = account ID`). Permissions are set via `acctype_*` columns — don't create additional records to "expand access".
 
-!!! warning "Анти-паттерн: `from_auth = 0` в access_db"
+!!! warning "Anti-pattern: `from_auth = 0` in access_db"
 
-    В обычных каталогах `from_auth = 0` означает "запись принадлежит всей группе" (видна всем участникам `from_group`), и это легитимный паттерн. На уровне save-логики сервер разрешает этот `0` сознательно.
+    In regular catalogs `from_auth = 0` means "record belongs to the whole group" (visible to all members of `from_group`), and that's a legitimate pattern.
 
-    **В `access_db` так делать нельзя.** Видимость каталога роли определяется значениями `acctype_*` (`0`/`1`/`2`) — сам механизм row-ownership через `from_auth` для этой таблицы **не применяется платформой**. Создавать вторую запись с `(dbmodule, 0, from_group)` "чтобы было видно всем" — бессмысленно, это только добавит дубликат в списке `/db/access_db`, а реальных прав не расширит.
+    **In `access_db` this must not be done.** Catalog visibility per role is determined by `acctype_*` values (`0`/`1`/`2`) — the row-ownership mechanism via `from_auth` is **not applied by the platform** for this table. Creating a second record with `(dbmodule, 0, from_group)` "to make it visible to all" is pointless — it only adds a duplicate in `/db/access_db`, without granting any real permissions.
 
-    Правильно: одна запись `(dbmodule, owner_id, from_group)` с нужными `acctype_*`.
+    Correct: one record `(dbmodule, owner_id, from_group)` with appropriate `acctype_*`.
 
-**Важно — серверная подстановка from_auth/from_group:**
+**Important — server-side from_auth/from_group substitution:**
 
-С апреля 2026 платформа (при включённом `FEATURES_USED.auth_role`) автоматически подставляет `from_group` и `from_auth` из сессии/токена при INSERT/UPDATE в любой каталог. Клиенту больше **не нужно** передавать их вручную в `form[from_auth]`/`form[from_group]` — сервер возьмёт значения из авторизации. Если клиент всё же передаёт, эти значения проходят валидацию:
+Since April 2026 the platform (when `FEATURES_USED.auth_role` is enabled) automatically substitutes `from_group` and `from_auth` from the session/token on INSERT/UPDATE to any catalog. Clients no longer **need** to pass them manually in `form[from_auth]`/`form[from_group]` — the server takes values from auth. If the client does pass them, these values go through validation:
 
-- non-admin не может указать чужой `from_group` / чужой `from_auth` — сервер заменит на свой
-- admin может точечно назначить владельца (`from_auth = конкретный ID`) или перенести в другую группу
-- `from_auth = 0` всегда разрешён (общая для группы) — для `access_db` это анти-паттерн (см. выше)
+- Non-admins cannot specify another's `from_group` / another's `from_auth` — server replaces with their own
+- Admins can explicitly assign an owner (`from_auth = specific ID`) or transfer to another group
+- `from_auth = 0` is always allowed (group-wide) — for `access_db` this is an anti-pattern (see above)
 
-Это убирает старую боль "записи создаются с `from_group=0` если не передать руками". Теперь ручная передача — только для явного трансфера (админ).
+This eliminates the old pain of "records created with `from_group=0` if not passed manually". Manual passing is now only for explicit transfers (admin).
 
-### Когда приложение должно думать об access_db
+### When the app must think about access_db
 
-При проектировании миниапа **обязательно определиться** какие роли должны видеть каталог и как:
+When designing a miniapp **always decide** which roles should see the catalog and how:
 
-- **Только админы** — оставить как есть (дефолт). Подходит для служебных/настроечных каталогов.
-- **Персональные данные всех ролей** — каждая роль → `acctype_* = 2` (self, только свои записи). Подходит для заметок, ToDo, настроек, черновиков.
-- **Коллаборация** — выбранные роли → `acctype_* = 1` (все записи организации). Подходит для задач, клиентов, сделок.
-- **Смешанно** — точечно по ролям (админ видит всё, клиент только свои, аналитик только read-only — через дополнительные механизмы прав).
+- **Admin only** — leave as-is (default). Suitable for service/config catalogs.
+- **Personal data for all roles** — each role → `acctype_* = 2` (self, only own records). Suitable for notes, ToDo, settings, drafts.
+- **Collaboration** — selected roles → `acctype_* = 1` (all org records). Suitable for tasks, clients, deals.
+- **Mixed** — per-role (admin sees all, client only own, analyst read-only — via additional permission mechanisms).
 
-Если из контекста задачи **не ясно** какую схему выбрать — **спроси пользователя**:
-> «Этот каталог — для какой роли? Видно только админу, или нужно чтобы разные роли видели свои записи, или чтобы все видели все?»
+If from the task context **it's not clear** which scheme to choose — **ask the user**:
+> "Which role is this catalog for? Visible only to admin, or should different roles see their own records, or should everyone see everything?"
 
-Не угадывай. От этого зависит правильная настройка `access_db`.
+Don't guess. The correct `access_db` configuration depends on this.
 
-### Обновление прав через API
+### Updating permissions via API
 
-Паттерн `configureAccess` — обновляет (или создаёт если нет) запись в access_db всем ролям текущего инстанса одним значением:
+The `configureAccess` pattern — updates (or creates if missing) the `access_db` record for all roles of the current instance with one value:
 
 ```js
 async function configureAccess(catalog, defaultValue = 2) {
-    const schemaResp = await App.fetch('/db/access_db/sheme.json');
-    // Из iframe ответ двойной: поля в schemaResp.data.data; прямой вызов: schemaResp.data
-    const schemaFields = schemaResp?.data?.data ?? schemaResp?.data ?? {};
-    const acctypeFields = Object.keys(schemaFields)
+    const schema = await App.fetch('/db/access_db/sheme.json');
+    const acctypeFields = Object.keys(schema.data || {})
         .filter(k => k.startsWith('acctype_'));
 
-    // Проверить существует ли запись
-    const existingResp = await App.fetch(`/db/access_db.json?form[dbmodule]=${catalog}`);
-    const existing = (existingResp?.data?.data ?? (Array.isArray(existingResp?.data) ? existingResp.data : []))?.[0];
+    // Check if record exists
+    const existing = (await App.fetch(
+        `/db/access_db.json?form[dbmodule]=${catalog}`
+    )).data?.[0];
 
-    const body = {
-        'form[dbmodule]': catalog,
-        'form[name]': catalog,
-        submit: 1,
-    };
-    for (const field of acctypeFields) {
-        body[`form[${field}]`] = defaultValue;
-    }
-
-    if (!existing) {
-        // Создаём новую запись
-        body['form[alias]'] = Date.now().toString(36) + Math.random().toString(36).substr(2, 8);
-        const resp = await App.fetch('/db/access_db/add?edit&ajax=1', {
-            method: 'POST',
-            body
-        });
-        if (!resp || resp.status === 'error' || resp.status === 'no') {
-            throw new Error(`Failed to create access_db entry: ${JSON.stringify(resp)}`);
-        }
-    } else {
-        // Обновляем существующую
-        body['form[id]'] = existing.id;
-        body['form[alias]'] = existing.alias;
-        const resp = await App.fetch(`/db/access_db/${existing.alias}?edit&ajax=1`, {
-            method: 'POST',
-            body
-        });
-        if (!resp || resp.status === 'error' || resp.status === 'no') {
-            throw new Error(`Failed to update access_db entry: ${JSON.stringify(resp)}`);
-        }
-    }
-}
-```
-
-Раньше пример показывал только update-ветку с `if (!access) return` — это **ошибка**, если запись access_db не была создана автоматически (API-путь), миниап молча не получил бы никаких прав. Теперь правильный паттерн всегда — **create-or-update**.
-
-Это означает:
-- Менеджер, оператор, клиент, бухгалтер и т.д. **не увидят** твой каталог, даже если залогинены и позвали `App.fetch('/db/custom_my_catalog.json')`
-- Ответ вернётся со `status: ok`, но `data: []` — это выглядит как «каталог пустой», хотя данные есть
-- Если миниап встроен как виджет каталога, который установил админ — работать будет только у админа
-- Для корректной работы — обязательно прописать права нужным ролям (см. паттерн `configureAccess` ниже)
-
-### Структура access_db
-
-| Поле | Значение |
-|------|----------|
-| `dbmodule` | Alias каталога **с** префиксом `custom_` (`custom_my_catalog`) |
-| `name` | Название (обычно совпадает с `dbmodule`) |
-| `from_group` | Тенант пользователя (из `getUser().group`) |
-| `acctype_root` | Права для роли «Администратор» (0/1/2) |
-| `acctype_adm` | Права для роли «Менеджер» (0/1/2) |
-| `acctype_res`, `acctype_fin`, `acctype_ag1`..`ag6`, `acctype_ec1`..`ec5`, `acctype_b2b1`..`b2b3`, `acctype_md1`..`md3` | Права для соответствующих ролей |
-
-**Значения `acctype_*`:**
-
-| Значение | Доступ | Когда использовать |
-|----------|--------|--------------------|
-| `0` | Нет доступа (каталог скрыт) | Роль не должна видеть этот каталог вообще |
-| `1` | Все записи организации (своего `from_group`) | Совместная работа: задачи, клиенты, сделки — видят все сотрудники |
-| `2` | Только свои (`from_auth = свой user_id`) | Персональные данные: заметки, черновики, настройки |
-
-Список ролей **специфичен для инстанса** — на `panel.korfix.ru` один набор, на self-hosted может быть другой. Получить актуальный список: `App.fetch('/db/access_db/sheme.json')` → смотреть поля с префиксом `acctype_` в ответе.
-
-### Best practice: дефолт «2 всем ролям» (self-access)
-
-**Самый безопасный и типовой дефолт — выдать всем ролям значение `2` (только свои записи).** Этого достаточно для большинства приложений: каждый пользователь видит только то, что создал сам.
-
-Когда выбирать другое:
-- **Значение `1`** (все записи организации) — для коллаборативных каталогов: задачи (все видят все задачи компании), клиенты CRM, сделки, склад
-- **Значение `0`** (нет доступа) — для технических/внутренних каталогов, которые не должен видеть конкретный тип аккаунта
-- **Смешанно** — если роли реально отличаются (админ видит всё, менеджер видит всё своей группы, клиент видит только свои заявки)
-
-### Готовый паттерн: «self всем» (рекомендуемый дефолт)
-
-Функция работает как **create-or-update** — если запись access_db отсутствует (типичный кейс при self-provisioning через API, когда afteradd-хук не отработал), она создаётся. Если уже есть — обновляется.
-
-```js
-function uid() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2, 8);
-}
-
-async function configureAccess(catalog, defaultValue = 2) {
-    // 1. Получить список полей acctype_* из схемы
-    const schemaResp = await App.fetch('/db/access_db/sheme.json');
-    // Из iframe postMessage оборачивает ответ: поля в .data.data; прямой вызов: .data
-    const schemaFields = schemaResp?.data?.data ?? schemaResp?.data ?? {};
-    const acctypeFields = Object.keys(schemaFields)
-        .filter(k => k.startsWith('acctype_'));
-
-    // 2. Проверить существует ли запись для нашего каталога
-    const existingResp = await App.fetch(`/db/access_db.json?form[dbmodule]=${catalog}`);
-    const existing = (existingResp?.data?.data ?? (Array.isArray(existingResp?.data) ? existingResp.data : []))?.[0];
-
-    // 3. Собрать body со всеми acctype_* = defaultValue
     const body = {
         'form[dbmodule]': catalog,
         'form[name]': catalog,
@@ -552,14 +417,14 @@ async function configureAccess(catalog, defaultValue = 2) {
 
     let resp;
     if (!existing) {
-        // Создаём новую запись — платформа через API не создаёт автоматически
-        body['form[alias]'] = uid();
+        // Create new record
+        body['form[alias]'] = Date.now().toString(36) + Math.random().toString(36).substr(2, 8);
         resp = await App.fetch('/db/access_db/add?edit&ajax=1', {
             method: 'POST',
             body
         });
     } else {
-        // Обновляем существующую
+        // Update existing
         body['form[id]'] = existing.id;
         body['form[alias]'] = existing.alias;
         resp = await App.fetch(`/db/access_db/${existing.alias}?edit&ajax=1`, {
@@ -568,7 +433,6 @@ async function configureAccess(catalog, defaultValue = 2) {
         });
     }
 
-    // 4. Проверить результат — App.fetch не бросает при status:'error' / 'no'
     if (!resp || resp.status === 'error' || resp.status === 'no') {
         throw new Error(
             `configureAccess(${catalog}) failed: ${resp?.message || JSON.stringify(resp)}`
@@ -576,68 +440,56 @@ async function configureAccess(catalog, defaultValue = 2) {
     }
 }
 
-// Использование в installer:
-await configureAccess('custom_quicknotes');           // все роли → self (2)
-await configureAccess('custom_shared_tasks', 1);      // все роли → all (1)
+// In installer:
+await configureAccess('custom_quicknotes');           // all roles → self (2)
+await configureAccess('custom_shared_tasks', 1);      // all roles → all (1)
 ```
 
-Функция сама подтянет актуальный список ролей текущего инстанса — не надо хардкодить `acctype_adm`, `acctype_b2b2` и т.д.
+The function automatically fetches the current instance's role list — don't hardcode `acctype_adm`, `acctype_b2b2`, etc.
 
-### Что делать миниапу при установке
+### access_db structure
 
-Три варианта по убыванию предпочтения:
+| Field | Value |
+|-------|-------|
+| `dbmodule` | Catalog alias **with** `custom_` prefix (`custom_my_catalog`) |
+| `name` | Name (usually same as `dbmodule`) |
+| `from_group` | User's tenant (from `getUser().group`) |
+| `acctype_root` | Permissions for "Administrator" role (0/1/2) |
+| `acctype_adm` | Permissions for "Manager" role (0/1/2) |
+| `acctype_res`, `acctype_fin`, `acctype_ag1`..`ag6`, `acctype_ec1`..`ec5`, `acctype_b2b1`..`b2b3`, `acctype_md1`..`md3` | Permissions for corresponding roles |
 
-**1. Автоматически: self всем ролям** (best default — большинство апп-случаев)
+**`acctype_*` values:**
 
-```js
-await configureAccess('custom_my_catalog');  // см. функцию выше
-```
+| Value | Access | When to use |
+|-------|--------|-------------|
+| `0` | No access (catalog hidden) | Role must not see this catalog at all |
+| `1` | All org records (own `from_group`) | Collaboration: tasks, clients, deals — visible to all staff |
+| `2` | Only own (`from_auth = own user_id`) | Personal data: notes, drafts, settings |
 
-**2. Автоматически: конкретные значения для конкретных ролей** (если нужна коллаборация)
+The role list is **instance-specific** — `panel.korfix.ru` has one set, self-hosted may have another. Get the current list: `App.fetch('/db/access_db/sheme.json')` → fields with `acctype_` prefix.
 
-```js
-await configureAccess('custom_tasks', 1);  // все видят все
-// или точечно:
-await App.fetch(`/db/access_db/${access.alias}?edit&ajax=1`, {
-    method: 'POST',
-    body: {
-        'form[id]': access.id,
-        'form[alias]': access.alias,
-        'form[dbmodule]': access.dbmodule,
-        'form[acctype_adm]': 1,      // менеджер — все
-        'form[acctype_b2b2]': 2,     // оператор — только свои
-        'form[acctype_b2b3]': 0,     // клиент — скрыто
-        submit: 1
-    }
-});
-```
+### Best practice: default "2 for all roles" (self-access)
 
-**3. Делегировать админу** (если бизнес-логика прав сложная)
+**The safest and most common default — give all roles value `2` (only own records).** This is sufficient for most apps: each user sees only what they created.
 
-В `about` → «Настройка» написать: «После установки откройте `/db/access_db`, найдите запись для `custom_my_catalog`, проставьте права ролям». Это OK если администратор однозначно понимает что выставлять.
-
-### Важные нюансы
-
-- **Запись `access_db` создаётся автоматически** после INSERT в `custom_dbtables` с дефолтом `acctype_root=1, acctype_adm=1` (остальные роли = 0). Это работает одинаково через UI и через API.
-- `dbmodule` в `access_db` содержит **полный alias с префиксом** `custom_` — НЕ `dbname` из `custom_dbtables` (там без префикса).
-- Изменение `access_db` требует прав уровня **администратор** — обычный пользователь не сможет обновить права через свой токен. Миниап должен либо запускаться в контексте админа при установке, либо делегировать это пользователю.
-- `from_group` должен совпадать с тенантом пользователя, иначе запись относится к чужой группе.
-- **При удалении каталога** (soft-delete `hidden=1`) запись в `access_db` **не удаляется автоматически** — платформа сохраняет права на случай восстановления каталога или если таблица шарится с другими аккаунтами. Очистка вручную при необходимости.
-- **Физическая таблица** `crm__custom_{dbname}` **также не удаляется** при soft-delete каталога — в ней могут быть данные других аккаунтов (разные `from_group` в одной общей таблице). Удаление только через SQL/админа.
+When to choose otherwise:
+- **Value `1`** (all org records) — for collaborative catalogs: tasks (all see all company tasks), CRM clients, deals, warehouse
+- **Value `0`** (no access) — for technical/internal catalogs that a specific account type shouldn't see
+- **Mixed** — if roles genuinely differ (admin sees all, manager sees all in their group, client sees only their requests)
 
 ---
 
-## MCP-доступ к кастомным каталогам после установки
+## MCP access to custom catalogs after install
 
-Когда MCP-агент работает через Bearer-токен — он видит только каталоги из поля `custom_catalogs` токена. Каталоги, созданные через self-provisioning, **не попадают туда автоматически**.
+When an MCP agent works via Bearer token — it sees only the catalogs from the token's `custom_catalogs` field. Catalogs created via self-provisioning **are not added there automatically**.
 
-### Способ 1 — Вручную (admin UI)
+### Method 1 — Manual (admin UI)
 
-После установки: `/db/api` → найти токен → поле **«Доступ к кастомным каталогам»** → выбрать каталог → сохранить.
+After install: `/db/api` → find the token → **"Access to custom catalogs"** field → select the catalog → save.
 
-### Способ 2 — Автоматически из install-фрейма
+### Method 2 — Automatically from the install frame
 
-Требует: токен имеет `db_api_get` + `db_api_post` в `apiclasses_id`.
+Requires: token has `db_api_get` + `db_api_post` in `apiclasses_id`.
 
 ```js
 async function registerCatalogForMCP(catalogAlias, tokenAlias) {
@@ -664,17 +516,17 @@ async function registerCatalogForMCP(catalogAlias, tokenAlias) {
     }
 }
 
-// В runInstall() — опциональный шаг, оборачиваем в try/catch:
+// In runInstall() — optional step, wrap in try/catch:
 try {
     await registerCatalogForMCP('custom_quicknotes', tokenAlias)
-    logLine('✓ Каталог зарегистрирован для MCP')
+    logLine('✓ Catalog registered for MCP')
 } catch (e) {
-    logLine(`⚠ MCP-регистрация пропущена: ${e.message} — добавьте вручную в /db/api`)
+    logLine(`⚠ MCP registration skipped: ${e.message} — add manually in /db/api`)
 }
 ```
 
-`tokenAlias` — alias токена, который нужно обновить. Не хардкодить в коде: спросить пользователя в форме установки или передать через параметры фрейма.
+`tokenAlias` — alias of the token to update. Don't hardcode in code: ask the user in the install form or pass via frame parameters.
 
 ---
 
-**Дальше:** [styling.md](styling.md) · **← [Home](index.md)**
+**Next:** [styling.md](styling.md) · **← [Home](index.md)**

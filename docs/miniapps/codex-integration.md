@@ -1,93 +1,94 @@
-# Использование документации без Claude Code плагина
+# Using the docs without the Claude Code plugin
 
 > **← [Home](index.md)**
 
-Плагин `korfix-devkit` написан под **Claude Code** и использует механизмы skills/agents.
-Если вы работаете в **Codex**, **Cursor**, **Gemini CLI** или другом AI-инструменте без поддержки
-plugin/agent/skill — эта страница объясняет как получить тот же результат.
+The `korfix-devkit` plugin is built for **Claude Code** and relies on its skills/agents mechanism.
+If you work in **Codex**, **Cursor**, **Gemini CLI**, or any other AI tool without plugin/agent/skill
+support — this page explains how to get the same result.
 
 ---
 
-## Как работает плагин (для понимания)
+## How the plugin works (for context)
 
-В Claude Code плагин даёт:
-- **Skills** — markdown-файлы с инструкциями, которые AI читает по запросу
-- **Agents** — специализированные роли с набором правил
-- **Docs** — справочная документация по API и платформе
+In Claude Code the plugin provides:
 
-Без этого механизма нужно просто **передавать контент skills и docs в контекст вручную**.
+- **Skills** — markdown files with instructions that the AI reads on demand
+- **Agents** — specialised roles with rule sets
+- **Docs** — API and platform reference
+
+Without that mechanism, you simply **pass the skill and doc contents into the model's context manually**.
 
 ---
 
-## Быстрый старт для Codex / Cursor / другого AI
+## Quick start for Codex / Cursor / other AI
 
-### 1. Главная точка входа
+### 1. Main entry point
 
-Перед началом любой работы с миниапами передай AI содержимое этих файлов:
+Before any miniapp work, give the AI the contents of these files:
 
 ```
-docs/miniapps/rules.md          — правила песочницы (обязательно)
-docs/miniapps/getting-started.md — первый миниап
+docs/miniapps/rules.md           — sandbox rules (required)
+docs/miniapps/getting-started.md — first miniapp
 ```
 
-### 2. Выбери нужные документы по задаче
+### 2. Pick the docs that match your task
 
-| Задача | Файлы для передачи в контекст |
-|--------|-------------------------------|
-| Создать новый миниап | `rules.md` + `getting-started.md` + `config-json.md` + `styling.md` |
-| Работа с данными каталогов | `data-api.md` + `js-api.md` |
-| Хранение настроек приложения | `storage-and-hooks.md` |
-| Создание каталога при установке | `self-provisioning.md` + `data-api.md` |
-| Дашборд-виджет | `dashboards.md` + `config-json.md` |
-| Деплой | `deploy.md` |
-| Проверка перед релизом | `checklist.md` |
+| Task | Files to pass into context |
+|------|----------------------------|
+| Create a new miniapp | `rules.md` + `getting-started.md` + `config-json.md` + `styling.md` |
+| Work with catalog data | `data-api.md` + `js-api.md` |
+| Persist app settings | `storage-and-hooks.md` |
+| Create a catalog at install time | `self-provisioning.md` + `data-api.md` |
+| Dashboard widget | `dashboards.md` + `config-json.md` |
+| Deploy | `deploy.md` |
+| Pre-release checks | `checklist.md` |
 
-### 3. Вместо skill — передай содержимое SKILL.md
+### 3. Skills — pass `SKILL.md` contents directly
 
-Каждый skill в плагине — это файл `skills/<name>/SKILL.md`. Передай его напрямую в контекст:
+Each skill in the plugin is a file at `skills/<name>/SKILL.md`. Paste it straight into the context:
 
-| Нужная функция | Файл |
-|----------------|------|
-| Работа с каталогами (CRUD) | `skills/korfix-crud-data/SKILL.md` |
-| JS внутри iframe | `skills/korfix-js-api/SKILL.md` |
-| Схема каталога | `skills/korfix-catalog-schema/SKILL.md` |
-| Конфиг миниапа | `skills/korfix-miniapp-config/SKILL.md` |
-| Проверка перед деплоем | `skills/korfix-miniapp-validate/SKILL.md` |
+| What you need | File |
+|---------------|------|
+| Catalog CRUD | `skills/korfix-crud-data/SKILL.md` |
+| JS inside the iframe | `skills/korfix-js-api/SKILL.md` |
+| Catalog schema | `skills/korfix-catalog-schema/SKILL.md` |
+| Miniapp config | `skills/korfix-miniapp-config/SKILL.md` |
+| Pre-deploy validation | `skills/korfix-miniapp-validate/SKILL.md` |
 | Self-provisioning | `skills/korfix-self-provisioning/SKILL.md` |
-| Аудит токена | `skills/korfix-token-audit/SKILL.md` |
+| Token audit | `skills/korfix-token-audit/SKILL.md` |
 
-### 4. Вместо agent — передай содержимое agents/*.md
+### 4. Agents — pass `agents/*.md` contents directly
 
-Роли агентов описаны в `agents/`:
+Agent roles live in `agents/`:
 
-| Роль | Файл |
+| Role | File |
 |------|------|
-| Разработчик миниапов | `agents/korfix-miniapp-dev.md` |
-| Аналитик требований | `agents/korfix-analyst.md` |
-| Архитектор | `agents/korfix-architect.md` |
+| Miniapp developer | `agents/korfix-miniapp-dev.md` |
+| Requirements analyst | `agents/korfix-analyst.md` |
+| Architect | `agents/korfix-architect.md` |
 | Gamedev | `agents/korfix-gamedev.md` |
-| Валидатор | `agents/korfix-miniapp-validator.md` |
+| Validator | `agents/korfix-miniapp-validator.md` |
 
 ---
 
-## Пример промпта для Codex
+## Sample prompt for Codex
 
 ```
-Ты разработчик миниапов для платформы Korfix.
-Правила работы: [вставь содержимое agents/korfix-miniapp-dev.md]
-Правила песочницы: [вставь содержимое docs/miniapps/rules.md]
-JS API: [вставь содержимое skills/korfix-js-api/SKILL.md]
+You are a miniapp developer for the Korfix platform.
+Working rules: [paste contents of agents/korfix-miniapp-dev.md]
+Sandbox rules: [paste contents of docs/miniapps/rules.md]
+JS API: [paste contents of skills/korfix-js-api/SKILL.md]
 
-Задача: создай миниап для учёта заявок клиентов.
+Task: build a miniapp that tracks customer applications.
 ```
 
 ---
 
-## Замечания
+## Notes
 
-- Все пути в документации — относительные внутри iframe (`/db/catalog.json`), не нужно домен
-- Переменные окружения (`KORFIX_API_URL`, `KORFIX_TOKEN`) задай через .env или напрямую в инструкции AI
-- Актуальная онлайн-версия документации: [docs.korfix.info](https://docs.korfix.info)
+- All documentation paths are relative to the platform inside the iframe (`/db/catalog.json`) — no domain needed.
+- Environment variables (`KORFIX_API_URL`, `KORFIX_TOKEN`) — set them via `.env` or directly in the AI's instructions.
+- Up-to-date online docs: [docs.korfix.info](https://docs.korfix.info).
 
 ---
 

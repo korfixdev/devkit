@@ -59,11 +59,17 @@ If after the architect's response there are forks that depend on the user's choi
 
 If needed, run the architect again for a refined analysis.
 
-### Phase 4 — Spec assembly and README.md
+### Phase 4 — Spec assembly and SPEC.md
 
-Compile everything into a technical README.md. Save to the working directory (if not specified — create a folder with the app name in the current directory).
+Compile everything into a technical `SPEC.md` (the requirements/spec artifact). Save to the working
+directory (if not specified — create a folder with the app name in the current directory).
 
-**README.md structure:**
+> **SPEC.md vs README.md:** you own `SPEC.md` — the up-front requirements & design. The developer's
+> `README.md` (maintained by `korfix-tech-writer`) is the living technical doc that ships in the zip.
+> They are separate files: never write the spec into `README.md`, and the dev/tech-writer must not
+> overwrite `SPEC.md`.
+
+**SPEC.md structure:**
 
 ```markdown
 # [Application Name] — Technical Specification
@@ -159,14 +165,21 @@ Where and how it appears in the CRM:
 | 0.1.0 | YYYY-MM-DD | Initial spec |
 ```
 
-After saving the file — tell the user:
+After saving the file — give the user a 2-3 line summary of the spec and confirm direction. Then
+**hand off to development yourself**: spawn the `korfix-miniapp-dev` agent via the `Agent` tool,
+passing the path to `SPEC.md`. Do not ask the user to type a command — you have the `Agent` tool, use it.
 
 ```
-README.md with the technical spec is ready: {path to file}
-
-Next step: pass it to the korfix-miniapp-dev agent — it will read the spec and start development.
-You can say: "Develop the application using the spec at {path}"
+SPEC.md is ready: {path}. Summary: {2-3 lines}.
+→ Launching korfix-miniapp-dev to implement it from this spec.
 ```
+
+Then call the `Agent` tool with `subagent_type: korfix-miniapp-dev` and a prompt like:
+"Implement the miniapp described in the spec at {path to SPEC.md}. Read the spec first, then follow
+your normal development → validation → deploy workflow."
+
+> For a **game/gamification** spec, hand off to `korfix-gamedev` instead of `korfix-miniapp-dev`.
+> If the user hasn't yet confirmed they want to proceed to build, ask once before spawning.
 
 ## Rules
 
@@ -182,8 +195,7 @@ If the idea involves a **game or gamification** (works with Korn/quests/leaderbo
 
 - **Agent:** `korfix-gamedev` (instead of `korfix-miniapp-dev` during implementation)
 - **Skill:** `korfix-gamedev` (in this same plugin)
-- **Documentation:** [docs.korfix.info/gamedev/](https://docs.korfix.info/gamedev/) — start with `concepts.md`, then `recipes.md`
-- **Reference apps:** `etalon-apps/games-hub/` and `etalon-apps/coin-clicker/` — source of truth for structure, patterns, and best practices
+- **Documentation:** bundled locally in `${CLAUDE_PLUGIN_ROOT}/docs/gamedev/` — start with `concepts.md`, then `recipes.md`. No reference apps are bundled; reconstruct from `coin-clicker-walkthrough.md` + `recipes.md` (local sources only if the user points to them).
 
 Your own discovery interview for gamedev — additionally ask:
 - How does the user **earn** Korn / points? (clicks / matches / levels / time?)
@@ -197,4 +209,4 @@ In the gamedev miniapp spec, be sure to describe:
 - Which quests (new) are required and what `condition_type` they use (if no standard one exists — note that a core module change is needed)
 - Which permissions on catalogs (minimum `sys_game_scores`, `sys_game_profiles`)
 
-For architectural questions on gamedev — in `korfix-architect` pass a link to the conceptual document: `https://docs.korfix.info/gamedev/concepts`.
+For architectural questions on gamedev — point `korfix-architect` to the bundled `${CLAUDE_PLUGIN_ROOT}/docs/gamedev/concepts.md`.

@@ -1,33 +1,33 @@
-# Фреймы: стандарты и соглашения
+# Frames: Standards and Conventions
 
-> **См. также:** [config-json.md](config-json.md) · [self-provisioning.md](self-provisioning.md) · [dashboards.md](dashboards.md) · [js-api.md](js-api.md)
+> **See also:** [config-json.md](config-json.md) · [self-provisioning.md](self-provisioning.md) · [dashboards.md](dashboards.md) · [js-api.md](js-api.md)
 > **← [Home](index.md)**
 
-Каждый ключ в `config.json → urls` — это фрейм (iframe). Имя фрейма определяет его роль в архитектуре приложения. Следуй этим соглашениям — они проверяются валидатором.
+Every key in `config.json → urls` is a frame (iframe). The frame name determines its architectural role. Follow these conventions — they are checked by the validator.
 
 ---
 
-## Стандартные типы фреймов
+## Standard frame types
 
-### `install` — экран установки
+### `install` — setup screen
 
-**Когда использовать:** приложение требует self-provisioning (создаёт custom-каталоги/поля).
+**When to use:** the app requires self-provisioning (creates custom catalogs/fields).
 
-**Назначение:** wizard первичной настройки, запускается один раз.
+**Purpose:** first-run setup wizard, runs once.
 
-**Обязательные требования:**
+**Required:**
 
-- Проверяет существование всех нужных каталогов через `custom_dbtables` (не через `/db/{catalog}.json`)
-- **Всегда проверяет РЕАЛЬНЫЙ статус ответа API** — см. раздел «Проверка ответов» ниже
-- Сохраняет лог каждого шага в `App.storage` под ключом `install.log`
-- При повторном открытии (каталог уже создан): показывает сохранённый лог + кнопки «Переустановить» / «Закрыть»
-- Если приложение имеет фрейм `widget` — после успешной установки **авто-добавляет виджет на первый дашборд**
-- После завершения установки — перенаправляет в `main` фрейм:
+- Checks existence of all needed catalogs via `custom_dbtables` (not via `/db/{catalog}.json`)
+- **Always checks the REAL API response status** — see "Checking responses" section below
+- Saves a log of each step to `App.storage` under the key `install.log`
+- On re-open (catalog already exists): shows the saved log + "Reinstall" / "Close" buttons
+- If the app has a `widget` frame — after successful install, **auto-adds the widget to the first dashboard**
+- After install completes — navigates to the `main` frame:
   ```js
   App.navigate(`/db/installed_apps/${params.data.token}?frame=main`);
   ```
 
-**В config.json:**
+**In config.json:**
 ```json
 {
     "urls": { "install": "install.html" },
@@ -37,16 +37,16 @@
 
 ---
 
-### `main` — основной интерфейс
+### `main` — primary interface
 
-**Когда использовать:** приложение имеет пункт в меню CRM или открывается кнопкой «Открыть».
+**When to use:** the app has a CRM menu item or opens via an "Open" button.
 
-**Назначение:** первичный экран пользователя.
+**Purpose:** primary user-facing screen.
 
-**Обязательные требования:**
+**Required:**
 
-- При загрузке проверяет готовность приложения (каталоги существуют, данные доступны)
-- Если приложение не установлено — **перенаправляет на `install` фрейм**:
+- On load, checks the app is ready (catalogs exist, data is accessible)
+- If the app is not installed — **redirects to the `install` frame**:
   ```js
   const App = new VMCRMUserApp();
   const params = await App.getRequestParams();
@@ -56,64 +56,64 @@
       App.navigate(`/db/installed_apps/${params.data.token}?frame=install`);
       return;
   }
-  // Приложение готово — рендерим основной UI
+  // App is ready — render main UI
   ```
-- `urls.main` **обязателен** если приложение добавляет пункт в меню или должно открываться из маркетплейса
+- `urls.main` **is required** if the app adds a menu item or should open from the marketplace
 
-**В config.json:**
+**In config.json:**
 ```json
 {
     "urls": { "main": "main.html", "install": "install.html" },
     "urlsConf": { "main": { "method": "get" } },
-    "menu": { "tt_tasks": { "frame": "main", "name": "Мой модуль" } }
+    "menu": { "tt_tasks": { "frame": "main", "name": "My Module" } }
 }
 ```
 
 ---
 
-### `footer` — встроенный виджет каталога
+### `footer` — embedded catalog widget
 
-**Когда использовать:** приложение встраивается внутри страниц каталога (под таблицей, над/под карточкой).
+**When to use:** the app embeds inside catalog pages (below the table, above/below a card).
 
-**Назначение:** дополнительный UI-блок внутри существующих страниц CRM — не отдельная страница.
+**Purpose:** additional UI block inside existing CRM pages — not a standalone page.
 
-**Обязательные требования:**
+**Required:**
 
-- Компактная вёрстка: без собственного хедера/навбара
-- `App.setFrameSize()` обязателен после каждого render/resize
-- Получает контекст текущего каталога через `params.data.catalog`
+- Compact layout: no own header/navbar
+- `App.setFrameSize()` required after every render/resize
+- Receives current catalog context via `params.data.catalog`
 
-**В config.json:**
+**In config.json:**
 ```json
 {
     "catalogs": {
         "ag_clients": {
-            "catalog.items.footer": { "name": "Мой виджет", "frame": "footer", "width": 6 }
+            "catalog.items.footer": { "name": "My Widget", "frame": "footer", "width": 6 }
         }
     }
 }
 ```
 
-Пустой ключ каталога `""` применяет виджет ко всем каталогам платформы.
-Один html-файл может обслуживать и `footer`, и `widget` — они визуально похожи.
+Empty catalog key `""` applies the widget to all platform catalogs.
+One html file can serve both `footer` and `widget` — they're visually similar.
 
 ---
 
-### `widget` — компактный виджет дашборда
+### `widget` — compact dashboard widget
 
-**Когда использовать:** приложение предоставляет краткую выжимку для рабочего стола.
+**When to use:** the app provides a summary for the workspace.
 
-**Назначение:** встраивание в дашборд через тип `app-frame`.
+**Purpose:** embedding in the dashboard via the `app-frame` type.
 
-**Обязательные требования:**
+**Required:**
 
-- Компактный размер: ширина ≤ 6 колонок, высота минимальная
-- Быстрая загрузка: только суть, без тяжёлых библиотек
-- `App.setFrameSize()` обязателен
-- Работает при `data.catalog === 'dashboard_widgets'` — стандартный контекст дашборда
-- Если приложение имеет self-provisioning (`urls.install`): **install-фрейм обязан авто-установить виджет на первый дашборд**
+- Compact size: width ≤ 6 columns, minimal height
+- Fast loading: just the essentials, no heavy libraries
+- `App.setFrameSize()` required
+- Works with `data.catalog === 'dashboard_widgets'` — standard dashboard context
+- If the app has self-provisioning (`urls.install`): **the install frame must auto-install the widget on the first dashboard**
 
-**В config.json:**
+**In config.json:**
 ```json
 {
     "urls": { "widget": "widget.html" },
@@ -126,10 +126,10 @@
 
 ---
 
-## Паттерн: авто-установка виджета при install
+## Pattern: auto-install widget on setup
 
-Вызывается в конце `runInstall()` — после создания каталогов и прав доступа.
-Ошибка установки виджета **не прерывает** основную установку — пишем в лог и продолжаем.
+Called at the end of `runInstall()` — after creating catalogs and access rights.
+A widget install error **does not abort** the main install — log it and continue.
 
 ```js
 async function installWidgetOnDashboard(appToken, widgetName) {
@@ -137,7 +137,7 @@ async function installWidgetOnDashboard(appToken, widgetName) {
         const resp = await App.fetch('/api/db/dashboards?limit=999');
         const boards = (resp.data || []).sort((a, b) => (a.prior || 0) - (b.prior || 0));
         if (!boards.length) {
-            logLine('⚠ Дашбордов не найдено — виджет можно добавить вручную');
+            logLine('⚠ No dashboards found — widget can be added manually');
             return;
         }
         const board = boards[0];
@@ -158,76 +158,76 @@ async function installWidgetOnDashboard(appToken, widgetName) {
         if (!result || result.status === 'error' || result.status === 'no') {
             throw new Error(result?.message || JSON.stringify(result));
         }
-        logLine('✓ Виджет добавлен на дашборд «' + board.name + '»');
+        logLine('✓ Widget added to dashboard "' + board.name + '"');
     } catch (e) {
-        logLine('⚠ Не удалось добавить виджет автоматически: ' + e.message);
+        logLine('⚠ Could not add widget automatically: ' + e.message);
     }
 }
 
-// Как получить appToken и вызвать:
+// How to get appToken and call:
 const params = await App.getRequestParams();
-const appToken = params.data.token;   // installed_apps.alias текущей установки
-await installWidgetOnDashboard(appToken, 'Название виджета');
+const appToken = params.data.token;   // installed_apps.alias of current install
+await installWidgetOnDashboard(appToken, 'Widget Name');
 ```
 
-> Примечание: `/api/db/dashboards` (не `/db/`) — возвращает полный список без серверных фильтров. Подробнее: [dashboards.md](dashboards.md).
+> Note: `/api/db/dashboards` (not `/db/`) — returns the full list without server-side filters. More: [dashboards.md](dashboards.md).
 
 ---
 
-## Проверка ответов API: всегда обязательна
+## Checking API responses: always required
 
-`App.fetch()` **не бросает исключений** при ошибках API — сервер возвращает HTTP 200 с `status: 'error'` или `status: 'no'` в теле. Это частая причина «установка прошла, но ничего не создалось».
+`App.fetch()` **does not throw exceptions** on API errors — the server returns HTTP 200 with `status: 'error'` or `status: 'no'` in the body. This is a common cause of "installation completed but nothing was created".
 
-**Всегда проверяй реальный статус:**
+**Always check the real status:**
 
 ```js
 const resp = await App.fetch('/db/custom_dbtables/add?edit&ajax=1', { method: 'POST', body });
 
-// НЕПРАВИЛЬНО — молча проглатывает ошибку:
-// install завершится "успешно", но таблица не создалась
-logLine('✓ Таблица создана');  // ← ложный успех
+// WRONG — silently swallows the error:
+// Install will complete "successfully" but the table wasn't created
+logLine('✓ Table created');  // ← false success
 
-// ПРАВИЛЬНО:
+// CORRECT:
 if (!resp || resp.status === 'error' || resp.status === 'no') {
-    throw new Error(`Ошибка создания таблицы: ${resp?.message || JSON.stringify(resp)}`);
+    throw new Error(`Table creation error: ${resp?.message || JSON.stringify(resp)}`);
 }
-logLine(`✓ Таблица создана (alias: ${resp.alias})`);
+logLine(`✓ Table created (alias: ${resp.alias})`);
 ```
 
-Применимо ко всем мутирующим запросам: создание каталогов, полей, виджетов, записей.
-Для чтения (GET-запросы) — проверять через `resp.data` / `Array.isArray(resp.data)`.
+Applies to all mutating requests: creating catalogs, fields, widgets, records.
+For reads (GET requests) — check via `resp.data` / `Array.isArray(resp.data)`.
 
 ---
 
-## Типовая структура файлов
+## Typical file structure
 
 ```
 my-app/
-├── config.json      # обязателен
-├── main.html        # если есть пункт меню / кнопка «Открыть»
-├── install.html     # если есть self-provisioning (custom-каталоги)
-├── widget.html      # если встраивается на дашборд
-├── footer.html      # если встраивается внутрь каталогов (опционально отдельный)
+├── config.json      # required
+├── main.html        # if there's a menu item / "Open" button
+├── install.html     # if there's self-provisioning (custom catalogs)
+├── widget.html      # if embedding on dashboard
+├── footer.html      # if embedding inside catalogs (optionally separate)
 ├── logo.svg
-└── README.md        # обязателен перед деплоем
+└── README.md        # required before deploy
 ```
 
-Один файл может покрывать несколько ролей (например один `widget.html` как `footer` и как `widget`) — допустимо, если UI одинаковый. Соглашение по именам помогает ориентироваться.
+One file can cover multiple roles (e.g. one `widget.html` as both `footer` and `widget`) — acceptable if the UI is the same. Naming conventions aid navigation.
 
 ---
 
-## Правила валидатора
+## Validator rules
 
 ### Critical (FAIL)
 
-- `main.html` присутствует и есть `urls.install` → в `main.html` должен быть `checkCatalogExists` или `App.navigate(...)` с `frame=install`
-- `install.html` содержит мутирующие `App.fetch` без проверки `resp.status`
+- `main.html` present and `urls.install` exists → `main.html` must have `checkCatalogExists` or `App.navigate(...)` with `frame=install`
+- `install.html` has mutating `App.fetch` calls without `resp.status` check
 
 ### Must (WARN)
 
-- `urls.widget` объявлен + есть `urls.install` → в `install.html` должен быть вызов `installWidgetOnDashboard` или аналог
-- `urls.widget` объявлен → `permissions.catalogs` должен содержать `dashboard_widgets: ["read", "write"]`
+- `urls.widget` declared + `urls.install` exists → `install.html` must have `installWidgetOnDashboard` or equivalent
+- `urls.widget` declared → `permissions.catalogs` must contain `dashboard_widgets: ["read", "write"]`
 
 ---
 
-**Дальше:** [self-provisioning.md](self-provisioning.md) · **← [Home](index.md)**
+**Next:** [self-provisioning.md](self-provisioning.md) · **← [Home](index.md)**

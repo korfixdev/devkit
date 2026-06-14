@@ -1,37 +1,37 @@
-# Синхронизация с Bitrix24 (bitrix24_sync)
+# Bitrix24 Synchronization (bitrix24_sync)
 
-> **См. также:** [data-api.md](data-api.md) · [storage-and-hooks.md](storage-and-hooks.md) · [korfix-catalogs.md](korfix-catalogs.md)
+> **See also:** [data-api.md](data-api.md) · [storage-and-hooks.md](storage-and-hooks.md) · [korfix-catalogs.md](korfix-catalogs.md)
 > **← [Home](index.md)**
 
-Платформа поддерживает двустороннюю синхронизацию каталогов с Bitrix24 CRM.
-Миниапы могут читать и управлять настройками синхронизации.
+The platform supports two-way synchronization of catalogs with Bitrix24 CRM.
+Miniapps can read and manage synchronization settings.
 
-> Внутренняя архитектура, REST-клиент, event.php — в [../backend/bitrix24-integration.md](../backend/bitrix24-integration.md)
-
----
-
-## Каталоги
-
-| Каталог | Описание |
-|---------|----------|
-| `bitrix24_sync` | Маппинг каталогов (какой локальный ↔ какой в Bitrix24) |
-| `bitrix24_sync_fieldmap` | Маппинг полей (какое поле ↔ какое поле) |
+> Internal architecture, REST client, event.php — in [../backend/bitrix24-integration.md](../backend/bitrix24-integration.md)
 
 ---
 
-## Чтение настроек синхронизации
+## Catalogs
+
+| Catalog | Description |
+|---------|-------------|
+| `bitrix24_sync` | Catalog mapping (which local catalog ↔ which Bitrix24 entity) |
+| `bitrix24_sync_fieldmap` | Field mapping (which field ↔ which field) |
+
+---
+
+## Reading Sync Settings
 
 ```js
-// Все маппинги каталогов
+// All catalog mappings
 const resp = await App.fetch('/db/bitrix24_sync.json');
 resp.data.forEach(mapping => {
     console.log(mapping.local_catalog);    // "md_project"
     console.log(mapping.bitrix_catalog);   // "deal"
-    console.log(mapping.direction);        // "2" (двустороннее)
+    console.log(mapping.direction);        // "2" (bidirectional)
     console.log(mapping.event_types);      // "0,1" (ADD, UPDATE)
 });
 
-// Маппинги полей для конкретной синхронизации
+// Field mappings for a specific sync
 const fields = await App.fetch(`/db/bitrix24_sync_fieldmap.json?form[sync_id]=${mapping.id}`);
 fields.data.forEach(f => {
     console.log(f.local_field);   // "name"
@@ -42,79 +42,79 @@ fields.data.forEach(f => {
 
 ---
 
-## Направления синхронизации
+## Sync Directions
 
-| Значение `direction` | Описание |
-|----------------------|----------|
-| `0` | Из Bitrix24 → локально |
-| `1` | Локально → в Bitrix24 |
-| `2` | Двустороннее |
+| `direction` value | Description |
+|-------------------|-------------|
+| `0` | From Bitrix24 → local |
+| `1` | Local → to Bitrix24 |
+| `2` | Bidirectional |
 
-## Типы событий
+## Event Types
 
-| Значение `event_types` | Описание |
-|------------------------|----------|
-| `0` | Добавление (ADD) |
-| `1` | Обновление (UPDATE) |
-| `2` | Удаление (DELETE) |
+| `event_types` value | Description |
+|---------------------|-------------|
+| `0` | Add (ADD) |
+| `1` | Update (UPDATE) |
+| `2` | Delete (DELETE) |
 
-Хранятся через запятую: `"0,1"` = ADD + UPDATE.
-
----
-
-## Каталоги Bitrix24
-
-| Значение `bitrix_catalog` | Сущность |
-|---------------------------|----------|
-| `deal` | Сделки |
-| `lead` | Лиды |
-| `contact` | Контакты |
-| `company` | Компании |
-| `product` | Товары |
-| `productsection` | Группы товаров |
-| `item` | Smart-процессы |
-| `user` | Пользователи |
+Stored comma-separated: `"0,1"` = ADD + UPDATE.
 
 ---
 
-## Создание маппинга каталогов
+## Bitrix24 Entities
+
+| `bitrix_catalog` value | Entity |
+|------------------------|--------|
+| `deal` | Deals |
+| `lead` | Leads |
+| `contact` | Contacts |
+| `company` | Companies |
+| `product` | Products |
+| `productsection` | Product groups |
+| `item` | Smart processes |
+| `user` | Users |
+
+---
+
+## Creating a Catalog Mapping
 
 ```js
-// Синхронизировать заказы → сделки Bitrix24 (только обновления)
+// Sync orders → Bitrix24 deals (updates only)
 await App.fetch('/db/bitrix24_sync/add?edit&ajax=1', {
     method: 'POST',
     body: {
-        'form[name]': 'Заказы → Сделки',
+        'form[name]': 'Orders → Deals',
         'form[local_catalog]': 'b2b_orders',
         'form[bitrix_catalog]': 'deal',
-        'form[direction]': '1',            // в Bitrix
+        'form[direction]': '1',            // to Bitrix
         'form[event_types]': ['0', '1'],   // ADD + UPDATE
-        'form[hook_url]': 'https://mycompany.bitrix24.ru/rest/1/abc123/',
+        'form[hook_url]': 'https://mycompany.bitrix24.com/rest/1/abc123/',
         submit: 1
     }
 });
 ```
 
-## Создание маппинга полей
+## Creating a Field Mapping
 
 ```js
-// Связать поле "name" с "TITLE" в Bitrix24
+// Map "name" field to "TITLE" in Bitrix24
 await App.fetch('/db/bitrix24_sync_fieldmap/add?edit&ajax=1', {
     method: 'POST',
     body: {
-        'form[name]': 'Название → TITLE',
-        'form[sync_id]': syncId,           // ID записи из bitrix24_sync
+        'form[name]': 'Name → TITLE',
+        'form[sync_id]': syncId,           // ID from bitrix24_sync record
         'form[local_field]': 'name',
         'form[bitrix_field]': 'TITLE',
         submit: 1
     }
 });
 
-// С маппингом значений (статусы)
+// With value mapping (statuses)
 await App.fetch('/db/bitrix24_sync_fieldmap/add?edit&ajax=1', {
     method: 'POST',
     body: {
-        'form[name]': 'Статус → STAGE_ID',
+        'form[name]': 'Status → STAGE_ID',
         'form[sync_id]': syncId,
         'form[local_field]': 'status',
         'form[bitrix_field]': 'STAGE_ID',
@@ -126,21 +126,21 @@ await App.fetch('/db/bitrix24_sync_fieldmap/add?edit&ajax=1', {
 
 ---
 
-## Фильтрация событий
+## Filtering Events
 
-Можно синхронизировать только записи с определёнными значениями:
+You can sync only records with specific field values:
 
 ```js
-// Синхронизировать только выигранные сделки
+// Sync only won deals
 await App.fetch('/db/bitrix24_sync/add?edit&ajax=1', {
     method: 'POST',
     body: {
-        'form[name]': 'Только выигранные сделки',
+        'form[name]': 'Won deals only',
         'form[local_catalog]': 'ag_projects',
         'form[bitrix_catalog]': 'deal',
-        'form[direction]': '0',               // из Bitrix
+        'form[direction]': '0',               // from Bitrix
         'form[event_types]': ['0', '1'],
-        'form[hook_url]': 'https://mycompany.bitrix24.ru/rest/1/abc123/',
+        'form[hook_url]': 'https://mycompany.bitrix24.com/rest/1/abc123/',
         'form[event_filter_by]': 'STAGE_ID',
         'form[event_filter_values]': 'WON',
         submit: 1
@@ -150,18 +150,18 @@ await App.fetch('/db/bitrix24_sync/add?edit&ajax=1', {
 
 ---
 
-## Сценарии для миниапов
+## Use Cases for Miniapps
 
-### Визуализация статуса синхронизации
+### Visualizing sync status
 
 ```js
-// Проверить, синхронизирован ли каталог с Bitrix24
+// Check if a catalog is synced with Bitrix24
 async function isSyncedWithBitrix(catalog) {
     const resp = await App.fetch(`/db/bitrix24_sync.json?form[local_catalog]=${catalog}`);
     return resp.data.length > 0;
 }
 
-// Получить все синхронизируемые каталоги
+// Get all synced catalogs
 async function getSyncedCatalogs() {
     const resp = await App.fetchAll('/db/bitrix24_sync.json');
     return resp.data.map(m => ({
@@ -172,15 +172,15 @@ async function getSyncedCatalogs() {
 }
 ```
 
-### Мастер настройки интеграции
+### Integration setup wizard
 
-Приложение может предложить пошаговый мастер: выбор каталогов,
-маппинг полей, тестирование соединения — упрощая настройку для пользователя.
+An app can offer a step-by-step wizard: catalog selection,
+field mapping, connection testing — simplifying setup for the user.
 
-### Мониторинг ошибок синхронизации
+### Monitoring sync errors
 
 ```js
-// Логи событий интеграции
+// Integration event logs
 const logs = await App.fetch('/db/eventlogs.json?form[catalog]=bitrix24&limit=20');
 logs.data.forEach(log => {
     console.log(log.ts, log.action, log.text_message);
@@ -189,17 +189,17 @@ logs.data.forEach(log => {
 
 ---
 
-## Важно
+## Important Notes
 
-- Синхронизация работает через cron — не в реальном времени
-- Входящие вебхуки ставятся в очередь (`core_evt`) и обрабатываются отложенно
-- Защита от петли: событие от Bitrix24 не триггерит обратную синхронизацию
-- `hook_url` — webhook URL из настроек Bitrix24 (Разработчикам → Входящий вебхук)
-- Доступ к `bitrix24_sync`: root + администратор
-- Маппинг значений (`values_map`): CSV-формат, `local_value,bitrix_value` на строку
+- Synchronization runs via cron — not real-time
+- Incoming webhooks are queued (`core_evt`) and processed asynchronously
+- Loop protection: an event from Bitrix24 does not trigger reverse sync
+- `hook_url` — webhook URL from Bitrix24 settings (Developers → Incoming webhook)
+- Access to `bitrix24_sync`: root + administrator
+- Value mapping (`values_map`): CSV format, `local_value,bitrix_value` per line
 
 ---
 
-*Каталоги: `/db/bitrix24_sync`, `/db/bitrix24_sync_fieldmap` | Бэкенд: [../backend/bitrix24-integration.md](../backend/bitrix24-integration.md)*
+*Catalogs: `/db/bitrix24_sync`, `/db/bitrix24_sync_fieldmap` | Backend: [../backend/bitrix24-integration.md](../backend/bitrix24-integration.md)*
 
 **← [Home](index.md)**

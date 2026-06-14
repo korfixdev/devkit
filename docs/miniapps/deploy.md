@@ -1,52 +1,52 @@
-# Деплой приложения
+# Deploying a Miniapp
 
-> **См. также:** [rules.md](rules.md) · [getting-started.md](getting-started.md) · [checklist.md](checklist.md) · [config-json.md](config-json.md)
+> **See also:** [rules.md](rules.md) · [getting-started.md](getting-started.md) · [checklist.md](checklist.md) · [config-json.md](config-json.md)
 > **← [Home](index.md)**
 
-Пошаговое создание, упаковка, загрузка через API и обновление миниапов.
+Step-by-step: creating, packaging, uploading via API, and updating miniapps.
 
-> ⚠ **Важно:** деплой и обновление миниапа всегда идут через каталог `/db/marketplace` (создание/перезалив zip). Каталог `/db/installed_apps` — это **только реестр уже установленных** приложений, заполняется автоматически. Туда писать руками или через API **не нужно**.
+> ⚠ **Important:** deploying and updating a miniapp always goes through the `/db/marketplace` catalog (create/re-upload a zip). The `/db/installed_apps` catalog is a **read-only registry of installed** apps, filled automatically. Don't write to it manually or via API.
 
 ---
 
-## Пошаговое создание приложения
+## Step-by-step app creation
 
-### Шаг 1: Определить тип
+### Step 1: Determine the type
 
-| Тип | Когда использовать |
-|-----|-------------------|
-| Виджет в footer каталога | Дополнительная визуализация под списком |
-| Виджет в карточке | Доп. информация на странице элемента |
-| Пункт меню | Полноэкранное приложение (календарь, канбан) |
-| itemsAction | Действие над элементом (попап) |
-| afterSave hook | Серверная реакция на сохранение (только remote) |
+| Type | When to use |
+|------|-------------|
+| Footer widget in catalog | Additional visualization below the list |
+| Card widget | Extra info on the item view page |
+| Menu item | Full-screen app (calendar, kanban) |
+| itemsAction | Action on an item (popup) |
+| afterSave hook | Server-side reaction to saves (remote only) |
 
-### Шаг 2: Создать файлы
+### Step 2: Create files
 
 ```bash
 mkdir my-app
 cd my-app
-# Создать config.json и widget.html
+# Create config.json and widget.html
 ```
 
-### Шаг 3: Написать config.json
+### Step 3: Write config.json
 
-Определить:
+Determine:
 
-- `urls` — фреймы приложения
-- `urlsConf` — метод запроса (`get` для локальных, `post` для remote)
-- `catalogs` или `menu` — куда встраивается
-- `permissions` — какие каталоги читает/пишет
+- `urls` — app frames
+- `urlsConf` — request method (`get` for local, `post` for remote)
+- `catalogs` or `menu` — where it embeds
+- `permissions` — which catalogs it reads/writes
 
-Полная спека и пример → [config-json.md](config-json.md).
+Full spec and example → [config-json.md](config-json.md).
 
-### Шаг 4: Написать HTML фрейм
+### Step 4: Write the HTML frame
 
-Шаблон:
+Template:
 
 ```html
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <style>
@@ -63,17 +63,17 @@ const App = new VMCRMUserApp();
 
 async function init() {
     const params = await App.getRequestParams();
-    const { catalog, itemId, token } = params.data;
+    const { catalog, itemId } = params.data;
 
-    // Загрузить данные
+    // Load data
     const resp = await App.fetch(`/db/${catalog}.json`);
 
-    // Отрисовать UI
+    // Render UI
     document.getElementById('app').innerHTML = `
-        <p>Каталог: ${catalog}, элементов: ${resp.data?.length || 0}</p>
+        <p>Catalog: ${catalog}, items: ${resp.data?.length || 0}</p>
     `;
 
-    // Подогнать размер фрейма
+    // Adjust frame height
     App.setFrameSize(null, document.body.scrollHeight + 10);
 }
 
@@ -83,84 +83,94 @@ init();
 </html>
 ```
 
-### Шаг 5: Проверить по чеклисту
+### Step 5: Check against the checklist
 
-Перед упаковкой пройди по [checklist.md](checklist.md). Особое внимание:
+Before packaging, go through [checklist.md](checklist.md). Pay special attention to:
 
-- `config.json` валиден, поле `about` со всеми 5 разделами
-- Все файлы из `urls` существуют
-- `App.setFrameSize()` вызывается после рендера
-- `App.fetch()` вместо `window.fetch()`
-- `font-size ≥ 16px` в input/select/textarea (iOS Safari)
+- `config.json` is valid, `about` field has all 5 sections
+- All files from `urls` exist
+- `App.setFrameSize()` is called after rendering
+- `App.fetch()` instead of `window.fetch()`
+- `font-size ≥ 16px` in input/select/textarea (iOS Safari)
 
-### Шаг 6: Упаковать в zip
+### Step 6: Package into zip
 
-```bash
-# В директории приложения:
-zip -r /tmp/my-app.zip config.json widget.html *.js *.css *.svg
-```
-
-**Допустимые расширения в zip**: html, htm, txt, js, png, jpg, jpeg, webp, ico, gif, css, json, svg, map, md, eot, woff2, ttf, woff.
-
-**Запрещённые**: php, exe, sh — платформа отклонит zip.
-
-#### Deploy-time manifest validation
-
-The platform now validates the bundled `config.json` and the archive **on deploy** and returns the
-verdict in the API response. Applies to both `POST /api/db/marketplace/{ID}` and
-`POST /api/marketplace/deploy/{ID}`.
-
-- **Errors → deploy is BLOCKED.** Response: `{"status":"error","message":"...list of problems..."}`.
-  Causes: invalid JSON; missing `name`; missing or non-object `urls`; any file referenced in `urls.*`
-  or `logo` not present in the zip.
-- **Warnings → deploy SUCCEEDS.** Response includes a `"warnings":[...]` array. Causes: missing
-  recommended fields `package`, `permissions`, `about`.
-
-Read `message` / `warnings` straight from the deploy response and fix accordingly — you don't need to
-open the app to find a broken manifest.
-
-```jsonc
-// errors → blocked
-{"status":"error","message":"config.json: invalid JSON; logo: file 'logo.svg' not found in archive"}
-```
-
-```jsonc
-// success with warnings
-{"status":"success","id":"123","warnings":["missing recommended field 'permissions'","missing recommended field 'about'"]}
-```
-
-> Still good practice to validate `config.json` locally **before** zipping, as a pre-flight:
+> ✅ **The manifest is validated server-side on deploy.** Both `POST /api/db/marketplace/{id}`
+> and `POST /api/marketplace/deploy/{id}` validate the bundled `config.json` and the archive,
+> and return the verdict in the response — read it and fix, no need to open the app to discover
+> a broken manifest.
+>
+> **Errors block the deploy** (response `{"status":"error","message":"...list..."}`). Triggered by:
+> invalid JSON; missing `name`; missing or non-object `urls`; any file referenced in `urls.*` or
+> `logo` that isn't present in the zip. The `message` lists every problem at once. Example:
+> ```json
+> {"status":"error","message":"config.json: invalid JSON; field \"name\" is required; urls.widget -> widget.html not found in zip"}
+> ```
+>
+> **Warnings don't block** — the deploy succeeds and the response carries `warnings`. Triggered by
+> missing recommended fields: `package`, `permissions`, `about`. Example:
+> ```json
+> {"status":"success","id":"123","alias":"abc...","warnings":["field \"package\" is recommended","field \"about\" is recommended"]}
+> ```
+>
+> Still worth a local pre-flight before zipping:
 > ```bash
 > python3 -m json.tool config.json   # or: jq . config.json
 > ```
 
-### Шаг 7: Загрузить в маркетплейс
+```bash
+# From the app directory:
+zip -r /tmp/my-app.zip config.json widget.html *.js *.css *.svg
+```
 
-Загрузка приложения = создание/обновление записи в каталоге `/db/marketplace`.
+**Allowed extensions in zip**: html, htm, txt, js, png, jpg, jpeg, webp, ico, gif, css, json, svg, map, md, eot, woff2, ttf, woff.
 
-#### Через интерфейс
+**Prohibited**: php, exe, sh — the platform will reject the zip.
 
-1. Открой `/db/marketplace`
-2. Нажми **Добавить** (для нового) или открой существующее (для обновления)
-3. Загрузи zip-файл в поле `doc1`
-4. Сохрани
+### Step 7: Upload to the marketplace
 
-#### Через API (рекомендуется для вайбкодинга)
+Uploading an app = creating/updating a record in the `/db/marketplace` catalog.
 
-**Создание нового приложения** (ID ещё не известен):
+#### Via the UI
+
+1. Open `/db/marketplace`
+2. Click **Add** (for a new app) or open an existing one (to update)
+3. Upload the zip file in the `doc1` field
+4. Save
+
+#### Via API — endpoint decision table (canonical)
+
+This is the **single source of truth** for which deploy endpoint to call. Everything else
+(agents, skills) points here.
+
+| Goal | Endpoint (POST) | Notes |
+|------|-----------------|-------|
+| **Create** new app (no ID yet) | `/api/db/marketplace` (alias `/api/db/marketplace/add`) + `-F name=...` | Returns `{"id","alias"}`. `deploy/` **cannot** create. |
+| **Update** existing app (default) | `/api/db/marketplace/{ID}` | Standard. Uploads the zip + notifies the store via internal hook. Sufficient in production. |
+| **Update + force `appconfig` refresh** | `/api/marketplace/deploy/{ID}` | Alias = update + refresh in one call. Requires an existing ID. Use when you must explicitly clear the config cache. |
+| **Cache-only** invalidation | `/api/marketplace/refresh/{ID}` | When the zip is already uploaded and only the cache is stale. |
+
+Both update endpoints (`/api/db/marketplace/{ID}` and `/api/marketplace/deploy/{ID}`) run the same
+deploy-time manifest validation (errors → `422` block, warnings → success). Auth on all of them:
+`Authorization: Bearer {TOKEN}` header **or** `?token={TOKEN}` query.
+
+> **Default to `/api/db/marketplace/{ID}` for updates.** Reach for `/api/marketplace/deploy/{ID}`
+> only when you specifically need the cache refresh in one shot.
+
+**Creating a new app** (no ID yet):
 
 ```bash
 curl -s -X POST "https://panel.korfix.ru/api/db/marketplace/add" \
   -H "Authorization: Bearer {TOKEN}" \
   -F "name=My App Name" \
   -F "doc1=@/tmp/my-app.zip;type=application/zip"
-# Ответ: {"status":"success","id":"123","alias":"abc..."}
-# Сохрани ID — он понадобится для последующих обновлений
+# Response: {"status":"success","id":"123","alias":"abc..."}
+# Save the ID — you'll need it for subsequent updates
 ```
 
-Поля передаются **без обёртки `form[]`** — просто `name=...`. Имя, описание, теги также подтянутся из `config.json` внутри архива при следующем рендере.
+Fields are passed **without the `form[]` wrapper** — just `name=...`. The name, description, and tags will also be pulled from `config.json` inside the archive on the next render.
 
-**Обновление существующего приложения** (ID известен):
+**Updating an existing app** (ID known):
 
 ```bash
 curl -s -X POST "https://panel.korfix.ru/api/db/marketplace/{ID}" \
@@ -168,80 +178,80 @@ curl -s -X POST "https://panel.korfix.ru/api/db/marketplace/{ID}" \
   -F "doc1=@/tmp/my-app.zip;type=application/zip"
 ```
 
-Стандартный эндпоинт загружает zip и уведомляет store через внутренний хук. В production-конфигурации этого достаточно.
+The standard endpoint uploads the zip and notifies the store via an internal hook. In production configuration this is sufficient.
 
-**Укороченный вариант через `deploy`** (update + refresh за один запрос):
+**Shorthand via `deploy`** (update + refresh in one request):
 
 ```bash
-# /api/marketplace/deploy/{ID} — это просто update + refresh в одном вызове.
-# Удобно если нужно явно сбросить appconfig (например в локальной конфигурации).
+# /api/marketplace/deploy/{ID} — update + refresh in one call.
+# Useful when you need to explicitly clear appconfig (e.g. in local configuration).
 curl -s -X POST "https://panel.korfix.ru/api/marketplace/deploy/{ID}" \
   -H "Authorization: Bearer {TOKEN}" \
   -F "doc1=@/tmp/my-app.zip;type=application/zip"
 ```
 
-> Ограничение: `deploy` требует существующий ID. Для создания нового приложения — только стандартный `POST /api/db/marketplace/add`.
+> Limitation: `deploy` requires an existing ID. For creating a new app — use standard `POST /api/db/marketplace/add`.
 
-**Только инвалидировать кеш** (если zip уже загружен):
+**Cache-only invalidation** (when the zip is already uploaded):
 
 ```bash
 curl -s -X POST "https://panel.korfix.ru/api/marketplace/refresh/{ID}" \
   -H "Authorization: Bearer {TOKEN}"
 ```
 
-> `token=` в query string тоже работает как альтернатива Bearer-заголовку.
+> `token=` in the query string also works as an alternative to the Bearer header.
 
-### Шаг 8: Установить приложение
+### Step 8: Install the app
 
-Установка = пользовательское действие в UI маркетплейса.
+Installation = a user action in the marketplace UI.
 
-1. Открой маркетплейс: `/db/marketplace`
-2. Найди своё приложение в списке (по `name` из `config.json`)
-3. Нажми кнопку **Установить** на карточке приложения
-4. Фреймы появятся в указанных в `config.json` точках встраивания
+1. Open the marketplace: `/db/marketplace`
+2. Find your app in the list (by `name` from `config.json`)
+3. Click the **Install** button on the app card
+4. Frames will appear at the entry points specified in `config.json`
 
-> Реестр `installed_apps` заполняется автоматически — туда писать руками не нужно.
+> The `installed_apps` registry is filled automatically — don't write to it manually.
 
 ---
 
-## Автодеплой через API
+## Auto-deploy via API
 
-Загрузку zip можно автоматизировать через REST API, не заходя в интерфейс.
+Zip uploads can be automated via the REST API without touching the UI.
 
-### Полный цикл: создать + задеплоить одной командой
+### Full cycle: create + deploy in one command
 
 ```bash
 zip -r /tmp/my-app.zip config.json widget.html *.js *.css
 
-# Первый раз — создаём, получаем ID:
+# First time — create and get the ID:
 curl -s -X POST "https://panel.korfix.ru/api/db/marketplace/add" \
   -H "Authorization: Bearer {TOKEN}" \
   -F "name=My App" \
   -F "doc1=@/tmp/my-app.zip;type=application/zip"
 # → {"status":"success","id":"123","alias":"abc..."}
 
-# Последующие обновления по ID:
+# Subsequent updates by ID:
 curl -s -X POST "https://panel.korfix.ru/api/db/marketplace/123" \
   -H "Authorization: Bearer {TOKEN}" \
   -F "doc1=@/tmp/my-app.zip;type=application/zip"
 ```
 
-### Получение ID существующего приложения
+### Getting an existing app's ID
 
 ```bash
 curl -H "Authorization: Bearer {TOKEN}" \
   "https://panel.korfix.ru/api/db/marketplace?filter[name]=My App"
 ```
 
-### Проверка версии после деплоя
+### Verifying the version after deploy
 
 ```bash
 curl -H "Authorization: Bearer {TOKEN}" \
   "https://panel.korfix.ru/api/db/marketplace/{ID}"
-# В поле appconfig.version — версия из config.json
+# The appconfig.version field contains the version from config.json
 ```
 
-### CI/CD скрипт
+### CI/CD script
 
 ```bash
 #!/bin/bash
@@ -260,34 +270,34 @@ RESPONSE=$(curl -s -X POST "$API_URL/api/db/marketplace/$APP_ID" \
 echo "$RESPONSE"
 ```
 
-### Требования к токену
+### Token requirements
 
-Токен из `/db/api` должен иметь доступ к каталогу `marketplace` (метод POST). Добавь `db_marketplace_post` в **«Классы API»** токена.
+The token from `/db/api` must have access to the `marketplace` catalog (POST method). Add `db_marketplace_post` to the token's **"API Classes"**.
 
-### Цикл вайбкодинга
+### Vibe-coding cycle
 
-1. Ассистент редактирует html/js/css файлы приложения
-2. Проверяет на соответствие [checklist.md](checklist.md)
-3. Пакует в zip
-4. Деплоит через `curl` одной командой в `/db/marketplace`
-5. Результат виден в браузере сразу после обновления страницы
-
----
-
-## Обновление приложения
-
-Процесс обновления:
-
-1. Ассистент редактирует html/js/css файлы приложения
-2. Проверяет на соответствие [checklist.md](checklist.md)
-3. Пакует в zip
-4. Перезаливает zip (через форму или API-деплой) в `/db/marketplace`
-5. В маркетплейсе появляется бейдж «обновить»
-6. Пользователь нажимает кнопку **Обновить** на странице приложения
-7. Фреймы приложения начинают раздаваться с новым кодом
-
-> При API-деплое шаги 1-4 идут автоматически. Шаги 5-7 — действия пользователя в интерфейсе маркетплейса.
+1. Assistant edits the app's html/js/css files
+2. Checks against [checklist.md](checklist.md)
+3. Packages into zip
+4. Deploys via `curl` in one command to `/db/marketplace`
+5. Result is visible in the browser immediately after page refresh
 
 ---
 
-**Дальше:** [checklist.md](checklist.md) · **← [Home](index.md)**
+## Updating an app
+
+Update process:
+
+1. Assistant edits the app's html/js/css files
+2. Checks against [checklist.md](checklist.md)
+3. Packages into zip
+4. Re-uploads zip (via UI or API deploy) to `/db/marketplace`
+5. Marketplace shows an "update" badge
+6. User clicks the **Update** button on the app page
+7. App frames start serving the new code
+
+> With API deploy, steps 1-4 are automatic. Steps 5-7 are user actions in the marketplace UI.
+
+---
+
+**Next:** [checklist.md](checklist.md) · **← [Home](index.md)**

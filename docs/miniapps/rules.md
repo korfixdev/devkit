@@ -1,74 +1,74 @@
-# Правила разработки миниапов (обязательно к прочтению)
+# Miniapp Development Rules (required reading)
 
-> **← [Home](index.md)** · Это первый документ. Прочитать до начала работы.
+> **← [Home](index.md)** · This is the first document. Read before you start.
 
-Миниап — HTML/JS/CSS-приложение в изолированном iframe внутри Korfix CRM. Эти правила — про безопасность, корректность и портируемость.
-
----
-
-## Безопасность
-
-**Токены и секреты держи в env, не в коде.**
-
-- `KORFIX_TOKEN` — в переменных окружения разработчика. Никогда не коммить в git миниапа, никогда не класть в zip, никогда не показывать в UI.
-- Если токен попал в коммит — сразу отзови его в `/db/api` и выпусти новый.
-- Для прода и теста — **разные токены**.
-- Токен должен иметь **минимум прав**: только каталоги, которые реально нужны миниапу, только нужные методы (read/write).
-- Секреты в `config.json` (API-ключи внешних сервисов и т.п.) хранить в `App.storage`, а не в файлах приложения.
-
-## Работа с API — только правильные каналы
-
-**Внутри iframe:** используй `App.fetch('/db/...')`.
-**Снаружи (webhook, n8n, скрипты):** `Authorization: Bearer <token>` с `/api/...`.
-
-- **Никогда** не делай `window.fetch()` напрямую из миниапа — CORS его заблокирует.
-- **Никогда** не используй куки/сессии браузера в обход `App.fetch` — iframe изолирован, эти механизмы недоступны и могут дать неверный результат.
-- **Никогда** не захардкоживай URL инстанса (`panel.korfix.ru` и т.п.) — пиши относительные пути, чтобы приложение работало на любом инстансе.
-
-## Что можно положить в zip
-
-**Разрешено:** `.html`, `.js`, `.css`, `.svg`, `.png`, `.jpg`, `.webp`, `.ico`, `.gif`, `.json`, `.md`, `.woff`, `.woff2`, `.ttf`, `.eot`.
-
-**Запрещено:** любые исполняемые/серверные расширения — `.php`, `.exe`, `.sh`, `.py`, `.rb` и т.п. При попытке загрузить zip с такими файлами платформа откажет.
-
-**Серверная логика** — только через «удалённое приложение» (`install_url` вместо `urls` в `config.json`). Тогда серверный код живёт на твоём сервере, а миниап получает данные по HTTP от платформы через `afterSave`-вебхуки.
-
-## Портируемость
-
-- **`urls` в config.json — относительные пути** (`"main": "index.html"`), если приложение упаковано в zip. Платформа сама подставит путь.
-- **Не ссылайся на конкретный домен** ни в коде миниапа, ни в `config.json`, если это локальное приложение. Миниап должен работать на `panel.korfix.ru`, `acme.korfix.ru` и любом другом инстансе без правок.
-- **Не хардкодь ID статей, каталогов, групп** — получай их через `App.fetch('/db/{catalog}/sheme.json')` или `catalog_schema()`.
-
-## Владение записей
-
-При создании любой записи через API:
-
-- **`alias`** — генерировать явно: `Date.now().toString(36) + Math.random().toString(36).substr(2, 8)`. Не полагаться на автогенерацию, особенно при массовой вставке.
-- **`from_auth`** — ID создающего пользователя. Получать через `catalog_schema().from_auth.arr` — берёшь ключ отличный от `0`.
-- **`from_group`** — тенант (группа). Обычно равен `from_auth` для персональных записей или ID группы для общих.
-
-Без `from_auth`/`from_group` запись создаётся на суперадмина и не видна обычным пользователям. Это ошибка, не фича.
-
-## Принцип: не искать обходные пути
-
-Если что-то не получается через `App.fetch` или документированные API — **не ищи workaround**. Остановись, задай вопрос: либо проблема в документации (раздел не покрыт), либо это действительно не должно делаться.
-
-Примеры чего **не надо**:
-- Встраивать `<script>` с внешнего домена чтобы обойти CORS (вместо этого — `App.fetch` через `postMessage`)
-- Вызывать `parent.postMessage` напрямую с захардкоженным target origin (пиши через `App`-методы, они знают откуда пришли)
-- Сохранять состояние в `localStorage` iframe'а (изолирован; вместо этого — `App.storage`)
-- Использовать `<iframe src="/db/...">` для обхода API (интерфейс платформы не гарантирован для встраивания)
-
-Если не хватает API — создай issue в [korfixdev/docs](https://github.com/korfixdev/docs) или спроси в коммьюнити. Не пиши код, который зависит от неописанного поведения платформы.
+A miniapp is an HTML/JS/CSS application running in an isolated iframe inside Korfix CRM. These rules cover security, correctness, and portability.
 
 ---
 
-## См. также
+## Security
 
-- [getting-started.md](getting-started.md) — первое приложение с нуля
-- [data-api.md](data-api.md) — форматы запросов и фильтры
-- [js-api.md](js-api.md) — VMCRMUserApp: методы и события
-- [deploy.md](deploy.md) — упаковка и деплой
-- [checklist.md](checklist.md) — проверка перед релизом
+**Keep tokens and secrets in env, not in code.**
 
-**Дальше:** [getting-started.md](getting-started.md) · **← [Home](index.md)**
+- `KORFIX_TOKEN` — in developer environment variables. Never commit to the miniapp's git, never include in the zip, never expose in the UI.
+- If a token ends up in a commit — revoke it immediately in `/db/api` and issue a new one.
+- Use **different tokens** for production and staging.
+- Tokens should have **minimum required permissions**: only the catalogs the miniapp actually needs, only the necessary methods (read/write).
+- Secrets in `config.json` (external API keys etc.) — store in `App.storage`, not in application files.
+
+## API access — use the right channels
+
+**Inside the iframe:** use `App.fetch('/db/...')`.
+**Outside (webhooks, n8n, scripts):** `Authorization: Bearer <token>` with `/api/...`.
+
+- **Never** call `window.fetch()` directly from the miniapp — CORS will block it.
+- **Never** use browser cookies/sessions to bypass `App.fetch` — the iframe is isolated, these mechanisms are unavailable and can give incorrect results.
+- **Never** hardcode the instance URL (`panel.korfix.ru` etc.) — use relative paths so the app works on any instance.
+
+## What can go in the zip
+
+**Allowed:** `.html`, `.js`, `.css`, `.svg`, `.png`, `.jpg`, `.webp`, `.ico`, `.gif`, `.json`, `.md`, `.woff`, `.woff2`, `.ttf`, `.eot`.
+
+**Prohibited:** any executable/server-side extensions — `.php`, `.exe`, `.sh`, `.py`, `.rb`, etc. The platform will reject a zip containing such files.
+
+**Server logic** — only via a "remote app" (`install_url` instead of `urls` in `config.json`). Server code then lives on your server, and the miniapp receives data from the platform via `afterSave` webhooks.
+
+## Portability
+
+- **`urls` in config.json — relative paths** (`"main": "index.html"`) for zip-packaged apps. The platform fills in the path.
+- **Don't reference a specific domain** in miniapp code or `config.json` for local apps. The miniapp must work on `panel.korfix.ru`, `acme.korfix.ru`, and any other instance without changes.
+- **Don't hardcode article IDs, catalog IDs, group IDs** — fetch them via `App.fetch('/db/{catalog}/sheme.json')` or `catalog_schema()`.
+
+## Record ownership
+
+When creating any record via the API:
+
+- **`alias`** — generate explicitly: `Date.now().toString(36) + Math.random().toString(36).substr(2, 8)`. Don't rely on auto-generation, especially for bulk inserts.
+- **`from_auth`** — ID of the creating user. Fetch via `catalog_schema().from_auth.arr` — take the key that's not `0`.
+- **`from_group`** — tenant (group). Usually equals `from_auth` for personal records or the group ID for shared ones.
+
+Without `from_auth`/`from_group` the record is created under the super-admin and won't be visible to regular users. This is a bug, not a feature.
+
+## Principle: don't look for workarounds
+
+If something doesn't work via `App.fetch` or the documented APIs — **don't search for a workaround**. Stop, ask a question: either the documentation is incomplete, or this action genuinely shouldn't be done.
+
+Examples of what **not to do**:
+- Embedding a `<script>` from an external domain to bypass CORS (instead — `App.fetch` via `postMessage`)
+- Calling `parent.postMessage` directly with a hardcoded target origin (use `App` methods — they know where they came from)
+- Storing state in the iframe's `localStorage` (isolated; use `App.storage` instead)
+- Using `<iframe src="/db/...">` to bypass the API (the platform UI isn't guaranteed to be embeddable)
+
+If the API is missing something — open an issue at [korfixdev/docs](https://github.com/korfixdev/docs) or ask in the community. Don't write code that depends on undocumented platform behavior.
+
+---
+
+## See also
+
+- [getting-started.md](getting-started.md) — first app from scratch
+- [data-api.md](data-api.md) — request formats and filters
+- [js-api.md](js-api.md) — VMCRMUserApp: methods and events
+- [deploy.md](deploy.md) — packaging and deploy
+- [checklist.md](checklist.md) — pre-release checklist
+
+**Next:** [getting-started.md](getting-started.md) · **← [Home](index.md)**

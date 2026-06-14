@@ -1,122 +1,122 @@
-# Инструкции и справка (account_help, service_help)
+# Help Content (account_help, service_help)
 
-> **См. также:** [data-api.md](data-api.md) · [korfix-catalogs.md](korfix-catalogs.md) · [favorites-menu.md](favorites-menu.md)
+> **See also:** [data-api.md](data-api.md) · [korfix-catalogs.md](korfix-catalogs.md) · [favorites-menu.md](favorites-menu.md)
 > **← [Home](index.md)**
 
-Два каталога для контекстной помощи: инструкции к каталогам
-и справочная информация на страницах.
+Two catalogs for contextual help: instructions for catalogs
+and reference information on pages.
 
 ---
 
-## account_help — Инструкции к каталогам
+## account_help — Catalog Instructions
 
-Инструкции привязаны к конкретным каталогам платформы. Отображаются
-как кнопка-стикер в заголовке каталога — при клике открывается модалка
-с контентом инструкции.
+Instructions are tied to specific platform catalogs. They appear
+as a sticky-note button in the catalog header — clicking opens a modal
+with the instruction content.
 
-### Структура записи
+### Record Structure
 
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `name` | textbox | Заголовок инструкции |
-| `aliasdb` | select | Каталог, к которому привязана инструкция (например `tt_tasks`) |
-| `is_main` | checkbox | Инструкция по умолчанию (если несколько на каталог — показывается с `is_main=1`) |
-| `cont` | textarea (wysiwyg) | Текст инструкции (HTML) |
-| `doc` | photo | Иллюстрация |
-| `doc1` | file | Прикреплённый файл |
-| `youtube` | textbox | Ссылка на YouTube-видео |
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | textbox | Instruction title |
+| `aliasdb` | select | Catalog the instruction is attached to (e.g. `tt_tasks`) |
+| `is_main` | checkbox | Default instruction (if multiple exist for a catalog — the one with `is_main=1` is shown) |
+| `cont` | textarea (wysiwyg) | Instruction text (HTML) |
+| `doc` | photo | Illustration |
+| `doc1` | file | Attached file |
+| `youtube` | textbox | YouTube video link |
 
-Доступ: по группе (`from_group`). Можно создавать несколько инструкций на каталог.
+Access: by group (`from_group`). Multiple instructions per catalog are allowed.
 
-### Как работает в UI
+### How It Works in the UI
 
-При открытии любого каталога в заголовке появляется иконка:
-- **Заполненный стикер** (fas fa-sticky-note) — инструкция есть, клик открывает её
-- **Пустой стикер** (far fa-sticky-note) — инструкции нет, клик создаёт новую
+When opening any catalog, an icon appears in the header:
+- **Filled sticky note** (fas fa-sticky-note) — instruction exists, click opens it
+- **Empty sticky note** (far fa-sticky-note) — no instruction, click creates one
 
-### Чтение инструкций
+### Reading Instructions
 
 ```js
-// Получить все инструкции
+// Get all instructions
 const resp = await App.fetch('/db/account_help.json');
 
-// Инструкции для конкретного каталога
+// Instructions for a specific catalog
 const resp = await App.fetch('/db/account_help.json?form[aliasdb]=tt_tasks');
 const instruction = resp.data[0];
-console.log(instruction.name);     // "Как работать с задачами"
-console.log(instruction.cont);     // HTML-контент
-console.log(instruction.youtube);  // "abcd" или полная ссылка
+console.log(instruction.name);     // "How to work with tasks"
+console.log(instruction.cont);     // HTML content
+console.log(instruction.youtube);  // "abcd" or full URL
 ```
 
-### Создание инструкции из миниапа
+### Creating an Instruction from a Miniapp
 
 ```js
-// Создать инструкцию для каталога заказов
+// Create an instruction for the orders catalog
 await App.fetch('/db/account_help/add?edit&ajax=1', {
     method: 'POST',
     body: {
-        'form[name]': 'Как оформить заказ',
+        'form[name]': 'How to place an order',
         'form[aliasdb]': 'b2b_orders',
         'form[is_main]': 1,
-        'form[cont]': '<h3>Шаг 1</h3><p>Откройте каталог заказов...</p>',
+        'form[cont]': '<h3>Step 1</h3><p>Open the orders catalog...</p>',
         'form[youtube]': 'https://youtu.be/abcd',
         submit: 1
     }
 });
 ```
 
-### Получение списка каталогов
+### Getting the Catalog List
 
 ```js
-// Доступные каталоги для привязки инструкции
+// Available catalogs for attaching an instruction
 const schema = await App.fetch('/db/account_help/sheme.json');
 const catalogs = schema.data.aliasdb.arr;
-// { "tt_tasks": "Задачи (tt_tasks)", "b2b_orders": "Заказы (b2b_orders)", ... }
+// { "tt_tasks": "Tasks (tt_tasks)", "b2b_orders": "Orders (b2b_orders)", ... }
 ```
 
 ---
 
-## service_help — Справочная информация по страницам
+## service_help — Page Reference Information
 
-Справки привязаны к URL-адресам страниц. Отображаются как кнопка "?"
-в заголовке страницы.
+Help items are tied to page URLs. They appear as a "?" button
+in the page header.
 
-### Структура записи
+### Record Structure
 
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `name` | textbox | Заголовок справки |
-| `show_on_pages` | textarea | URL-адреса страниц, на которых показывать (по одному на строку) |
-| `cont` | textarea (tinymce) | Текст справки (HTML с WYSIWYG-редактором) |
-| `doc` | photo | Иллюстрация |
-| `doc1` | file | Прикреплённый файл |
-| `youtube` | textbox | Ссылка на YouTube-видео |
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | textbox | Help title |
+| `show_on_pages` | textarea | Page URLs to show on (one per line) |
+| `cont` | textarea (tinymce) | Help text (HTML with WYSIWYG editor) |
+| `doc` | photo | Illustration |
+| `doc1` | file | Attached file |
+| `youtube` | textbox | YouTube video link |
 
-### Как работает в UI
+### How It Works in the UI
 
-Справки загружаются вызовом `cmd('db/service_help')` в подвале каждого каталога.
-Если для текущей страницы есть справка — в заголовке появляется кнопка "?" (fa-question-circle),
-клик открывает модалку с контентом, картинкой и видео.
+Help items are loaded via `cmd('db/service_help')` in each catalog's footer.
+If a help item exists for the current page — a "?" button (fa-question-circle) appears
+in the header; clicking opens a modal with content, image, and video.
 
-### Чтение справок
+### Reading Help Items
 
 ```js
-// Все справки
+// All help items
 const resp = await App.fetch('/db/service_help.json');
 
-// Справки содержащие определённый URL
+// Help items containing a specific URL
 const resp = await App.fetch('/db/service_help.json?form[show_on_pages]=/db/tt_tasks');
 ```
 
-### Создание справки
+### Creating a Help Item
 
 ```js
 await App.fetch('/db/service_help/add?edit&ajax=1', {
     method: 'POST',
     body: {
-        'form[name]': 'Как пользоваться фильтрами',
+        'form[name]': 'How to use filters',
         'form[show_on_pages]': '/db/tt_tasks\n/db/b2b_orders',
-        'form[cont]': '<p>Используйте панель фильтров...</p>',
+        'form[cont]': '<p>Use the filter panel...</p>',
         submit: 1
     }
 });
@@ -124,17 +124,17 @@ await App.fetch('/db/service_help/add?edit&ajax=1', {
 
 ---
 
-## Сценарии использования в миниапах
+## Use Cases for Miniapps
 
-### Автоматическое создание инструкции при установке
+### Auto-create instruction on install
 
-Приложение может создать инструкцию к каталогу, с которым работает:
+An app can create an instruction for the catalog it works with:
 
 ```js
 async function createAppInstruction(catalog, title, content, videoUrl) {
-    // Проверяем, нет ли уже инструкции от нашего приложения
+    // Check if an instruction already exists from our app
     const resp = await App.fetch(`/db/account_help.json?form[aliasdb]=${catalog}`);
-    if (resp.data.length > 0) return; // уже есть
+    if (resp.data.length > 0) return; // already exists
 
     await App.fetch('/db/account_help/add?edit&ajax=1', {
         method: 'POST',
@@ -149,25 +149,25 @@ async function createAppInstruction(catalog, title, content, videoUrl) {
 }
 ```
 
-### Контекстная помощь внутри миниапа
+### Contextual help inside the miniapp
 
-Миниап может читать существующие инструкции и показывать их
-в собственном UI, например как тултипы или встроенные подсказки:
+A miniapp can read existing instructions and display them
+in its own UI, e.g. as tooltips or inline hints:
 
 ```js
 async function getHelpForCatalog(catalog) {
     const resp = await App.fetch(`/db/account_help.json?form[aliasdb]=${catalog}`);
-    return resp.data; // массив инструкций
+    return resp.data; // array of instructions
 }
 ```
 
-### База знаний
+### Knowledge base
 
-Приложение может построить навигируемую базу знаний из всех инструкций:
+An app can build a navigable knowledge base from all instructions:
 
 ```js
 const all = await App.fetchAll('/db/account_help.json');
-// Группировка по каталогам
+// Group by catalog
 const byModule = {};
 all.data.forEach(item => {
     if (!byModule[item.aliasdb]) byModule[item.aliasdb] = [];
@@ -177,19 +177,19 @@ all.data.forEach(item => {
 
 ---
 
-## Разница между каталогами
+## Differences Between Catalogs
 
 | | account_help | service_help |
 |---|---|---|
-| Привязка | К каталогу (`aliasdb`) | К URL страницы (`show_on_pages`) |
-| Иконка | Стикер (fa-sticky-note) | Вопрос (fa-question-circle) |
-| Множественность | Несколько на каталог (приоритет `is_main`) | Несколько на страницу |
-| Редактор | wysiwyg-simple | tinymce |
-| Доступ | По группе | По группе |
-| Назначение | Инструкции для пользователей | Справочная информация от администратора |
+| Bound to | Catalog (`aliasdb`) | Page URL (`show_on_pages`) |
+| Icon | Sticky note (fa-sticky-note) | Question mark (fa-question-circle) |
+| Multiple | Yes, per catalog (priority: `is_main`) | Yes, per page |
+| Editor | wysiwyg-simple | tinymce |
+| Access | By group | By group |
+| Purpose | User instructions | Reference content from admin |
 
 ---
 
-*Каталоги: `/db/account_help`, `/db/service_help`*
+*Catalogs: `/db/account_help`, `/db/service_help`*
 
 **← [Home](index.md)**

@@ -93,13 +93,10 @@ Example:
 
 ## Pre-deploy checklist
 
-- [ ] `about` is filled in and contains all 5 sections
-- [ ] All files from `urls` exist in the zip
-- [ ] `logo` file exists in the zip
-- [ ] JSON is valid (no trailing comma, no unescaped `\`)
-- [ ] `urls` use relative paths
-- [ ] `permissions` are explicitly declared
-- [ ] `category` is set (int 1..5)
+The full checklist is canonical in `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/checklist.md` — don't keep a
+second copy here. The config.json-specific items to confirm: `about` with all 5 sections · all `urls`
+files + `logo` present in the zip · valid JSON (no trailing comma / unescaped `\`) · `urls` relative ·
+`permissions` declared · `category` set (int 1..5).
 
 ## Documentation
 

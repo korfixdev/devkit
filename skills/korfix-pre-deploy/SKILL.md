@@ -5,7 +5,13 @@ description: Use immediately before deploying a Korfix miniapp. Step-by-step pre
 
 # korfix-pre-deploy
 
-Step-by-step checklist before deploying a miniapp. Follow sequentially — do not skip steps.
+Step-by-step procedure before deploying a miniapp. Follow sequentially — do not skip steps.
+
+> **Checklist source of truth:** the item list lives in `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/checklist.md`.
+> The `korfix-miniapp-checklist` skill (developer self-check) and `korfix-miniapp-validate` (reviewer)
+> both reference it. This skill is the *deploy procedure*, not a second copy of the checklist.
+>
+> **Deploy endpoints source of truth:** `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/deploy.md` (decision table).
 
 ## Step 1 — Is the version bumped?
 
@@ -37,7 +43,20 @@ Run `korfix-miniapp-validator` in a **fresh subagent**:
 
 If `NOT READY` — fix all Critical and Must items, repeat validation.
 
-## Step 4 — Build the zip
+## Step 4 — Local bundle gate (before zipping)
+
+Run the bundled structural validator — it checks config.json JSON validity, that every file in
+`urls.*` and `logo` exists, that `config.json` is at the root, and that `dashboard_widgets`
+permission is present when `urls.widget` is declared. It hits **no API** — pure local pre-flight.
+
+```bash
+node ${CLAUDE_PLUGIN_ROOT}/scripts/validate-bundle.js /path/to/app-dir
+```
+
+Fix every `FAIL` it reports before continuing. (The platform repeats these checks server-side on
+deploy and will reject the zip with `422` — catching them locally saves a round-trip.)
+
+## Step 5 — Build the zip
 
 ```bash
 cd /path/to/app-dir
@@ -50,14 +69,18 @@ Verify the zip contains:
 - [ ] `logo` file is present
 - [ ] `README.md` is present
 
-## Step 5 — Deploy
+## Step 6 — Deploy
 
-**Update existing** (ID exists):
+> Full endpoint reference → `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/deploy.md` (decision table).
+
+**Update existing** (ID exists) — canonical default:
 ```bash
-curl -X POST "${KORFIX_API_URL}/api/marketplace/deploy/${APP_ID}" \
+curl -X POST "${KORFIX_API_URL}/api/db/marketplace/${APP_ID}" \
   -H "Authorization: Bearer ${KORFIX_TOKEN}" \
   -F "doc1=@/tmp/app.zip;type=application/zip"
 ```
+> Use `POST /api/marketplace/deploy/${APP_ID}` instead only when you need to force an `appconfig`
+> cache refresh in the same call.
 
 **New app** (no ID):
 ```bash
@@ -67,9 +90,10 @@ curl -X POST "${KORFIX_API_URL}/api/db/marketplace" \
   -F "doc1=@/tmp/app.zip;type=application/zip"
 ```
 
-Check the response: `"status": "ok"`. If there's an error — do not retry blindly, investigate the cause.
+Check the response: `"status": "success"`/`"ok"`. On `"status":"error"` the `message` lists every
+manifest problem — fix and re-deploy, don't retry blindly.
 
-## Step 6 — Smoke test after deploy
+## Step 7 — Smoke test after deploy
 
 Open the app on the instance:
 1. Verify the version in the marketplace has updated

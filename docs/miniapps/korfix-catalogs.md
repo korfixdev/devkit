@@ -1,357 +1,357 @@
-# Маркетплейс -- Каталоги Korfix
+# Marketplace — Korfix Catalogs
 
-> **См. также:** [data-api.md](data-api.md) · [self-provisioning.md](self-provisioning.md) · [db-views.md](db-views.md) · [catalog-settings.md](catalog-settings.md)
+> **See also:** [data-api.md](data-api.md) · [self-provisioning.md](self-provisioning.md) · [db-views.md](db-views.md) · [catalog-settings.md](catalog-settings.md)
 > **← [Home](index.md)**
 
-Korfix -- полноценная ERP-платформа. Все каталоги доступны из приложения
-через `App.fetch('/db/{catalog}.json', ...)` с правами текущего пользователя.
+Korfix is a full-featured ERP platform. All catalogs are accessible from an app
+via `App.fetch('/db/{catalog}.json', ...)` with the current user's permissions.
 
 ---
 
-## ⚠️ Имена каталогов — всегда с префиксом модуля
+## ⚠️ Catalog Names — Always Module-Prefixed
 
-Все каталоги Korfix именуются с префиксом модуля: `ag_*`, `b2b_*`, `md_*`, `crm_*`, `wh_*`, `tt_*` и т.п.
+All Korfix catalogs are named with a module prefix: `ag_*`, `b2b_*`, `md_*`, `crm_*`, `wh_*`, `tt_*`, etc.
 
-**Generic-имён без префикса не существует:**
+**Generic names without prefix do not exist:**
 
-- ❌ `/db/clients` — нет такого каталога. Возможно имеется в виду `crm_clients` (общий CRM), `ag_clients` (контрагенты в финансах), `b2b_clients` (клиенты B2B) или `md_clients` (клиенты MD). **Уточни у пользователя какой именно** — не угадывай.
-- ❌ `/db/users` — нет. Доступны `auth_pers` (все аккаунты), `ag_accounts`, `b2b_accounts`, `md_accounts` или просто `accounts`.
-- ❌ `/db/orders`, `/db/projects` без префикса — то же самое.
+- ❌ `/db/clients` — no such catalog. Likely means `crm_clients` (general CRM), `ag_clients` (AG finance counterparties), `b2b_clients` (B2B clients), or `md_clients` (MD clients). **Ask the user which one** — don't guess.
+- ❌ `/db/users` — no. Available: `auth_pers` (all accounts), `ag_accounts`, `b2b_accounts`, `md_accounts`, or simply `accounts`.
+- ❌ `/db/orders`, `/db/projects` without prefix — same applies.
 
-### Двойственные каталоги (одна таблица, разные представления)
+### Dual-view catalogs (one table, multiple representations)
 
-Несколько каталогов могут смотреть в **одну БД-таблицу** через `$_KAT['TABLES']`-маппинг — показывают разные поля и применяют разные фильтры:
+Multiple catalogs can point to **one DB table** via `$_KAT['TABLES']` mapping — showing different fields and applying different filters:
 
-- **Клиенты:** `ag_clients`, `b2b_clients`, `md_clients`, `md_contractors` → одна таблица. Удалил в одном — пропал во всех. Поля и `access_db` — раздельные per каталог.
-- **Аккаунты/пользователи:** `accounts`, `users`, `ag_accounts`, `b2b_accounts`, `md_accounts`, `integrations` → таблица `auth_pers`.
-- **Финансовые операции:** `ag_cashflows`, `ag_cashflows_prj`, `ag_bdr`, `ag_balans_report`, `ag_profit_and_loss` → таблица `ag_cashflows`.
-- **Проекты:** `ag_projects`, `ag_sales_report`, `ag_workload_report`, `trash` → таблица `ag_projects`.
+- **Clients:** `ag_clients`, `b2b_clients`, `md_clients`, `md_contractors` → one table. Deleting in one deletes in all. Fields and `access_db` are separate per catalog.
+- **Accounts/users:** `accounts`, `users`, `ag_accounts`, `b2b_accounts`, `md_accounts`, `integrations` → table `auth_pers`.
+- **Financial transactions:** `ag_cashflows`, `ag_cashflows_prj`, `ag_bdr`, `ag_balans_report`, `ag_profit_and_loss` → table `ag_cashflows`.
+- **Projects:** `ag_projects`, `ag_sales_report`, `ag_workload_report`, `trash` → table `ag_projects`.
 
-При работе с такими каталогами:
-- Чтение «полного списка» — обычно через каноничный (`ag_clients`, `auth_pers`)
-- Создание в контексте конкретного модуля (B2B/MD) — через модульный (`b2b_clients`) — afteradd допишет специфичные поля
-- Удаление = глобальное (soft-delete `hidden=1` во всей таблице)
+When working with such catalogs:
+- Reading the "full list" — typically via the canonical name (`ag_clients`, `auth_pers`)
+- Creating in a module context (B2B/MD) — via the module-specific name (`b2b_clients`) — afteradd will populate module-specific fields
+- Deletion = global (soft-delete `hidden=1` across the entire table)
 
 ---
 
-## Доступные каталоги
+## Available Catalogs
 
-### Финансы (AG-модуль)
+### Finance (AG Module)
 
-| Каталог | Описание |
-|---------|----------|
-| `ag_cashflows` | Операции (ДДС) |
-| `ag_cashflows_prj` | Выплаты по проектам |
-| `ag_cashflows_clients` | Операции по контрагентам |
-| `ag_transactions` | Транзакции |
-| `ag_accountant` | Счета на оплату |
-| `ag_contracts` | Договоры |
-| `ag_clients` | Контрагенты |
-| `ag_companies` | Ваши юрлица |
-| `ag_projects` | Проекты |
-| `ag_products` | Продукты |
-| `ag_products_group` | Группы продуктов |
-| `ag_articles` | Статьи ДДС |
-| `ag_cat_articles` | Категории статей |
-| `ag_fonds` | Фонды |
-| `ag_fonds_percent` | Распределение по фондам |
-| `ag_flows` | Потоки |
-| `ag_settlement_accounts` | Расчётные счета |
-| `ag_dds` | ДДС (отчёт) |
-| `ag_bdr` | Бюджет доходов и расходов |
-| `ag_balans_report` | Баланс |
-| `ag_sales_report` | Отчёт по продажам |
-| `ag_workload_report` | Отчёт по занятости |
-| `ag_products_report` | ДДС по продуктам |
-| `ag_debt_credit_report` | Задолженности контрагентов |
-| `ag_sumcash` | Платёжный календарь по юрлицам |
-| `ag_fonds_calendar` | Платёжный календарь по фондам |
-| `ag_project_to_types` | Бюджет и рентабельность по продуктам |
-| `ag_p2t_plan` | Месячный план по продуктам |
-| `ag_article_plan` | Месячный план по статьям |
-| `ag_accounts` | Сотрудники (AG) |
-| `bank_exchanges` | Банковские выгрузки |
-| `currency_rate` | Курсы валют |
+| Catalog | Description |
+|---------|-------------|
+| `ag_cashflows` | Transactions (cash flow) |
+| `ag_cashflows_prj` | Project payments |
+| `ag_cashflows_clients` | Transactions by counterparty |
+| `ag_transactions` | Transactions |
+| `ag_accountant` | Payment invoices |
+| `ag_contracts` | Contracts |
+| `ag_clients` | Counterparties |
+| `ag_companies` | Your legal entities |
+| `ag_projects` | Projects |
+| `ag_products` | Products |
+| `ag_products_group` | Product groups |
+| `ag_articles` | Cash flow items |
+| `ag_cat_articles` | Item categories |
+| `ag_fonds` | Funds |
+| `ag_fonds_percent` | Fund distribution |
+| `ag_flows` | Flows |
+| `ag_settlement_accounts` | Settlement accounts |
+| `ag_dds` | Cash flow statement |
+| `ag_bdr` | Budget of income and expenses |
+| `ag_balans_report` | Balance sheet |
+| `ag_sales_report` | Sales report |
+| `ag_workload_report` | Workload report |
+| `ag_products_report` | Cash flow by product |
+| `ag_debt_credit_report` | Counterparty debts |
+| `ag_sumcash` | Payment calendar by legal entity |
+| `ag_fonds_calendar` | Payment calendar by fund |
+| `ag_project_to_types` | Budget and profitability by product |
+| `ag_p2t_plan` | Monthly plan by product |
+| `ag_article_plan` | Monthly plan by item |
+| `ag_accounts` | Employees (AG) |
+| `bank_exchanges` | Bank exports |
+| `currency_rate` | Exchange rates |
 
-### B2B (торговля, заказы)
+### B2B (Trade, Orders)
 
-| Каталог | Описание |
-|---------|----------|
-| `b2b_orders` | Заказы |
-| `b2b_basket` | Состав заказа |
-| `b2b_order_items` | Заказанная продукция |
-| `b2b_clients` | Клиенты |
-| `b2b_items` | Продукция |
-| `b2b_cat_items` | Группы продукции |
-| `b2b_nomenclature_group` | Категории продукции |
-| `b2b_discounts` | Скидки и цены |
-| `b2b_prices_items` | Особые цены на продукцию |
-| `b2b_delivery` | Адреса доставки |
-| `b2b_routes` | Маршруты |
-| `b2b_route_items` | Продукция по маршрутам |
-| `b2b_available_categories` | Доступные категории продуктов |
-| `b2b_production_schedule` | График производства |
-| `b2b_accounts` | Пользователи B2B |
-| `b2b_news` | Новости (B2B портал) |
-| `basket_connect` | Связь корзин |
+| Catalog | Description |
+|---------|-------------|
+| `b2b_orders` | Orders |
+| `b2b_basket` | Order contents |
+| `b2b_order_items` | Ordered products |
+| `b2b_clients` | Clients |
+| `b2b_items` | Products |
+| `b2b_cat_items` | Product groups |
+| `b2b_nomenclature_group` | Product categories |
+| `b2b_discounts` | Discounts and prices |
+| `b2b_prices_items` | Special product prices |
+| `b2b_delivery` | Delivery addresses |
+| `b2b_routes` | Routes |
+| `b2b_route_items` | Products by route |
+| `b2b_available_categories` | Available product categories |
+| `b2b_production_schedule` | Production schedule |
+| `b2b_accounts` | B2B users |
+| `b2b_news` | News (B2B portal) |
+| `basket_connect` | Cart connections |
 
-### Производство (MD-модуль)
+### Manufacturing (MD Module)
 
-| Каталог | Описание |
-|---------|----------|
-| `md_project` | Обработка заказов |
-| `md_production` | Производство |
-| `md_project_product` | Изделия в проекте |
-| `md_project_batch` | Партии в изделиях |
-| `md_batches` | Партии |
-| `md_sketches` | Эскизы |
-| `md_design` | 3D Модельер |
-| `md_wages` | Расчёт ЗП |
-| `md_wages_actual` | Зарплаты |
-| `md_min_wages` | Оклады |
-| `md_awards` | Премии и штрафы |
-| `md_coefficients` | Коэффициенты |
-| `md_contractors` | Подрядчики |
-| `md_clients` | Клиенты (MD) |
-| `md_basket` | Состав заказов (MD) |
-| `md_accounts` | Сотрудники (MD) |
-| `md_alloy` | Виды сплавов |
-| `md_articles` | Комментарии к отчёту |
-| `md_cat_articles` | Категории статей (MD) |
-| `md_reports` | Отчёты |
-| `md_production_report` | Отчёт производства |
-| `md_remarks` | Комментарии |
+| Catalog | Description |
+|---------|-------------|
+| `md_project` | Order processing |
+| `md_production` | Production |
+| `md_project_product` | Products in a project |
+| `md_project_batch` | Batches in products |
+| `md_batches` | Batches |
+| `md_sketches` | Sketches |
+| `md_design` | 3D Designer |
+| `md_wages` | Payroll calculation |
+| `md_wages_actual` | Salaries |
+| `md_min_wages` | Base salaries |
+| `md_awards` | Bonuses and penalties |
+| `md_coefficients` | Coefficients |
+| `md_contractors` | Contractors |
+| `md_clients` | Clients (MD) |
+| `md_basket` | Order contents (MD) |
+| `md_accounts` | Employees (MD) |
+| `md_alloy` | Alloy types |
+| `md_articles` | Report comments |
+| `md_cat_articles` | Item categories (MD) |
+| `md_reports` | Reports |
+| `md_production_report` | Production report |
+| `md_remarks` | Remarks |
 
-### Time Tracking (TT-модуль)
+### Time Tracking (TT Module)
 
-| Каталог | Описание |
-|---------|----------|
-| `tt_tasks` | Задачи |
-| `tt_projects` | Проекты |
-| `tt_worklogs` | Рабочие журналы |
-| `tt_versions` | Версии |
+| Catalog | Description |
+|---------|-------------|
+| `tt_tasks` | Tasks |
+| `tt_projects` | Projects |
+| `tt_worklogs` | Work logs |
+| `tt_versions` | Versions |
 | `tt_wiki` | Wiki |
-| `tt_comments` | Комментарии |
+| `tt_comments` | Comments |
 
-### Склад (WH-модуль)
+### Warehouse (WH Module)
 
-| Каталог | Описание |
-|---------|----------|
-| `wh_items` | Товары |
-| `wh_cat_items` | Группы товаров |
-| `wh_stores` | Склады |
-| `wh_movements` | Движение товаров |
-| `wh_nomenclature_group` | Категории товаров |
-| `wh_warehouse_report` | Отчёт по складам |
+| Catalog | Description |
+|---------|-------------|
+| `wh_items` | Products |
+| `wh_cat_items` | Product groups |
+| `wh_stores` | Warehouses |
+| `wh_movements` | Stock movements |
+| `wh_nomenclature_group` | Product categories |
+| `wh_warehouse_report` | Warehouse report |
 
-### Выездные работы (VRN-модуль)
+### Field Services (VRN Module)
 
-| Каталог | Описание |
-|---------|----------|
-| `vrn_projects` | Работы |
-| `vrn_type_work` | Виды работ |
-| `vrn_tools` | Инструменты |
-| `vrn_equipment` | Техника и оборудование |
-| `vrn_materials` | Материалы |
+| Catalog | Description |
+|---------|-------------|
+| `vrn_projects` | Jobs |
+| `vrn_type_work` | Job types |
+| `vrn_tools` | Tools |
+| `vrn_equipment` | Machinery and equipment |
+| `vrn_materials` | Materials |
 
 ### CRM
 
-| Каталог | Описание |
-|---------|----------|
-| `crm_contacts` | Клиенты |
-| `crm_orders` | Заказы |
-| `crm_delivery` | Доставка |
-| `crm_stores` | Склады |
-| `crm_items` | Товары |
-| `crm_basket` | Состав заказов |
-| `crm_feedback` | Обращения |
+| Catalog | Description |
+|---------|-------------|
+| `crm_contacts` | Clients |
+| `crm_orders` | Orders |
+| `crm_delivery` | Delivery |
+| `crm_stores` | Warehouses |
+| `crm_items` | Products |
+| `crm_basket` | Order contents |
+| `crm_feedback` | Support tickets |
 
-### Системные / служебные
+### System / Service
 
-| Каталог | Описание |
-|---------|----------|
-| `accounts` | Сотрудники (основной) |
-| `users` | Пользователи платформы |
-| `contacts` | Контакты |
-| `project_types` | Типы проектов |
-| `activity` | Лог активности пользователей |
-| `eventlogs` | События интеграций |
-| `integrations` | Интеграции |
-| `notifications` | Уведомления |
-| `dashboard_widgets` | Виджеты дашборда |
-| `dashboards` | Рабочие столы |
-| `saved_filters` | Сохранённые фильтры |
-| `apps_storage` | KV-хранилище приложений |
-| `installed_apps` | Установленные приложения (у конкретной группы/тенанта) |
-| `marketplace` | Каталог всех приложений маркетплейса |
-| `todo` | ToDo |
-| `remarks` | Замечания |
-| `bookmarks` | Закладки |
-| `favorites_menu` | Избранное меню |
-| `profile_company` | Профиль компании |
-| `coredb_spravochnik` | Справочник |
-| `new_elements` | Новые элементы |
-| `trash` | Корзина |
-| `docs` | Документы (doctxt) |
-| `catalog_rules` | Правила каталогов (afterSave/beforeSave) |
+| Catalog | Description |
+|---------|-------------|
+| `accounts` | Employees (primary) |
+| `users` | Platform users |
+| `contacts` | Contacts |
+| `project_types` | Project types |
+| `activity` | User activity log |
+| `eventlogs` | Integration events |
+| `integrations` | Integrations |
+| `notifications` | Notifications |
+| `dashboard_widgets` | Dashboard widgets |
+| `dashboards` | Dashboards |
+| `saved_filters` | Saved filters |
+| `apps_storage` | App KV storage |
+| `installed_apps` | Installed apps (for a specific group/tenant) |
+| `marketplace` | All marketplace apps |
+| `todo` | To-do |
+| `remarks` | Remarks |
+| `bookmarks` | Bookmarks |
+| `favorites_menu` | Favorites menu |
+| `profile_company` | Company profile |
+| `coredb_spravochnik` | Reference directory |
+| `new_elements` | New items |
+| `trash` | Trash |
+| `docs` | Documents (doctxt) |
+| `catalog_rules` | Catalog rules (afterSave/beforeSave) |
 
 ---
 
-## Каталоги маркетплейса — подробно
+## Marketplace Catalogs — In Detail
 
-### `marketplace` — глобальный реестр приложений
+### `marketplace` — global app registry
 
-Содержит **все** приложения, опубликованные в маркетплейсе, независимо от того, установлены они у пользователя или нет. Это публичный каталог — аналог App Store.
+Contains **all** apps published in the marketplace, regardless of whether they are installed by the user. This is a public catalog — like an App Store.
 
-Ключевые поля ответа:
+Key response fields:
 
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `alias` | string | Уникальный идентификатор приложения |
-| `name` | string | Название приложения |
-| `anons` | string | Краткое описание (из `config.json → description`) |
-| `about` | string | Подробное описание (из `config.json → about`) |
-| `tags` | string | Теги через запятую |
-| `doc` | string | Имя файла иконки — путь: `/data/db/f_marketplace/{doc}` |
-| `from_group` | string | ID группы-владельца (разработчика) приложения |
-| `package` | string | Имя пакета (из `config.json → package`) |
-| `version` | string | Версия приложения |
+| Field | Type | Description |
+|-------|------|-------------|
+| `alias` | string | Unique app identifier |
+| `name` | string | App name |
+| `anons` | string | Short description (from `config.json → description`) |
+| `about` | string | Full description (from `config.json → about`) |
+| `tags` | string | Comma-separated tags |
+| `doc` | string | Icon filename — path: `/data/db/f_marketplace/{doc}` |
+| `from_group` | string | Group ID of the app owner (developer) |
+| `package` | string | Package name (from `config.json → package`) |
+| `version` | string | App version |
 
 ```js
-// Список всех приложений маркетплейса
+// List all marketplace apps
 const resp = await App.fetch('/db/marketplace.json');
-// resp.data[0].doc → имя файла иконки
-// Путь к иконке: `/data/db/f_marketplace/${item.doc}`
+// resp.data[0].doc → icon filename
+// Icon path: `/data/db/f_marketplace/${item.doc}`
 ```
 
-### `installed_apps` — установленные приложения тенанта
+### `installed_apps` — tenant's installed apps
 
-Содержит приложения, **установленные конкретной группой** (тенантом). Это не глобальный список — каждая группа видит только свои установленные приложения. Заполняется автоматически платформой при установке через UI маркетплейса.
+Contains apps **installed by a specific group** (tenant). This is not a global list — each group only sees their own installed apps. Populated automatically by the platform when a user installs from the marketplace UI.
 
-**Важно**: `installed_apps` — это единственный источник истины для вопроса «установлено ли приложение у данного пользователя». Не путать с `marketplace` (там все приложения) и `dashboard_widgets` (там виджеты дашборда, даже если тип — приложение маркетплейса).
+**Important**: `installed_apps` is the single source of truth for "is this app installed for this user?". Do not confuse with `marketplace` (all apps) or `dashboard_widgets` (dashboard widgets, even if of the marketplace app type).
 
-Ключевые поля:
+Key fields:
 
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `alias` | string | Уникальный alias записи |
-| `app_id` | string | **Alias записи в `marketplace`** — главная связь |
-| `name` | string | Название (копируется из marketplace) |
-| `from_group` | string | ID группы, которая установила приложение |
+| Field | Type | Description |
+|-------|------|-------------|
+| `alias` | string | Unique alias of the record |
+| `app_id` | string | **Alias from `marketplace`** — primary link |
+| `name` | string | Name (copied from marketplace) |
+| `from_group` | string | ID of the group that installed the app |
 
 ```js
-// Проверить, установлено ли приложение с package="my-app"
+// Check if app with package="my-app" is installed
 const installed = await App.fetchAll('/db/installed_apps.json');
 const myApp = installed.data.find(a => a.app_id === 'MY_MARKETPLACE_ALIAS');
 const isInstalled = !!myApp;
 
-// Если нужен alias из marketplace — он в поле app_id
+// If you need the marketplace alias — it's in app_id field
 const marketplaceAlias = myApp?.app_id;
 ```
 
-### Жизненный цикл приложения
+### App Lifecycle
 
 ```
 marketplace          → installed_apps         → dashboard_widgets
-(глобальный реестр)   (установлено у тенанта)   (размещено на дашборде)
+(global registry)     (installed by tenant)     (placed on dashboard)
      ↑                       ↑                          ↑
- деплой через API      пользователь нажал        пользователь добавил
- /db/marketplace/{id}  «Установить» в UI         виджет на рабочий стол
+ deploy via API        user clicked                user added
+ /db/marketplace/{id}  "Install" in UI             widget to workspace
 ```
 
-Связи:
-- `installed_apps.app_id` → `marketplace.alias` (FK: что установлено)
-- `dashboard_widgets.options.package` → `config.json → package` (что отображается на дашборде)
-- `apps_storage.app_id` → `installed_apps.id` (KV-хранилище конкретной установки)
+Relationships:
+- `installed_apps.app_id` → `marketplace.alias` (FK: what's installed)
+- `dashboard_widgets.options.package` → `config.json → package` (what's displayed on dashboard)
+- `apps_storage.app_id` → `installed_apps.id` (KV storage for a specific installation)
 
-### Рассылки и коммуникации
+### Notifications and Communications
 
-| Каталог | Описание |
-|---------|----------|
-| `send_partners_notifications` | Рассылки партнёрам |
-| `send_segments` | Сегменты рассылки |
-| `send_tpl_emails` | Шаблоны писем |
-| `mail_notifications_queue` | Очередь писем |
-| `telegram_notifications` | Очередь Telegram сообщений |
-| `tpl_emails_orders` | Шаблоны писем по заказам |
-| `tpl_emails_persons` | Шаблоны писем партнёрам |
+| Catalog | Description |
+|---------|-------------|
+| `send_partners_notifications` | Partner newsletters |
+| `send_segments` | Mailing segments |
+| `send_tpl_emails` | Email templates |
+| `mail_notifications_queue` | Email queue |
+| `telegram_notifications` | Telegram message queue |
+| `tpl_emails_orders` | Email templates for orders |
+| `tpl_emails_persons` | Email templates for partners |
 
-### AI и логи
+### AI and Logs
 
-| Каталог | Описание |
-|---------|----------|
-| `deepseek_request` | Запросы к DeepSeek |
-| `log_deepseek` | Логи DeepSeek |
-| `log_bad_authorize` | Логи неудачных авторизаций |
-| `log_billings` | Логи биллинга |
-| `api` | API-токены |
+| Catalog | Description |
+|---------|-------------|
+| `deepseek_request` | DeepSeek requests |
+| `log_deepseek` | DeepSeek logs |
+| `log_bad_authorize` | Failed authorization logs |
+| `log_billings` | Billing logs |
+| `api` | API tokens |
 
 ---
 
-## Примеры запросов из приложения
+## Example App Requests
 
-### Получить заказы B2B
+### Get B2B Orders
 
 ```js
 App.fetch('/db/b2b_orders.json').then(resp => {
-    console.log(resp.data); // массив заказов
+    console.log(resp.data); // array of orders
 });
 
-// С фильтром по статусу
+// With status filter
 App.fetch('/db/b2b_orders.json?form[status]=new').then(resp => { ... });
 ```
 
-### Состав конкретного заказа
+### Order Contents
 
 ```js
 App.getRequestParams().then(resp => {
     const orderId = resp.data.itemId;
     App.fetchAll(`/db/b2b_basket.json?form[order_id]=${orderId}`).then(resp => {
-        console.log(resp.data); // все позиции заказа
+        console.log(resp.data); // all order items
     });
 });
 ```
 
-### Создать задачу в TT
+### Create a Task in TT
 
 ```js
 App.fetch('/db/tt_tasks/add?edit&ajax=1', {
     method: 'POST',
     body: {
-        'form[name]': 'Задача из приложения',
+        'form[name]': 'Task from app',
         'form[project_id]': projectAlias,
         submit: 1
     }
 });
 ```
 
-### Отправить запрос в DeepSeek
+### Send a Request to DeepSeek
 
 ```js
 App.fetch('/db/deepseek_request/add?edit&ajax=1', {
     method: 'POST',
     body: {
-        'form[prompt]': 'Проанализируй заказ',
+        'form[prompt]': 'Analyze the order',
         'form[context]': JSON.stringify(orderData),
         submit: 1
     }
 });
 ```
 
-### Добавить уведомление в Telegram
+### Add a Telegram Notification
 
 ```js
 App.fetch('/db/telegram_notifications/add?edit&ajax=1', {
     method: 'POST',
     body: {
-        'form[message]': 'Новый заказ #' + orderId,
+        'form[message]': 'New order #' + orderId,
         'form[chat_id]': chatId,
         submit: 1
     }
 });
 ```
 
-### Прочитать историю активности
+### Read Activity History
 
 ```js
 App.fetch('/db/activity.json?form[catalog]=b2b_orders&form[item_id]=ORDER_ALIAS')
@@ -364,133 +364,133 @@ App.fetch('/db/activity.json?form[catalog]=b2b_orders&form[item_id]=ORDER_ALIAS'
 
 ---
 
-## Сценарии сквозной автоматизации
+## End-to-End Automation Scenarios
 
-Korfix -- ERP с единой базой, поэтому приложение может строить
-**сквозные сценарии** через несколько модулей без переключения контекста.
+Korfix is an ERP with a unified database, so an app can build
+**end-to-end scenarios** across multiple modules without context switching.
 
-### B2B Заказ → Производство → Счёт
+### B2B Order → Manufacturing → Invoice
 
 ```js
 App.getRequestParams().then(async resp => {
     const orderId = resp.data.itemId;
 
-    // 1. Читаем заказ
+    // 1. Read the order
     const order = await App.fetch(`/db/b2b_orders/${orderId}`);
 
-    // 2. Создаём производственный проект
+    // 2. Create a manufacturing project
     const mdProject = await App.fetch('/db/md_project/add?edit&ajax=1', {
         method: 'POST',
         body: {
-            'form[name]': 'Производство ' + order.data.name,
+            'form[name]': 'Production ' + order.data.name,
             'form[b2b_order_id]': orderId,
             submit: 1
         }
     });
 
-    // 3. Создаём счёт на оплату
+    // 3. Create a payment invoice
     await App.fetch('/db/ag_accountant/add?edit&ajax=1', {
         method: 'POST',
         body: {
-            'form[name]': 'Счёт по заказу ' + order.data.name,
+            'form[name]': 'Invoice for ' + order.data.name,
             'form[amount]': order.data.total,
             'form[client_id]': order.data.client_id,
             submit: 1
         }
     });
 
-    App.alert('Проект и счёт созданы', 'Готово');
+    App.alert('Project and invoice created', 'Done');
     App.reload();
 });
 ```
 
-### Вебхук на новые заказы → Telegram
+### Webhook on New Orders → Telegram
 
 ```js
-// Регистрируем один раз при установке приложения
+// Register once on app install
 App.storage.set(
     'event.hook.activity.b2b_orders.добавил.json',
     'https://myapp.example.com/api/new-order-hook'
 );
 ```
 
-На стороне бэкенда приложение получает POST с данными события
-и шлёт сообщение в Telegram через `telegram_notifications` или напрямую.
+The app backend receives a POST with event data
+and sends a message to Telegram via `telegram_notifications` or directly.
 
 ---
 
-## Включённые фичи платформы (conf.phtml)
+## Enabled Platform Features (conf.phtml)
 
-Эти возможности активны в Korfix -- приложения могут на них опираться:
+These capabilities are active in Korfix — apps can rely on them:
 
-| Фича | Значение |
-|------|----------|
-| `marketplace` | ✓ маркетплейс |
-| `core_events` | ✓ система событий (afteradd, beforesave, activity) |
-| `access_db` | ✓ row-level права на каталоги |
-| `access_statuses` | ✓ права на статусы |
-| `custom_dbfields` | ✓ кастомные поля в каталогах |
-| `saved_filters` | ✓ сохранённые фильтры |
-| `currency_rate` | ✓ курсы валют |
-| `json_response` | ✓ всё возвращает JSON |
-| `cataccess` | ✓ права на уровне строк |
-| `partners` | ✓ авторизация B2B-клиентов |
-| `yookassa` | ✓ платёжная система |
-| `bitrix24` | ✓ синхронизация с Bitrix24 |
-| `smtp` | ✓ отправка email |
-| `multiauth` | ✓ несколько ролей у пользователя |
-| `catalog_rules` | ✓ декларативные правила afterSave/beforeSave |
+| Feature | Value |
+|---------|-------|
+| `marketplace` | ✓ marketplace |
+| `core_events` | ✓ event system (afteradd, beforesave, activity) |
+| `access_db` | ✓ row-level catalog permissions |
+| `access_statuses` | ✓ status permissions |
+| `custom_dbfields` | ✓ custom fields in catalogs |
+| `saved_filters` | ✓ saved filters |
+| `currency_rate` | ✓ exchange rates |
+| `json_response` | ✓ everything returns JSON |
+| `cataccess` | ✓ row-level access |
+| `partners` | ✓ B2B client authentication |
+| `yookassa` | ✓ payment system |
+| `bitrix24` | ✓ Bitrix24 synchronization |
+| `smtp` | ✓ email sending |
+| `multiauth` | ✓ multiple roles per user |
+| `catalog_rules` | ✓ declarative afterSave/beforeSave rules |
 
 ---
 
-## Связи между каталогами (FK)
+## Catalog Relationships (FK)
 
-Связи определены через поля типа `select_from_table` в схемах. При запросе через API связанные значения подставляются автоматически (поле `{name}_value` в ответе).
+Relationships are defined via `select_from_table` type fields in schemas. When requested via the API, related values are substituted automatically (the `{name}_value` field in the response).
 
-### Типы ограничений (WHERE)
+### Constraint Types (WHERE)
 
-Большинство связей ограничены условиями видимости:
+Most relationships are restricted by visibility conditions:
 
-| Паттерн | Описание |
-|---------|----------|
-| `from_group = SESSION_GROUP` | Только записи своей группы (тенант-изоляция) |
-| `$_ACCESS->get_where()` | Полная проверка прав через систему доступа |
-| `from_group = ... OR from_group = '0'` | Свои + общие (шаблонные) записи |
-| `from_auth = SESSION_ID OR from_auth = 0` | Свои + публичные (напр. дашборды) |
-| `hidden < 1 OR hidden IS NULL` | Не удалённые |
-| `account_type = N` | Фильтр по роли пользователя |
+| Pattern | Description |
+|---------|-------------|
+| `from_group = SESSION_GROUP` | Only records from own group (tenant isolation) |
+| `$_ACCESS->get_where()` | Full permission check via the access system |
+| `from_group = ... OR from_group = '0'` | Own + shared (template) records |
+| `from_auth = SESSION_ID OR from_auth = 0` | Own + public (e.g. dashboards) |
+| `hidden < 1 OR hidden IS NULL` | Not deleted |
+| `account_type = N` | Filter by user role |
 
-### Финансы (AG)
+### Finance (AG)
 
 ```
 ag_cashflows
   ├─ project_id    → ag_projects.id
-  ├─ expense_type_id → ag_articles.id      (статья ДДС)
+  ├─ expense_type_id → ag_articles.id      (cash flow item)
   ├─ client_id     → ag_clients.id
-  ├─ companies_id  → ag_companies.id       (наше юрлицо)
+  ├─ companies_id  → ag_companies.id       (own legal entity)
   ├─ settlement_account_id → ag_settlement_accounts.id
   ├─ from_auth     → auth_pers.author_id
-  └─ members_id    → auth_pers.author_id[] (мульти)
+  └─ members_id    → auth_pers.author_id[] (multi)
 
 ag_contracts
   ├─ client_id     → ag_clients.id
   ├─ companies_id  → ag_companies.id
-  ├─ project_id    → ag_projects.id[]      (мульти)
+  ├─ project_id    → ag_projects.id[]      (multi)
   └─ members_id    → auth_pers.author_id[]
 
 ag_articles
   ├─ category      → ag_cat_articles.id
   ├─ flows_id      → ag_flows.id
-  ├─ products      → ag_products.id[]      (мульти)
+  ├─ products      → ag_products.id[]      (multi)
   └─ members_id    → auth_pers.author_id[]
 
-ag_accountant (Счета)
+ag_accountant (Invoices)
   ├─ client_id     → ag_clients.id
   ├─ companies_id  → ag_companies.id
   └─ members_id    → auth_pers.author_id[]
 
 ag_projects
-  ├─ type_project_id → ag_products.id      (тип проекта)
+  ├─ type_project_id → ag_products.id      (project type)
   ├─ contact_id    → ag_clients.id
   ├─ client_id     → ag_clients.id
   ├─ companies_id  → ag_companies.id
@@ -507,7 +507,7 @@ ag_clients / ag_companies
   └─ country_id    → country.alias
 ```
 
-### B2B (Торговля)
+### B2B (Trade)
 
 ```
 b2b_orders
@@ -515,29 +515,29 @@ b2b_orders
   ├─ delivery_id   → b2b_delivery.id
   └─ members_id    → auth_pers.author_id[]
 
-b2b_basket (Состав заказа)
+b2b_basket (Order contents)
   ├─ order_id      → b2b_orders.id
   └─ item_id       → b2b_items.id
 
-b2b_items (Продукция)
-  ├─ nomenclature_group → b2b_cat_items.id (категория)
+b2b_items (Products)
+  ├─ nomenclature_group → b2b_cat_items.id (category)
   └─ members_id    → auth_pers.author_id[]
 
 b2b_delivery
-  └─ route_id      → b2b_routes.id (JOIN с b2b_production_schedule)
+  └─ route_id      → b2b_routes.id (JOIN with b2b_production_schedule)
 
 b2b_discounts
   └─ client_group  → b2b_clients.id
 ```
 
-### Задачи (TT)
+### Tasks (TT)
 
 ```
 tt_tasks
-  ├─ person_id     → auth_pers.author_id   (исполнитель)
+  ├─ person_id     → auth_pers.author_id   (assignee)
   ├─ version_id    → tt_versions.id
   ├─ project_id    → tt_projects.id
-  ├─ parent_id     → tt_tasks.id           (родительская задача)
+  ├─ parent_id     → tt_tasks.id           (parent task)
   └─ members_id    → auth_pers.author_id[]
 
 tt_worklogs
@@ -554,7 +554,7 @@ tt_comments
   └─ from_auth     → auth_pers.author_id
 ```
 
-### Производство (MD)
+### Manufacturing (MD)
 
 ```
 md_project
@@ -572,7 +572,7 @@ md_project_product
   └─ project_id    → md_project.id
 ```
 
-### Склад (WH)
+### Warehouse (WH)
 
 ```
 wh_movements
@@ -585,7 +585,7 @@ wh_items
   └─ members_id    → auth_pers.author_id[]
 ```
 
-### Выездные работы (VRN)
+### Field Services (VRN)
 
 ```
 vrn_projects
@@ -605,7 +605,7 @@ crm_basket
   └─ item_id       → crm_items.id
 ```
 
-### Дашборды
+### Dashboards
 
 ```
 dashboard_widgets
@@ -614,7 +614,7 @@ dashboard_widgets
   └─ from_auth     → auth_pers.author_id
 ```
 
-### Системные
+### System
 
 ```
 installed_apps
@@ -624,36 +624,36 @@ apps_storage
   └─ app_id        → installed_apps.id
 
 custom_dbfields
-  ├─ scheme        → custom_dbtables.dbname (каталог, к которому привязано поле)
+  ├─ scheme        → custom_dbtables.dbname (catalog the field is attached to)
   └─ from_auth     → auth_pers.author_id
 
 custom_dbview
-  ├─ catalog1      → (любой каталог)
-  ├─ catalog2      → (любой каталог)
-  ├─ catalog1_field → (поле catalog1)
-  └─ catalog2_field → (поле catalog2)
+  ├─ catalog1      → (any catalog)
+  ├─ catalog2      → (any catalog)
+  ├─ catalog1_field → (field from catalog1)
+  └─ catalog2_field → (field from catalog2)
 ```
 
-### Общий паттерн members_id
+### Common members_id Pattern
 
-Почти все бизнес-каталоги имеют поле `members_id` (multiselect_from_table → auth_pers).
-Это участники/наблюдатели записи. WHERE ограничение: `from_group = SESSION_GROUP AND hidden < 1`.
+Almost all business catalogs have a `members_id` field (multiselect_from_table → auth_pers).
+These are participants/watchers of the record. WHERE constraint: `from_group = SESSION_GROUP AND hidden < 1`.
 
-### Использование связей в миниапах
+### Using Relationships in Miniapps
 
 ```js
-// API возвращает связанные значения если load_values=1
+// API returns related values when load_values=1
 const resp = await App.fetch('/api/db/ag_cashflows?limit=10&load_values=1');
 // resp.data[0].client_id = "5"
-// resp.data[0].client_id_value = "ООО Ромашка"
+// resp.data[0].client_id_value = "Acme Corp"
 
-// Или загрузить схему для получения вариантов select
+// Or load the schema to get select options
 const schema = await App.fetch('/db/ag_cashflows/sheme.json');
-// schema.data.client_id.arr = {5: "ООО Ромашка", 12: "ИП Иванов"}
+// schema.data.client_id.arr = {5: "Acme Corp", 12: "John Smith LLC"}
 ```
 
 ---
 
-*Каталоги: /modules/db/ в panel.korfix.ru*
+*Catalogs: /modules/db/ in panel.korfix.ru*
 
 **← [Home](index.md)**

@@ -1,47 +1,47 @@
-# Права на статусы (access_statuses)
+# Status Permissions (access_statuses)
 
-> **См. также:** [data-api.md](data-api.md) · [korfix-catalogs.md](korfix-catalogs.md) · [catalog-rules.md](catalog-rules.md)
+> **See also:** [data-api.md](data-api.md) · [korfix-catalogs.md](korfix-catalogs.md) · [catalog-rules.md](catalog-rules.md)
 > **← [Home](index.md)**
 
-Каталог `access_statuses` управляет тем, какие статусы доступны
-для каждой роли пользователя в каждом каталоге.
+The `access_statuses` catalog controls which statuses are available
+to each user role in each catalog.
 
-> Внутренняя механика (PHP, get_status_arr, get_disabled_statuses) — в [../backend/statuses.md](../backend/statuses.md)
-
----
-
-## Принцип
-
-В каталогах с полем `status` каждый статус — этап процесса.
-Через `access_statuses` администратор ограничивает, какие статусы
-доступны конкретной роли. Без записи — все статусы доступны.
-
-**Пример:** менеджер переводит заказ в "В работе",
-но только руководитель может поставить "Оплачен" или "Отменён".
+> Internal mechanics (PHP, get_status_arr, get_disabled_statuses) — in [../backend/statuses.md](../backend/statuses.md)
 
 ---
 
-## Структура записи
+## Concept
 
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `dbmodule` | select | Каталог |
-| `role` | select | Роль (тип аккаунта) |
-| `statuses` | multiselect | Разрешённые статусы (whitelist) |
+In catalogs with a `status` field, each status is a process stage.
+Via `access_statuses`, an admin restricts which statuses are available
+to a specific role. Without a record — all statuses are available.
 
-Одна запись на пару каталог + роль. Alias: `{dbmodule}_{role}`.
-
-**Доступ:** только root (создатель группы). Остальные роли, включая администраторов, не имеют доступа к управлению правами на статусы.
+**Example:** a manager moves an order to "In Progress",
+but only a supervisor can set "Paid" or "Cancelled".
 
 ---
 
-## Чтение настроек
+## Record Structure
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `dbmodule` | select | Catalog |
+| `role` | select | Role (account type) |
+| `statuses` | multiselect | Allowed statuses (whitelist) |
+
+One record per catalog + role pair. Alias: `{dbmodule}_{role}`.
+
+**Access:** root only (group creator). Other roles, including administrators, cannot manage status permissions.
+
+---
+
+## Reading Settings
 
 ```js
-// Все правила
+// All rules
 const resp = await App.fetch('/db/access_statuses.json');
 
-// Для конкретного каталога
+// For a specific catalog
 const resp = await App.fetch('/db/access_statuses.json?form[dbmodule]=b2b_orders');
 resp.data.forEach(rule => {
     console.log(rule.role);      // "3"
@@ -51,7 +51,7 @@ resp.data.forEach(rule => {
 
 ---
 
-## Создание правила
+## Creating a Rule
 
 ```js
 await App.fetch('/db/access_statuses/add?edit&ajax=1', {
@@ -67,31 +67,31 @@ await App.fetch('/db/access_statuses/add?edit&ajax=1', {
 
 ---
 
-## Получение каталогов, ролей и статусов
+## Getting Catalogs, Roles, and Statuses
 
 ```js
 const schema = await App.fetch('/db/access_statuses/sheme.json');
 
-// Каталоги с поддержкой статусов
+// Catalogs with status support
 const catalogs = schema.data.dbmodule.arr;
 
-// Роли (типы аккаунтов)
+// Roles (account types)
 const roles = schema.data.role.arr;
 
-// Статусы по каталогам
+// Statuses by catalog
 const statusesByModule = schema.data.dbmodule.group_statuses;
-// { "b2b_orders": { "10": "Новый", "20": "В работе" }, ... }
+// { "b2b_orders": { "10": "New", "20": "In Progress" }, ... }
 
-// Или статусы конкретного каталога через его схему
+// Or statuses for a specific catalog via its schema
 const catSchema = await App.fetch('/db/b2b_orders/sheme.json');
 const statuses = catSchema.data.status.arr;
 ```
 
 ---
 
-## Сценарии для миниапов
+## Use Cases for Miniapps
 
-### Визуализация процесса
+### Visualizing the process
 
 ```js
 async function getStatusMatrix(catalog) {
@@ -110,7 +110,7 @@ async function getStatusMatrix(catalog) {
 }
 ```
 
-### Проверка доступа перед сменой статуса
+### Checking access before changing a status
 
 ```js
 async function canSetStatus(catalog, statusId) {
@@ -125,28 +125,28 @@ async function canSetStatus(catalog, statusId) {
 }
 ```
 
-### Проверка прав перед показом UI
+### Checking permissions before showing UI
 
-Управление правами на статусы доступно только root (создателю группы).
-Перед показом интерфейса настройки стоит проверить:
+Status permission management is only available to root (group creator).
+Before showing the settings interface:
 
 ```js
 const params = await App.getRequestParams();
 if (params.data.userId !== params.data.groupId) {
-    // Не root — показать предупреждение или скрыть секцию
-    App.alert('Настройка прав на статусы доступна только владельцу аккаунта');
+    // Not root — show warning or hide section
+    App.alert('Status permission settings are only available to the account owner');
     return;
 }
-// Root — показать матрицу прав
+// Root — show permission matrix
 ```
 
-### Настройка воркфлоу при установке
+### Configuring workflow on install
 
-Приложение может при установке создать правила доступа к статусам,
-настраивая бизнес-процесс под роли компании.
+An app can create status access rules on install,
+setting up business processes tailored to company roles.
 
 ---
 
-*Каталог: `/db/access_statuses` | Бэкенд: [../backend/statuses.md](../backend/statuses.md)*
+*Catalog: `/db/access_statuses` | Backend: [../backend/statuses.md](../backend/statuses.md)*
 
 **← [Home](index.md)**

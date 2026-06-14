@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://korfix.info/schemas/miniapp-config.schema.json",
+  "title": "Korfix miniapp config.json",
+  "description": "Structural schema for a Korfix marketplace miniapp manifest. File presence (urls.* / logo on disk) is checked separately by validate-bundle.js — JSON Schema cannot see the filesystem.",
+  "type": "object",
+  "required": ["name", "urls"],
+  "properties": {
+    "name": { "type": "string", "minLength": 1, "description": "App name" },
+    "version": { "type": "string", "description": "SemVer, e.g. 1.2.0" },
+    "description": { "type": "string", "description": "Short description (1-2 sentences)" },
+    "about": { "type": "string", "description": "Marketplace description; markdown in a single string with \\n. All 5 sections recommended." },
+    "logo": { "type": "string", "description": "Icon filename present in the zip (e.g. logo.svg)" },
+    "package": { "type": "string", "description": "Package name / folder. Game apps: game-<alias>; system game apps: games-<alias>." },
+    "category": { "type": "integer", "minimum": 1, "maximum": 5, "description": "1 AI-agents, 2 Business, 3 Games, 4 Tools, 5 Other" },
+    "tags": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "array", "items": { "type": "string" } }
+      ]
+    },
+    "urls": {
+      "type": "object",
+      "description": "frame -> file (relative for bundled apps, absolute http(s) for remote)",
+      "minProperties": 1,
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "urlsConf": {
+      "type": "object",
+      "description": "Per-frame request config, e.g. { main: { method: \"get\" } }",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "method": { "type": "string", "enum": ["get", "post", "GET", "POST"] }
+        }
+      }
+    },
+    "menu": {
+      "type": "object",
+      "description": "catalog-alias -> { frame, name } — menu item appears after that catalog"
+    },
+    "catalogs": {
+      "type": "object",
+      "description": "Embed points per catalog (tabs, itemsActions, footers, afterSave)"
+    },
+    "permissions": {
+      "type": "object",
+      "properties": {
+        "catalogs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["read", "write"] }
+          }
+        },
+        "storage": { "type": "boolean" },
+        "navigate": { "type": "boolean" },
+        "modal": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "korgames": {
+      "type": "object",
+      "description": "Game module section (only for game miniapps)",
+      "properties": {
+        "game_id": { "type": ["string", "integer"] },
+        "reward_mode": { "type": "string" },
+        "items": { "type": "array" }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "urls": { "type": "object", "required": ["widget"] } },
+        "required": ["urls"]
+      },
+      "then": {
+        "properties": {
+          "permissions": {
+            "properties": {
+              "catalogs": {
+                "required": ["dashboard_widgets"],
+                "properties": {
+                  "dashboard_widgets": {
+                    "type": "array",
+                    "allOf": [
+                      { "contains": { "const": "read" } },
+                      { "contains": { "const": "write" } }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
