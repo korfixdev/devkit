@@ -111,6 +111,20 @@ App.fetch('/db/tt_tasks.json?form[status]=open&form[priority]=high')
 App.fetch('/api/db/tt_tasks?filter[status]=open&order_by=created&order=DESC&limit=20&load_values=1')
 ```
 
+## Common mistakes (guard)
+
+- **`form[]` vs flat — picked by endpoint, not by preference.** `/db/...` always wraps fields in
+  `form[name]=value`; `/api/db/...` always takes flat `name=value`. Mixing them silently drops the
+  fields (record saves empty / "nothing created"). Same rule for `App.fetch`, curl, and external calls.
+- **No generic catalog names.** There is no `/db/clients`, `/db/users`, `/db/orders`. Real catalogs are
+  prefixed: `crm_contacts`, `auth_pers`, `crm_orders`, `b2b_clients`, your own `custom_*`. Verify the
+  exact alias via `/api/db/getcatalogs` before coding — a guessed generic name 404s.
+- **Delete is not the HTTP `DELETE` verb.** Soft-delete is `POST /db/{cat}/{alias}?udel&ajax=1`. There is
+  no REST `DELETE` method — using `method: 'DELETE'` does nothing.
+- **`from_auth` + `from_group` are required on create.** Omit them and the record belongs to the
+  superadmin and is invisible to the user (looks like "saved but nothing appears"). Take both from
+  `App.getUser()` (`from_auth`, `from_group`) — don't hardcode or swap them.
+
 ## Documentation
 
 Read before working with CRUD:

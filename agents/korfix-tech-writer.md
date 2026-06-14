@@ -83,16 +83,10 @@ You maintain the technical README.md inside Korfix miniapp project directories. 
 
 ## Deploy / update (for developers)
 
-> Endpoint reference: the canonical decision table lives in `docs/miniapps/deploy.md`.
-> Default update = `POST /api/db/marketplace/{ID}` (shown below).
-
-```bash
-cd {app-dir}
-zip -r /tmp/{app-name}.zip config.json *.html *.js *.css *.svg README.md
-curl -X POST "${KORFIX_API_URL}/api/db/marketplace/{ID}" \
-  -H "Authorization: Bearer ${KORFIX_TOKEN}" \
-  -F "doc1=@/tmp/{app-name}.zip;type=application/zip"
-```
+> Deploy is **not** documented here — the full, current procedure (version bump, bundle gate, zip,
+> transport curl/MCP) lives in one place: the `korfix-pre-deploy` skill, with the endpoint decision
+> table in `docs/miniapps/deploy.md`. Default update = `POST /api/db/marketplace/{ID}`.
+> Don't paste a deploy recipe into the README — it drifts; point to the canonical source instead.
 
 ## Change history
 

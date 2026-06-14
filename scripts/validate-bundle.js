@@ -5,13 +5,14 @@
  * Pure local pre-flight (NO API calls): mirrors the platform's deploy-time manifest
  * validation so problems are caught before zipping instead of as a 422 on deploy.
  *
- * Checks:
+ * Checks (every config.json metadata field is REQUIRED — single source of truth shared
+ * with config-json.md and the korfix-miniapp-validate skill):
  *   - config.json exists at the bundle root and is valid JSON
- *   - required field `name`
- *   - `urls` is an object; every file referenced in urls.* exists in the bundle dir
- *   - `logo` file exists (if declared)
- *   - if `urls.widget` is declared → permissions.catalogs.dashboard_widgets includes read+write
- *   - recommended fields present (package, permissions, about, category 1..5) → WARN if missing
+ *   - required: name, version, description, about, package, category (int 1..5),
+ *     urls (object, every referenced file present), logo (file present), permissions
+ *   - conditional: if `urls.widget` is declared → permissions.catalogs.dashboard_widgets
+ *     includes read+write
+ *   - optional: urlsConf, embed points (menu/tabs/itemsActions/footer)
  *
  * If `ajv` happens to be resolvable AND schemas/config.schema.json exists, an extra
  * JSON-Schema pass runs too. Otherwise the structural checks above are authoritative.
@@ -74,15 +75,13 @@ function validateBundle(dir) {
     }
   }
 
-  // logo: file must exist if declared
-  if (cfg.logo) {
-    if (typeof cfg.logo !== 'string') {
-      fails.push('field "logo" must be a string filename');
-    } else if (!/^https?:\/\//i.test(cfg.logo) && !fs.existsSync(path.join(dir, cfg.logo))) {
-      fails.push(`logo -> "${cfg.logo}" not present in the bundle`);
-    }
-  } else {
-    warns.push('field "logo" is recommended (icon shown in the marketplace)');
+  // logo: required, file must exist
+  if (!cfg.logo) {
+    fails.push('field "logo" is required (icon shown in the marketplace)');
+  } else if (typeof cfg.logo !== 'string') {
+    fails.push('field "logo" must be a string filename');
+  } else if (!/^https?:\/\//i.test(cfg.logo) && !fs.existsSync(path.join(dir, cfg.logo))) {
+    fails.push(`logo -> "${cfg.logo}" not present in the bundle`);
   }
 
   // widget frame requires dashboard_widgets read+write
@@ -96,14 +95,20 @@ function validateBundle(dir) {
     }
   }
 
-  // recommended fields
-  if (!cfg.package) warns.push('field "package" is recommended (missing -> deploy warning)');
-  if (!cfg.permissions) warns.push('field "permissions" is recommended (declare used catalogs)');
-  if (!cfg.about) warns.push('field "about" is recommended (marketplace description)');
+  // required metadata fields (single source of truth: every config.json field is mandatory)
+  if (!cfg.version || typeof cfg.version !== 'string' || !cfg.version.trim()) {
+    fails.push('field "version" is required (SemVer, e.g. "1.0.0")');
+  }
+  if (!cfg.description || typeof cfg.description !== 'string' || !cfg.description.trim()) {
+    fails.push('field "description" is required (short 1-2 sentence summary)');
+  }
+  if (!cfg.package) fails.push('field "package" is required (app package/folder name)');
+  if (!cfg.permissions) fails.push('field "permissions" is required (declare every used catalog)');
+  if (!cfg.about) fails.push('field "about" is required (marketplace description, 5 sections)');
   if (cfg.category === undefined) {
-    warns.push('field "category" is recommended (int 1..5)');
+    fails.push('field "category" is required (int 1..5)');
   } else if (!Number.isInteger(cfg.category) || cfg.category < 1 || cfg.category > 5) {
-    warns.push(`field "category" should be an integer 1..5 (got ${JSON.stringify(cfg.category)})`);
+    fails.push(`field "category" must be an integer 1..5 (got ${JSON.stringify(cfg.category)})`);
   }
 
   // optional JSON-Schema pass (only if ajv + schema are both available)

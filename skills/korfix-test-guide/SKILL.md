@@ -37,7 +37,7 @@ Manual miniapp testing procedure in the browser after deploy. The static validat
 
 - [ ] On repeated install — installer does not crash, completes correctly
 - [ ] `App.done()` is called — platform moves to the next setup step
-- [ ] If installer creates a catalog — verify the catalog was created (`/db/custom_xxx.json`)
+- [ ] If installer creates a catalog — verify it was created by querying the **registry**, not the catalog itself: `/db/custom_dbtables.json?form[dbname]=xxx` must return a row (`dbname` = name without the `custom_` prefix). ⚠️ Do **not** check via `/db/custom_xxx.json` — the CRM returns `ok` with an empty list even when the catalog does not exist, so that check passes for a catalog that was never created (false green). See `self-provisioning.md`.
 - [ ] Repeated installer run is idempotent (no duplicate data)
 
 ## Data isolation check

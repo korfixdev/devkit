@@ -4,7 +4,7 @@
   "title": "Korfix miniapp config.json",
   "description": "Structural schema for a Korfix marketplace miniapp manifest. File presence (urls.* / logo on disk) is checked separately by validate-bundle.js — JSON Schema cannot see the filesystem.",
   "type": "object",
-  "required": ["name", "urls"],
+  "required": ["name", "version", "description", "about", "package", "category", "logo", "permissions", "urls"],
   "properties": {
     "name": { "type": "string", "minLength": 1, "description": "App name" },
     "version": { "type": "string", "description": "SemVer, e.g. 1.2.0" },

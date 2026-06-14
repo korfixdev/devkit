@@ -33,7 +33,7 @@ Run in fresh context (subagent or separate session) — you have no knowledge of
 ## Item priorities
 
 - **Critical (blocks release):**
-  - `config.json` is invalid, required fields are missing (`name`, `package`, `about`, `permissions`)
+  - `config.json` is invalid or any required field is missing. **All metadata fields are required** (single source of truth, same set as `validate-bundle.js`, `config-json.md`, and `schemas/config.schema.json`): `name`, `version`, `description`, `about`, `package`, `category` (int 1..5), `logo` (file present), `permissions`, `urls`. Missing any one → FAIL.
   - Forbidden extensions in zip/directory (`.php`, `.exe`, `.sh`)
   - `config.json` is not in the root
   - `window.fetch` / `XMLHttpRequest` used instead of `App.fetch`

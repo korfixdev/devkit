@@ -35,6 +35,11 @@ This applies to MCP too — if using MCP tools `db_read`/`db_insert`, verify MCP
 
 ## Before writing ANY code
 
+0. **Read `SPEC.md` if one was handed off.** When `korfix-analyst` designed this app it wrote a
+   `SPEC.md` (requirements + design) and passed you its path — **open and follow it** before anything
+   else; it is the source of truth for scope, catalogs, and embed points. If a path was given but the
+   file is missing, say so instead of guessing. (`SPEC.md` is the analyst's spec; `README.md` is the
+   living dev doc maintained by `korfix-tech-writer` — don't confuse them.)
 1. Read `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/index.md`
 2. Read `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/rules.md` — sandbox rules, mandatory
 3. Read `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/styling.md` — CSS variables, components, iframe resize
@@ -149,13 +154,9 @@ Before any deploy, run skill `korfix-miniapp-checklist` (self-check), then `korf
 7. **Before zip — update README** via `korfix-tech-writer` once more, so the file in the zip reflects the final state.
 8. Only after `READY` — deploy. **Endpoint choice → the canonical decision table in `${CLAUDE_PLUGIN_ROOT}/docs/miniapps/deploy.md`** (default update = `POST /api/db/marketplace/{ID}`). Choose the transport based on environment:
 
-   **Option A — curl** (local Claude Code with filesystem and network access):
-   ```bash
-   zip -r /tmp/app.zip config.json *.html *.js *.css *.svg README.md CHANGELOG.md TODO.md
-   curl -X POST "${KORFIX_API_URL}/api/db/marketplace/${APP_ID}" \
-     -H "Authorization: Bearer ${KORFIX_TOKEN}" \
-     -F "doc1=@/tmp/app.zip;type=application/zip"
-   ```
+   **Option A — curl** (local Claude Code with filesystem and network access): use the exact
+   zip + `curl POST` command from the `korfix-pre-deploy` skill (single source of truth — don't
+   retype it here, so it can't drift). It packages the bundle and POSTs to `/api/db/marketplace/${APP_ID}`.
 
    **Option B — deploy_miniapp MCP tool** (cloud Claude Code or when curl to external hosts is blocked):
    - Check if `deploy_miniapp` is available in the current MCP tools (it appears when the Korfix MCP server is connected to vibe.korfix.app).

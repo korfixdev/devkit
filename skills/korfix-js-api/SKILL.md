@@ -115,7 +115,9 @@ async function loadRecords() {
 
 setInterval(async () => {
     try {
-        const r = await App.fetchV2('/db/MY_CATALOG.json?limit=5&order=ts_desc&not_cache=1');
+        // free_cache=1 — ignore the user's session-saved filters (a programmatic poll must see the
+        // whole catalog, not what the user last filtered in the UI); not_cache=1 — don't pollute cache.
+        const r = await App.fetchV2('/db/MY_CATALOG.json?limit=5&order=ts_desc&free_cache=1&not_cache=1');
         const rows = r.data ?? [];
         const total = Number(r.total ?? rows.length);
         const topIds = rows.map(r => r.id).join(',');
@@ -173,6 +175,8 @@ init();
   }
   ```
 - **Platform resources — absolute paths**: avatars `/reimg/data/auth/{doc}?80x80`, catalog files `/data/db/f_{catalog}/{doc}`, app icons `/data/db/f_marketplace/{doc}`. Relative paths inside the iframe resolve to the app archive store URL, not the CRM domain.
+- **`storage.get(key)` returns the whole record, not the value.** `get()` resolves to `{name, value, alias, ...}` — rendering it directly prints `[object Object]`. Use `getValue(key, default)` for the bare value, or read `.value` off the record. (`getRow` is the explicit alias of `get`.)
+- **Webhook event keys are Russian words.** Catalog webhook payloads key the action in Russian: `добавил` (created), `отредактировал` (edited), `удалил` (deleted) — not `created`/`updated`/`deleted`. Match the Russian keys or the handler silently never fires. See `storage-and-hooks.md`.
 
 ## Documentation
 

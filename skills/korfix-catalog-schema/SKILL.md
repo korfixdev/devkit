@@ -15,6 +15,14 @@ const schema = await App.fetch('/db/tt_tasks/sheme.json')
 // schema.data — object: { fieldName: { type, arr, catalog, ... } }
 ```
 
+> **`sheme.json` vs `form[scheme]` — two different things, don't conflate them:**
+> - **`/db/{catalog}/sheme.json`** — the read-only **endpoint** that returns a catalog's field schema.
+>   The platform spells it `sheme` (no `c`) — `/db/.../scheme.json` is a 404. Keep the platform spelling.
+> - **`form[scheme]`** — a **required field** when *creating* a `custom_dbtables` catalog (the schema
+>   template to clone, currently `coredb_def_catalog`). Omitting it makes the create silently fail.
+>
+> One is an endpoint you GET to inspect fields; the other is a POST body field you set to create a catalog.
+
 ## Field types
 
 | type | Contains |

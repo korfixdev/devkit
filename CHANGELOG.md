@@ -4,6 +4,52 @@ All notable changes to the plugin are recorded here.
 
 Format — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning — [SemVer](https://semver.org/).
 
+## [0.25.0] — 2026-06-14
+
+Consistency + correctness pass across docs, skills, agents, and the bundle gate (external review follow-up).
+
+### Changed
+- **config.json — every metadata field is now required** (single source of truth). `validate-bundle.js`,
+  the `korfix-miniapp-validate` skill, `config-json.md`, and `schemas/config.schema.json` now all enforce
+  the same hard-required set: `name`, `version`, `description`, `about`, `package`, `category` (int 1..5),
+  `logo`, `permissions`, `urls`. Previously `package`/`logo`/`permissions`/`about`/`category` were only
+  WARN in one gate and required in another — a bundle could pass the local check then fail review.
+  `validate-bundle.js` also now actually checks `version` and `description` (it didn't before).
+- **`fetchV2` is the primary read pattern across all docs.** `data-api.md`, `js-api.md`, `dashboards.md`,
+  `db-views.md`, `self-provisioning.md`, and the gamedev `kg()` helper now lead with `App.fetchV2()`
+  (uniform `{ok, status, data}` shape); `asArray` is demoted to a documented legacy fallback. Removes the
+  in-file mix of old/new patterns that caused agents to copy the old `resp.data.data` style.
+- **`korfix-miniapp-dev` reads `SPEC.md`.** The agent is now told to open and follow the analyst's
+  handed-off `SPEC.md` before coding. `korfix-analyst` frontmatter corrected (it produces `SPEC.md`, not
+  `README.md`).
+- **Background polling uses `free_cache=1`** (not just `not_cache=1`) in `js-api.md` and the
+  `korfix-js-api` skill — a programmatic poll must ignore the user's session-saved UI filters.
+- **Deploy recipe deduplicated** — the canonical zip+curl command lives only in `korfix-pre-deploy`;
+  `korfix-miniapp-dev` and the `korfix-tech-writer` README template now reference it instead of inlining
+  (prevents drift). Gamedev docs now cross-link `deploy.md` and explain why games default to
+  `/api/marketplace/deploy/{id}`.
+
+### Added
+- **`korfix-crud-data`** guard section: `form[]` vs flat (by endpoint), no generic catalog names,
+  no REST `DELETE` verb, `from_auth`/`from_group` required on create.
+- **`korfix-js-api`** guards: `storage.get()` returns the record not the value (`[object Object]` trap);
+  webhook event keys are Russian words (`добавил`/`отредактировал`/`удалил`).
+- **`korfix-catalog-schema`**: explicit split between the `sheme.json` endpoint (platform spelling) and
+  the `form[scheme]` field required when creating `custom_dbtables`.
+- **pre-zip hook** now runs a conservative static scan of bundled `.js`/`.html` for write anti-patterns
+  (REST `DELETE`, `form[]` on `/api/db/`, writes with no `.ok`/status check, `storage.get()` into
+  `innerHTML`) — advisory, never blocks.
+
+### Fixed
+- **`korfix-test-guide`** no longer recommends the catalog-existence antipattern (`/db/custom_xxx.json`
+  returns `ok` even when the catalog doesn't exist) — now checks the `custom_dbtables` registry.
+- **Self-provisioning `checkCatalogExists`** docs fixed: the old `App.fetch` + `Array.isArray(resp.data)`
+  check always returned false inside the iframe (resp.data was the wrapper object) → re-provisioned every
+  load. Now uses `App.fetchV2`.
+- **`coin-clicker-walkthrough`** deploy used `category=games` (string) — corrected to `category=3` (int).
+- **Two broken doc cross-links** fixed: `index.md` → `backend-development.md` (was `../backend/index.md`);
+  `self-provisioning.md` token-audit link de-linked (was `../../devkit-skills/...`).
+
 ## [0.24.0] — 2026-06-14
 
 ### Changed
