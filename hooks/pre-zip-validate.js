@@ -49,9 +49,10 @@ function scanCodeAntipatterns(dir) {
       txt = fs.readFileSync(p, 'utf8');
     } catch (_) { continue; }
 
-    // 1. REST DELETE verb — does nothing on this platform (soft-delete = POST ...?udel)
-    if (/\bmethod\s*:\s*['"]DELETE['"]/i.test(txt)) {
-      advisories.push(`${f}: uses method:'DELETE' — the platform has no REST DELETE; soft-delete is POST /db/{cat}/{alias}?udel&ajax=1`);
+    // 1. DELETE verb on a /db/ (session) URL does nothing — that path needs ?udel POST.
+    //    (/api/db/ DOES support REST DELETE, so only flag when the file uses /db/ and not /api/db/.)
+    if (/\bmethod\s*:\s*['"]DELETE['"]/i.test(txt) && /(^|[^i])\/db\//.test(txt) && !/\/api\/db\//.test(txt)) {
+      advisories.push(`${f}: method:'DELETE' on a /db/ (session) URL does nothing — soft-delete is POST /db/{cat}/{alias}?udel&ajax=1. (REST DELETE works on /api/db/{cat}/{id}.)`);
     }
     // 2. form[] sent to /api/db/ — that endpoint takes flat fields, form[] is dropped
     if (txt.split('\n').some((ln) => ln.includes('/api/db/') && ln.includes('form['))) {

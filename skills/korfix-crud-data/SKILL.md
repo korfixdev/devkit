@@ -122,8 +122,12 @@ App.fetch('/api/db/tt_tasks?filter[status]=open&order_by=created&order=DESC&limi
 - **No generic catalog names.** There is no `/db/clients`, `/db/users`, `/db/orders`. Real catalogs are
   prefixed: `crm_contacts`, `auth_pers`, `crm_orders`, `b2b_clients`, your own `custom_*`. Verify the
   exact alias via `/api/db/getcatalogs` before coding — a guessed generic name 404s.
-- **Delete is not the HTTP `DELETE` verb.** Soft-delete is `POST /db/{cat}/{alias}?udel&ajax=1`. There is
-  no REST `DELETE` method — using `method: 'DELETE'` does nothing.
+- **Delete — depends on the endpoint:**
+  - **`/api/db/{cat}/{id}`** supports the REST `DELETE` verb → soft-delete (to trash, `hidden=1`).
+    `PUT` and `PATCH` also work there (upsert / update, same as `POST`).
+  - **`/db/{cat}/{alias}` (session iframe)** has **no** `DELETE` verb wired — soft-delete is
+    `POST /db/{cat}/{alias}?udel&ajax=1`. Using `method: 'DELETE'` on a `/db/` URL does nothing.
+  - All deletes are **soft** (record goes to `/db/trash`, `hidden=1`); there is no hard-delete via API.
 - **Record ownership — `from_group` / `from_auth`** (with `FEATURES_USED.auth_role`, enforced server-side
   in `kat_admin.php` → `KAT::save`; this is the case on Korfix instances):
   - **`from_group`** — don't pass it. The server forces it to your session group (a non-admin can't leave

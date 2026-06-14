@@ -4,6 +4,21 @@ All notable changes to the plugin are recorded here.
 
 Format — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning — [SemVer](https://semver.org/).
 
+## [0.25.2] — 2026-06-14
+
+Tracks a platform API change: `/api/db/` now supports the full set of REST write verbs (core change,
+test server — not yet on prod). Docs/skills/hook updated to match.
+
+### Changed
+- **`korfix-crud-data` delete guard flipped.** `/api/db/{cat}/{id}` now supports the REST `DELETE` verb
+  (→ soft-delete, `hidden=1`) and `PUT`/`PATCH` (upsert/update, same as `POST`). The `/db/` session path
+  still has no `DELETE` verb — there soft-delete remains `POST ...?udel`. All deletes are soft (to
+  `/db/trash`); no hard-delete via API.
+- **`data-api.md` "Deleting"** rewritten (en+ru): `DELETE /api/db/{cat}/{id}` as the primary example,
+  plus a verb-support note (GET/POST/PUT/PATCH/DELETE on `/api/db/`; a `_post` token grants all write verbs).
+- **pre-zip hook** `method:'DELETE'` check is now URL-aware: it only flags `DELETE` on a `/db/` (session)
+  URL, not on `/api/db/` (where REST DELETE is valid).
+
 ## [0.25.1] — 2026-06-14
 
 External-review follow-up (stale-snapshot reconciliation). Most A/B/C items were already shipped in
