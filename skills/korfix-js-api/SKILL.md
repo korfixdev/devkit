@@ -41,8 +41,9 @@ const billing = await App.fetch('/api/user/tariff')
 // data: { tarif, tarif_name, balance, discount, discount_date, payment_date, price, discount_3months, discount_12months }
 
 // Fetch (always via App, not window.fetch — CORS)
-App.fetch('/db/catalog.json')
-App.fetchAll('/db/catalog.json')   // all pages automatically
+App.fetch('/db/catalog.json')        // → {status, ok, data, total} (ok always present)
+App.fetchAll('/db/catalog.json')     // all pages automatically
+App.fetchV2('/db/catalog.json')      // → {ok, status, data, error?, total} — same shape from iframe AND root window (recommended for new code)
 
 // Prefetch — start in background early so App.fetch() returns immediately
 App.prefetch('/db/marketplace.json?limit=200&free_cache=1')
@@ -106,17 +107,17 @@ Seed after first load so the first tick never fires a spurious reload.
 let _pollSnap = { total: -1, topIds: '' };
 
 async function loadRecords() {
-    const resp = await App.fetch('/db/MY_CATALOG.json?...');
-    allRecords = asArray(resp);
+    const resp = await App.fetchV2('/db/MY_CATALOG.json?...');
+    allRecords = resp.data ?? [];
     _pollSnap = { total: allRecords.length, topIds: allRecords.slice(0,5).map(r=>r.id).join(',') };
     render();
 }
 
 setInterval(async () => {
     try {
-        const r = await App.fetch('/db/MY_CATALOG.json?limit=5&order=ts_desc&not_cache=1');
-        const rows = Array.isArray(r?.data) ? r.data : (r?.data?.data ?? []);
-        const total = Number(r?.total ?? rows.length);
+        const r = await App.fetchV2('/db/MY_CATALOG.json?limit=5&order=ts_desc&not_cache=1');
+        const rows = r.data ?? [];
+        const total = Number(r.total ?? rows.length);
         const topIds = rows.map(r => r.id).join(',');
         if (_pollSnap.total >= 0 && (total !== _pollSnap.total || topIds !== _pollSnap.topIds)) {
             loadRecords();

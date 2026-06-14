@@ -67,7 +67,14 @@ App.fetch(`/db/tt_tasks/${alias}?udel&ajax=1`, { method: 'POST' })
 
 ## Response normalization
 
-`resp.data` can be an array, object, or nested — depends on the catalog and pagination. Safe parsing:
+**Preferred — use `App.fetchV2()`:** always returns `{ok, status, data, error?, total?}` with `data` as the payload — same shape from both iframe and root window:
+
+```js
+const resp = await App.fetchV2('/db/tt_tasks.json?form[status]=open');
+const items = resp.data ?? [];  // always an array/object, never double-nested
+```
+
+**Legacy — `App.fetch()` workaround:** `resp.data` is the payload in root window, but `resp.data.data` in the iframe (postMessage wrapping). Use `asArray` to normalise:
 
 ```js
 function asArray(resp) {
@@ -76,6 +83,23 @@ function asArray(resp) {
     return [];
 }
 ```
+
+`App.fetch()` now always includes `ok: boolean` in the JSON response (added client-side when the server omits it), so `resp.ok` (root window) and `resp.data.ok` (iframe) are reliable.
+
+## Checking write results
+
+`/db/` write endpoints return HTTP 200 even on error — always check `ok` or `status`:
+
+```js
+const resp = await App.fetchV2('/db/tt_tasks/add?edit&ajax=1', {
+    method: 'POST',
+    body: { 'form[name]': 'Task', 'form[alias]': uid(), submit: 1 }
+});
+if (!resp.ok) throw new Error(resp.error?.message ?? 'Write failed');
+// resp.data — created record info (alias, id, ...)
+```
+
+`/api/db/` write endpoints return proper HTTP codes (201 create, 200 update, 422 validation error, 404 not found) so `if (!resp.ok)` is sufficient.
 
 ## Filtering and sorting
 

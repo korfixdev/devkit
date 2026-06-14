@@ -4,6 +4,12 @@ All notable changes to the plugin are recorded here.
 
 Format — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning — [SemVer](https://semver.org/).
 
+## [0.24.0] — 2026-06-14
+
+### Changed
+- **`korfix-js-api`** — `App.fetchV2()` added to Key methods; polling pattern updated to use `fetchV2` (eliminates `r?.data?.data` double-unwrap workaround; `r.data` is always the payload).
+- **`korfix-crud-data`** — Response normalization section updated: `App.fetchV2()` is now the preferred path (`resp.data ?? []`, no `asArray` needed); `asArray` remains as legacy fallback. New "Checking write results" section documents `ok` field on write responses and explains `/db/` vs `/api/db/` HTTP code behaviour.
+
 ## [0.23.1] — 2026-06-14
 
 Consistency pass across agents/skills/docs (reported gaps). No new platform features.
